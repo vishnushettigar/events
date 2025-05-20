@@ -1,0 +1,215 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Champion {
+  id            Int      @id @default(autoincrement())
+  temple        Mst_temple @relation(fields: [temple_id], references: [id])
+  temple_id     Int
+  year          Int
+  host_temple   Mst_temple @relation("HostTemple", fields: [host_temple_id], references: [id])
+  host_temple_id Int
+  created_at    DateTime  @default(now())
+  modified_at   DateTime  @updatedAt
+}
+
+model Ind_event_registration {
+  id              Int      @id @default(autoincrement())
+  event           Mst_event @relation(fields: [event_id], references: [id])
+  event_id        Int
+  user            Profile  @relation(fields: [user_id], references: [id])
+  user_id         Int
+  event_result    Mst_event_result? @relation("IndEventResultRelation", fields: [event_result_id], references: [id])
+  event_result_id Int?
+  created_at      DateTime  @default(now())
+  modified_at     DateTime  @updatedAt
+  is_deleted      Boolean   @default(false)
+  status          RegistrationStatus @default(PENDING)
+}
+
+enum RegistrationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Mst_age_category {
+  id         Int     @id @default(autoincrement())
+  name       String
+  from_age   Int
+  to_age     Int
+  is_deleted Boolean @default(false)
+  events     Mst_event[]
+}
+
+model Mst_event {
+  id             Int     @id @default(autoincrement())
+  name           String
+  event_type     Mst_event_type @relation(fields: [event_type_id], references: [id])
+  event_type_id  Int
+  age_category   Mst_age_category @relation(fields: [age_category_id], references: [id])
+  age_category_id Int
+  gender         Gender
+  is_deleted     Boolean @default(false)
+  is_closed      Boolean @default(false)
+  registrations  Ind_event_registration[]
+  team_registrations Team_event_registration[]
+  schedules      event_schedule[]
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  ALL
+}
+
+model Mst_event_result {
+  id            Int     @id @default(autoincrement())
+  event_type    Mst_event_type @relation(fields: [event_type_id], references: [id])
+  event_type_id Int
+  rank          Rank
+  points        Int
+  ind_event_registrations Ind_event_registration[] @relation("IndEventResultRelation")
+  team_event_registrations Team_event_registration[] @relation("TeamEventResultRelation")
+}
+
+enum Rank {
+  FIRST
+  SECOND
+  THIRD
+  NA
+}
+
+model Mst_event_type {
+  id               Int     @id @default(autoincrement())
+  name             String  @unique
+  type             EventType
+  participant_count Int    @default(1)
+  events           Mst_event[]
+  results          Mst_event_result[]
+}
+
+enum EventType {
+  TEAM
+  INDIVIDUAL
+}
+
+model Mst_role {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+  profiles Profile[]
+  user_roles User_role[]
+}
+
+model Mst_temple {
+  id            Int     @id @default(autoincrement())
+  code          String  @unique
+  name          String
+  address       String?
+  contact_name  String?
+  contact_phone String?
+  is_deleted    Boolean @default(false)
+  created_at    DateTime  @default(now())
+  modified_at   DateTime  @updatedAt
+  champions     Champion[]
+  host_champions Champion[] @relation("HostTemple")
+  profiles      Profile[]
+  team_registrations Team_event_registration[]
+}
+
+model Profile {
+  id            Int     @id @default(autoincrement())
+  user          User?  @relation(fields: [user_id], references: [id])
+  user_id       Int?   @unique
+  first_name    String
+  last_name     String?
+  email         String?
+  phone         String?
+  aadhar_number String? @unique
+  created_at    DateTime  @default(now())
+  modified_at   DateTime  @updatedAt
+  is_deleted    Boolean @default(false)
+  is_verified   Boolean @default(false)
+  temple        Mst_temple? @relation(fields: [temple_id], references: [id])
+  temple_id     Int?
+  dob           DateTime
+  gender        Gender
+  role          Mst_role @relation(fields: [role_id], references: [id])
+  role_id       Int @default(1)
+  registrations Ind_event_registration[]
+}
+
+model Settings {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  value       Int
+  created_at  DateTime  @default(now())
+  modified_at DateTime  @updatedAt
+}
+
+model Team_event_registration {
+  id              Int     @id @default(autoincrement())
+  temple          Mst_temple @relation(fields: [temple_id], references: [id])
+  temple_id       Int
+  event_result    Mst_event_result? @relation("TeamEventResultRelation", fields: [event_result_id], references: [id])
+  event_result_id Int?
+  member_user_ids String?
+  created_at      DateTime  @default(now())
+  modified_at     DateTime  @updatedAt
+  is_deleted      Boolean @default(false)
+  event           Mst_event @relation(fields: [event_id], references: [id])
+  event_id        Int
+  status          RegistrationStatus @default(PENDING)
+}
+
+model User {
+  id         Int     @id @default(autoincrement())
+  username   String  @unique
+  password   String
+  email      String? @unique
+  created_at DateTime  @default(now())
+  modified_at DateTime  @updatedAt
+  profile    Profile?
+  user_roles User_role[]
+}
+
+model User_role {
+  id      Int     @id @default(autoincrement())
+  user    User    @relation(fields: [user_id], references: [id])
+  user_id Int
+  role    Mst_role @relation(fields: [role_id], references: [id])
+  role_id Int
+}
+
+model Audit_log {
+  id          Int      @id @default(autoincrement())
+  user_id     Int?
+  action      String
+  table_name  String
+  record_id   Int?
+  old_value   String?
+  new_value   String?
+  created_at  DateTime @default(now())
+}
+
+model event_schedule {
+  id         Int      @id @default(autoincrement())
+  event_id   Int
+  start_time DateTime
+  end_time   DateTime
+  created_at DateTime @default(now())
+  modified_at DateTime @updatedAt
+  is_deleted Boolean  @default(false)
+
+  event Mst_event @relation(fields: [event_id], references: [id])
+
+  @@index([event_id])
+}
