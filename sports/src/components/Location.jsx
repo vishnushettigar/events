@@ -33,7 +33,7 @@ const Location = () => {
             <p className="text-lg text-gray-700 text-center font-semibold">SMS Pre-University College, Brahmavara</p>
             <p className="text-gray-600 text-center">CPHR+JH2, Varamballi, Karnataka 576213</p>
             <a
-              href="https://maps.google.com/maps?width=400&amp;height=300&amp;hl=en&amp;q=SMS ground Brahmavara&amp;t=&amp;z=14&amp;ie=UTF8&amp;iwloc=B&amp;output=embed"
+              href="https://www.google.com/maps/search/?api=1&query=SMS+ground+Brahmavara"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 inline-block px-6 py-2 bg-blue-700 text-white rounded-lg shadow hover:bg-blue-900 transition"
