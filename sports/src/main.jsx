@@ -11,6 +11,7 @@ import Templeparticipants from './components/Templeparticipants.jsx';
 import Myevents from './components/Myevents.jsx';
 import GroupEvents from './components/GroupEvents.jsx';
 import Events from './components/Events.jsx';
+import Alltemplereports from './Pages/Alltemplereports.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -47,7 +48,12 @@ import Events from './components/Events.jsx';
             element: <GroupEvents />
           }
         ]
+      },
+         {
+        path: "Alltemplereports",
+        element: <Alltemplereports />
       }
+   
     ],
     errorElement: <Error />
   }
