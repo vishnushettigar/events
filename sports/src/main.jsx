@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import Home from './components/Home.jsx';
+import Home from './Pages/Home.jsx';
 import SignInForm from './components/SignInForm.jsx';
 import Register from './components/Register.jsx';
 import App from './App.jsx';
@@ -12,6 +12,8 @@ import Myevents from './components/Myevents.jsx';
 import GroupEvents from './components/GroupEvents.jsx';
 import Events from './components/Events.jsx';
 import Alltemplereports from './Pages/Alltemplereports.jsx';
+import Templedetailedreports from './Pages/Templedetailedreports.jsx';
+import Participantslist from './Pages/Participantslist.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -52,7 +54,20 @@ import Alltemplereports from './Pages/Alltemplereports.jsx';
       {
         path: "/Alltemplereports",
         element: <Alltemplereports />
+      },
+      {
+        path: "/templedetailedreport",
+        element: <Templedetailedreports />
+      },
+      {
+        path: "/participantslist",
+        element: <Participantslist />
       }
+      // {
+      //   path: "/participantslist",
+      //   element: <Participantslist />
+        
+      // }
     ],
     errorElement: <Error />
   }
