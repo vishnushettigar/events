@@ -3,39 +3,46 @@ const jwt = require('jsonwebtoken');
 const prisma = new PrismaClient();
 
 async function register(username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id) {
-  const user = await prisma.user.create({
-    data: {
-      username,
-      password, // In production, hash the password
-      email,
-      profile: {
-        create: {
-          first_name,
-          last_name,
-          phone,
-          aadhar_number,
-          dob: new Date(dob),
-          gender,
-          temple_id: temple_id ? parseInt(temple_id) : null,
-          role_id: 1 // Default role: Participant
+  try {
+    console.log('Received registration data:', { username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id });
+    
+    const user = await prisma.user.create({
+      data: {
+        username,
+        password, // In production, hash the password
+        email,
+        profile: {
+          create: {
+            first_name,
+            last_name,
+            phone,
+            aadhar_number,
+            dob: new Date(dob),
+            gender,
+            temple_id: temple_id ? parseInt(temple_id) : null,
+            role_id: 1 // Default role: Participant
+          }
         }
+      },
+      include: {
+        profile: true
       }
-    },
-    include: {
-      profile: true
-    }
-  });
-  // Log the registration in audit_log
-  await prisma.audit_log.create({
-    data: {
-      user_id: user.id,
-      action: 'REGISTER',
-      table_name: 'User',
-      record_id: user.id,
-      new_value: JSON.stringify(user)
-    }
-  });
-  return user;
+    });
+    // Log the registration in audit_log
+    await prisma.audit_log.create({
+      data: {
+        user_id: user.id,
+        action: 'REGISTER',
+        table_name: 'User',
+        record_id: user.id,
+        new_value: JSON.stringify(user)
+      }
+    });
+    return user;
+  } catch (error) {
+    console.error('Error in register function:', error);
+    throw error;
+  }
 }
 
 async function login(username, password) {

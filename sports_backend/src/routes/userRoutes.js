@@ -83,7 +83,8 @@ router.post('/register', [
   }
 
   try {
-    const user = await userService.register(req.body);
+    const { username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id } = req.body;
+    const user = await userService.register(username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id);
     res.status(201).json(user);
   } catch (error) {
     console.error('Error registering user:', error);
