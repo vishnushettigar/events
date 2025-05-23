@@ -1,4 +1,5 @@
 import React from 'react'
+import { Link } from 'react-router-dom';
 
 
 
@@ -48,20 +49,22 @@ const report = [
                   <td className="px-6 py-4 font-semibold text-purple-800">{temple_info.temple_name}</td>
                   <td className="px-6 py-4 text-blue-700 font-bold">{temple_info.total_points}</td>
                   <td className="px-6 py-4">
-                    <a
+                    <Link to="/templedetailedreport"><a
                       href={`/temple_detailed_report/?temple_id=${temple_info.temple_id}`}
                       className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-red-600 transition font-semibold text-sm"
                     >
                       View Points
-                    </a>
+                    </a> </Link>
+                    
                   </td>
                   <td className="px-6 py-4">
-                    <a
+                    <Link to="/participantslist"><a
                       href={`/temple_participants/?temple_id=${temple_info.temple_id}`}
                       className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-red-600 transition font-semibold text-sm"
                     >
                       View All Participants
-                    </a>
+                    </a> </Link>
+                    
                   </td>
                 </tr>
               ))}

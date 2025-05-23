@@ -10,7 +10,7 @@ const links = [
      href: '',
    },
    {
-     text: '1000 + Participants',
+     text: '1000+ Participants',
      href: '',
    },
    {
@@ -39,7 +39,7 @@ const Counts = () => {
             onClick={() => clickCTA(link.text)}
           >
             <span className="text-5xl font-bold mb-2">
-              {link.text.match(/\d+/)}
+              {link.text.match(/\d+\+?/)}
             </span>
             <span className="text-lg font-semibold tracking-wide">
               {link.text.replace(/\d+\s?\+?/, '').trim()}

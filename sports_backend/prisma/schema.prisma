@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -195,8 +195,8 @@ model Audit_log {
   action      String
   table_name  String
   record_id   Int?
-  old_value   String?
-  new_value   String?
+  old_value   String?  @db.Text
+  new_value   String?  @db.Text
   created_at  DateTime @default(now())
 }
 

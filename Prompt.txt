@@ -1,0 +1,63 @@
+Prompt
+
+the sports directory here contains my frontend code for the event management application.
+
+Tech stack:
+I want to use sqlite with an orm, possibly prisma or something better and expressjs framework
+
+Overall Project details:
+
+Im building this for our annual sports event, I have lots of events which will be at the end inserted into mst_event table.
+Every user must first register himself, every user belongs to a temple which they choose during registration and every user will have one of these roles assigned to them, 
+
+1. Participant (Default role)
+2. Temple Admin (Assinged by me internally)
+3. Staff (People who will be making updates to stuff like event results/winners, who won the event, any updates to profile if needed, generate reports for each temple, and so many other reports)
+4. Read Only Staff
+5. Super user, has access to everything. (Like CRUD operation for every table)
+
+1. Participant flow
+a participant(belongs to a temple) registers himself with the necessary details as per registration page, once registered/logged in he will be able to based on his age category and gender chooses any 3 events he wants to participate in. From one temple only maximum 3 participants can register for an event type(excluding team events), if in case they try to register for an event which already has 4 participants, then that åttempt will go into pending status, which then temple admin decides what do (This is covered in the Temple admin flow below)
+
+2. Temple Admin
+Temple admin should also register himself just like a participant. Super user assigns them the Temple Admin role by calling an API only available to Super user. And then Temple admin can do everything that the participant can do, in addition he will be able to see all the participant list using filters like gender, age category, event type , And make any updates to those entities if he deems necessary, like decline/undo the registration of a participant so that another one in the pending state can be marked as accepted etc. Temple Admin has special access to enlist his temples participants to the team events,this will be a separate page where he gets to do this, view the current temple reports like who has won what events etc (Only for participants from his temple).
+
+3. Staff is also similar to Participant, just that these people will have access to make updates to participant profiles if need be, and also do registration on behalf of the participants. Mark the event results, as who won 1st, 2nd, thrid prices, which temple won which team event. When the winners are marked, certain points are added to them, which is later used to compare the total points gained by all teams. They also have options to see reports of everything, get event participant lists which is then printed out etc.
+
+4. Read only staff 
+These people will have read access to all that Staff has access to.
+
+5. Super user is also similar to participant, but has access to almost everything that staff has, and also access to every table there is to do anything they want with the entities.
+
+
+I already have a mysql schema for this which I will share as an attachment, it may need minor adjustments, like new roles, addition of new status column (Accepted/declined etc) for event regsitration. Also a new audit log table to capture actions like updates done by staff and temple admins (basically capture what change was done).
+
+
+Remaining Features that might be needed:
+Event Management:
+API to create/update/delete events (for Super Users)
+API to manage event types and categories
+API to set event schedules and venues
+API to manage age categories
+Temple Management:
+API to create/update/delete temples
+API to manage temple admins
+API to view all temples (for Super Users)
+Additional Reports:
+Overall championship report (for Super Users)
+Event-wise performance reports
+Age category-wise reports
+Gender-wise reports
+User Management:
+Password reset functionality
+User profile update
+Bulk user import/export
+User search and filtering
+System Management:
+System settings management
+Backup and restore functionality
+Log management and viewing
+
+
+
+http://localhost:4000/api-docs
