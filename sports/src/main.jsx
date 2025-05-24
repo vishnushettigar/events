@@ -2,8 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import Home from './Pages/Home.jsx';
-import SignInForm from './components/SignInForm.jsx';
-import Register from './components/Register.jsx';
+import SignInForm from './Pages/SignInForm.jsx';
+import Register from './Pages/Register.jsx';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -14,6 +14,7 @@ import Events from './components/Events.jsx';
 import Alltemplereports from './Pages/Alltemplereports.jsx';
 import Templedetailedreports from './Pages/Templedetailedreports.jsx';
 import Participantslist from './Pages/Participantslist.jsx';
+import Error from './Pages/Error.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -51,13 +52,6 @@ import Participantslist from './Pages/Participantslist.jsx';
           }
         ]
       },
-<<<<<<< HEAD
-         {
-        path: "Alltemplereports",
-        element: <Alltemplereports />
-      }
-   
-=======
       {
         path: "/Alltemplereports",
         element: <Alltemplereports />
@@ -70,12 +64,7 @@ import Participantslist from './Pages/Participantslist.jsx';
         path: "/participantslist",
         element: <Participantslist />
       }
-      // {
-      //   path: "/participantslist",
-      //   element: <Participantslist />
-        
-      // }
->>>>>>> e74805e0536ffa22e685d9644b23b09f38c1d6c4
+      
     ],
     errorElement: <Error />
   }
