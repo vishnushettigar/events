@@ -1,0 +1,12 @@
+# Database
+DATABASE_URL="file:./dev.db"
+
+# Server
+PORT=4000
+
+# JWT
+JWT_SECRET="your-secret-key-here"
+JWT_EXPIRES_IN="24h"
+
+# Logging
+LOG_LEVEL="debug"

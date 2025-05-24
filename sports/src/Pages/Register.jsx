@@ -18,6 +18,7 @@ const Register = () => {
     });
 
     const [errors, setErrors] = useState({});
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -72,8 +73,46 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (validateForm()) {
-            console.log('Form data:', formData);
-            // API call here
+            setIsSubmitting(true);
+            try {
+                const response = await fetch('http://localhost:4000/api/users/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: formData.aadhaar,
+                        password: formData.password,
+                        email: formData.email,
+                        first_name: formData.firstName,
+                        last_name: formData.lastName,
+                        phone: formData.mobile,
+                        aadhar_number: formData.aadhaar,
+                        dob: formData.dob,
+                        gender: formData.gender.toUpperCase(),
+                        temple_id: temples.indexOf(formData.temple) + 1
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Registration failed');
+                }
+
+                // Registration successful
+                console.log('Registration successful:', data);
+                // Redirect to login page
+                window.location.href = '/login';
+            } catch (error) {
+                console.error('Registration error:', error);
+                setErrors(prev => ({
+                    ...prev,
+                    submit: error.message || 'Registration failed. Please try again.'
+                }));
+            } finally {
+                setIsSubmitting(false);
+            }
         }
     };
 
@@ -92,6 +131,11 @@ const Register = () => {
                 <h2 className="text-center text-4xl font-extrabold text-white">Register</h2>
                 <p className="text-center text-gray-200">Create your account</p>
                 <form onSubmit={handleSubmit} className="space-y-5">
+                    {errors.submit && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            {errors.submit}
+                        </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {['firstName', 'lastName'].map((field, index) => (
                             <div className="relative" key={index}>
@@ -278,9 +322,14 @@ const Register = () => {
                     <div>
                         <button
                             type="submit"
-                            className="w-full py-2 px-4 bg-purple-700 hover:bg-purple-800 text-white font-semibold rounded-lg shadow-md focus:outline-none"
+                            disabled={isSubmitting}
+                            className={`w-full py-2 px-4 ${
+                                isSubmitting
+                                    ? 'bg-gray-500 cursor-not-allowed'
+                                    : 'bg-purple-700 hover:bg-purple-800'
+                            } text-white font-semibold rounded-lg shadow-md focus:outline-none`}
                         >
-                            Register
+                            {isSubmitting ? 'Registering...' : 'Register'}
                         </button>
                     </div>
                     <p className="text-center text-sm text-white">
