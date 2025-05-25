@@ -90,20 +90,27 @@ const Register = () => {
                         aadhar_number: formData.aadhaar,
                         dob: formData.dob,
                         gender: formData.gender.toUpperCase(),
-                        temple_id: temples.indexOf(formData.temple) + 1
+                        temple_name: formData.temple
                     }),
                 });
 
                 const data = await response.json();
 
                 if (!response.ok) {
+                    // Check for duplicate username error
+                    if (data.error?.code === 'P2002' && data.error?.meta?.target?.includes('username')) {
+                        throw new Error('This Aadhaar number is already registered. Please use a different Aadhaar number or try logging in.');
+                    }
                     throw new Error(data.error || 'Registration failed');
                 }
 
+                // Store the JWT token
+                localStorage.setItem('token', data.token);
+                
                 // Registration successful
                 console.log('Registration successful:', data);
-                // Redirect to login page
-                window.location.href = '/login';
+                // Redirect to MyEvents page
+                window.location.href = '/myevents';
             } catch (error) {
                 console.error('Registration error:', error);
                 setErrors(prev => ({

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const SignInForm = () => {
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         aadhaar: '',
         password: ''
@@ -44,20 +45,48 @@ const SignInForm = () => {
 
         setIsSubmitting(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log('Form submitted:', formData);
+            const response = await fetch('http://localhost:4000/api/users/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: formData.aadhaar,
+                    password: formData.password
+                })
+            });
 
-            // Reset form (optional)
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.message || 'Login failed');
+            }
+
+            // Store the token in localStorage
+            localStorage.setItem('token', data.token);
+            
+            // Store user data if needed
+            if (data.user) {
+                localStorage.setItem('user', JSON.stringify(data.user));
+            }
+
+            // Reset form
             setFormData({ aadhaar: '', password: '' });
             setErrors({});
+
+            // Redirect to myevents page
+            navigate('/myevents');
         } catch (err) {
             console.error('Login error:', err);
-            setErrors({ submit: 'An error occurred during login' });
+            setErrors({ 
+                submit: err.message || 'An error occurred during login. Please try again.' 
+            });
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    const isAuthenticated = !!localStorage.getItem('token');
 
     return (
         <div className="pt-16 ">

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import Padhmashali from '../assets/Padhmashali.png';
 
 const Sidebar = () => {
   const location = useLocation();
   return (
     <aside className="min-h-screen w-74 bg-gradient-to-b from-blue-800 to-blue-500 shadow-2xl flex flex-col p-0">
       <div className="flex flex-col items-center py-8 bg-blue-900 rounded-br-3xl rounded-bl-3xl shadow-md">
-        <img src="http://localhost:8000/static/img/Padhmashali.png" alt="Logo" className="pt-2 pb-2 pl-6 pr-6 w-40 h-20 mb-4 rounded-full border-4 border-white shadow-lg" />
+        <img src={Padhmashali} alt="Logo" className="pt-2 pb-2 pl-6 pr-6 w-40 h-20 mb-4 rounded-full border-4 border-white shadow-lg" />
         <h2 className="text-white text-2xl font-bold tracking-wide">My Events</h2>
       </div>
       <nav className="flex flex-col gap-2 mt-8 px-6">
