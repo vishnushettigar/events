@@ -1,45 +1,77 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function registerParticipant(user_id, event_id) {
+async function registerParticipant(userId, eventId) {
+  console.log('Registering participant:', { userId, eventId });
+
   // Get user's temple_id
   const user = await prisma.profile.findUnique({
-    where: { id: user_id },
+    where: { id: userId },
     select: { temple_id: true }
   });
 
   if (!user) {
+    console.error('User not found:', userId);
     throw new Error('User not found');
   }
 
-  // Get event details to check temple
+  // Get event details
   const event = await prisma.mst_event.findUnique({
-    where: { id: event_id },
+    where: { id: eventId },
     select: { temple_id: true }
   });
 
   if (!event) {
+    console.error('Event not found:', eventId);
     throw new Error('Event not found');
   }
 
+  console.log('Temple check:', {
+    userTempleId: user.temple_id,
+    eventTempleId: event.temple_id
+  });
+
   // Check if user's temple matches event's temple
   if (user.temple_id !== event.temple_id) {
+    console.error('Temple mismatch:', {
+      userTempleId: user.temple_id,
+      eventTempleId: event.temple_id
+    });
     throw new Error('Cannot register for events from other temples');
   }
 
-  const registration = await prisma.ind_event_registration.create({
-    data: {
-      user_id,
-      event_id
+  // Check if already registered
+  const existingRegistration = await prisma.ind_event_registration.findFirst({
+    where: {
+      user_id: userId,
+      event_id: eventId,
+      is_deleted: false
     }
   });
+
+  if (existingRegistration) {
+    console.error('Already registered:', existingRegistration);
+    throw new Error('Already registered for this event');
+  }
+
+  // Create registration
+  const registration = await prisma.ind_event_registration.create({
+    data: {
+      user_id: userId,
+      event_id: eventId,
+      status: 'PENDING'
+    }
+  });
+
+  console.log('Registration created:', registration);
 
   // Log the action
   await prisma.audit_log.create({
     data: {
-      user_id,
-      action: 'REGISTER_PARTICIPANT',
-      details: `Registered for event ${event_id}`
+      user_id: userId,
+      action: 'REGISTER_EVENT',
+      details: `Registered for event ${eventId}`,
+      ip_address: '127.0.0.1' // TODO: Get actual IP
     }
   });
 

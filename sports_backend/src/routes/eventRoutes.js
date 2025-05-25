@@ -10,18 +10,33 @@ router.post('/register-participant', authenticate, [
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.error('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
+
   const { user_id, event_id } = req.body;
+  console.log('Registration attempt:', { user_id, event_id, auth_user: req.user });
+
   try {
     const registration = await eventService.registerParticipant(user_id, event_id);
+    console.log('Registration successful:', registration);
     res.status(201).json(registration);
   } catch (error) {
-    console.error(error);
+    console.error('Registration error:', {
+      error: error.message,
+      stack: error.stack,
+      user_id,
+      event_id,
+      auth_user: req.user
+    });
+
     if (error.message.includes('other temples')) {
       return res.status(403).json({ error: error.message });
     }
-    res.status(500).json({ error: 'Registration failed' });
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Registration failed' });
   }
 });
 
