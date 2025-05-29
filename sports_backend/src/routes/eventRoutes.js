@@ -142,4 +142,72 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
   }
 });
 
+// Get age categories
+// router.get('/age-categories', authenticate, async (req, res) => {
+//   try {
+//     const ageCategories = await eventService.getAgeCategories();
+//     res.json(ageCategories);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Failed to fetch age categories' });
+//   }
+// });
+
+// Get gender options
+
+// router.get('/gender-options', authenticate, async (req, res) => {
+//   try {
+//     // Hardcoded gender options since there's no gender table
+//     const genderOptions = [
+//       { id: 1, name: 'Male', value: 'M' },
+//       { id: 2, name: 'Female', value: 'F' }
+//     ];
+//     res.json(genderOptions);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Failed to fetch gender options' });
+//   }
+// });
+
+// Get events by age category
+// router.get('/by-age-category/:ageCategory', authenticate, async (req, res) => {
+//   try {
+//     const { ageCategory } = req.params;
+//     const { gender } = req.query;
+//     const events = await eventService.getEventsByAgeCategory(ageCategory, gender);
+//     res.json(events);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: 'Failed to fetch events' });
+//   }
+// });
+
+// Get combined temple participant data (age categories, gender options, and events)
+router.get('/temple-participant-data', authenticate, async (req, res) => {
+  try {
+    const { ageCategory = 'All', gender = 'MALE' } = req.query;
+    
+    // Get age categories
+    const ageCategories = await eventService.getAgeCategories();
+    
+    // Hardcoded gender options
+    const genderOptions = [
+      { id: 1, name: 'Male', value: 'MALE' },
+      { id: 2, name: 'Female', value: 'FEMALE' }
+    ];
+    
+    // Get events based on filters
+    const events = await eventService.getEventsByAgeCategory(ageCategory, gender);
+    
+    res.json({
+      ageCategories,
+      genderOptions,
+      events
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch temple participant data' });
+  }
+});
+
 module.exports = router; 
