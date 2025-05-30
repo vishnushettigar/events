@@ -258,7 +258,11 @@ router.get('/profile', authenticate, async (req, res) => {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
             include: {
-                profile: true
+                profile: {
+                    include: {
+                        temple: true
+                    }
+                }
             }
         });
 
@@ -272,8 +276,24 @@ router.get('/profile', authenticate, async (req, res) => {
             return res.status(404).json({ error: 'Profile not found' });
         }
 
-        console.log('Profile found:', user.profile);
-        res.json(user.profile);
+        // Calculate age
+        const today = new Date();
+        const birthDate = new Date(user.profile.dob);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        // Format response
+        const profileData = {
+            ...user.profile,
+            age,
+            temple: user.profile.temple.name
+        };
+
+        console.log('Profile found:', profileData);
+        res.json(profileData);
     } catch (error) {
         console.error('Error fetching user profile:', error);
         res.status(500).json({ error: 'Failed to fetch user profile', details: error.message });

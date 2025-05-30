@@ -2,6 +2,7 @@ import React from 'react'
 import { Link } from 'react-router-dom';
 import './styles.css';
 import Padhmashali from '../assets/Padhmashali.png';
+import ProfileDropdown from './ProfileDropdown';
 
 const Navbar = () => {
     return (
@@ -16,15 +17,8 @@ const Navbar = () => {
                         <Link to="/myevents"><h3 className='text-white'>myevents</h3></Link>
                     </div>
                 </div>
-                <div className="nav-links flex flex-row pr-5 gap-2">
-                    {/* <button className='get-started-btn '>
-                        <Link to="/login" className='ml-[30px] p-2 rounded px-[25px] whitespace-nowrap transition duration-300 text-sm font-semibold inline-block bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] text-white'>
-                            login</Link>
-                    </button>
-                    <button className='get-started-btn'>
-                        <Link to="/register" className='ml-[30px] p-2 rounded px-[25px] whitespace-nowrap transition duration-300 text-sm font-semibold inline-block bg-gradient-to-br from-[#f09433] via-[#dc2743] to-[#bc1888] text-white'>
-                            register</Link>
-                    </button> */}
+                <div className="profile nav-links flex flex-row pr-5 gap-2 items-center">
+                    <ProfileDropdown />
                 </div>
             </div>
         </nav>

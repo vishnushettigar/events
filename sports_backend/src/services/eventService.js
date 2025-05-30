@@ -1,81 +1,98 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function registerParticipant(userId, eventId) {
-  console.log('Registering participant:', { userId, eventId });
+async function registerParticipant(user_id, event_id) {
+  try {
+    // First check if user has already registered for 3 events
+    const existingRegistrations = await prisma.ind_event_registration.findMany({
+      where: {
+        user_id: user_id,
+        is_deleted: false,
+        status: {
+          in: ['PENDING', 'ACCEPTED']
+        }
+      }
+    });
 
-  // Get user's temple_id
+    if (existingRegistrations.length >= 3) {
+      throw new Error('You can only register for a maximum of 3 events. Please cancel one of your existing registrations to register for a new event.');
+    }
+
+    // Check if user exists and get temple_id
   const user = await prisma.profile.findUnique({
-    where: { id: userId },
+    where: { id: user_id },
     select: { temple_id: true }
   });
 
   if (!user) {
-    console.error('User not found:', userId);
     throw new Error('User not found');
   }
 
-  // Get event details
+    // Check if event exists
   const event = await prisma.mst_event.findUnique({
-    where: { id: eventId },
-    select: { temple_id: true }
+      where: { id: event_id }
   });
 
   if (!event) {
-    console.error('Event not found:', eventId);
     throw new Error('Event not found');
   }
 
-  console.log('Temple check:', {
-    userTempleId: user.temple_id,
-    eventTempleId: event.temple_id
-  });
-
-  // Check if user's temple matches event's temple
-  if (user.temple_id !== event.temple_id) {
-    console.error('Temple mismatch:', {
-      userTempleId: user.temple_id,
-      eventTempleId: event.temple_id
+    // Check if already registered
+    const existingRegistration = await prisma.ind_event_registration.findFirst({
+      where: {
+        user_id: user_id,
+        event_id: event_id,
+        is_deleted: false
+      }
     });
-    throw new Error('Cannot register for events from other temples');
-  }
 
-  // Check if already registered
-  const existingRegistration = await prisma.ind_event_registration.findFirst({
-    where: {
-      user_id: userId,
-      event_id: eventId,
-      is_deleted: false
+    if (existingRegistration) {
+      throw new Error('Already registered for this event');
     }
-  });
 
-  if (existingRegistration) {
-    console.error('Already registered:', existingRegistration);
-    throw new Error('Already registered for this event');
-  }
+    // Count temple registrations for this event
+    const templeRegistrations = await prisma.ind_event_registration.findMany({
+      where: {
+        event_id: event_id,
+        is_deleted: false,
+        status: {
+          in: ['PENDING', 'ACCEPTED']
+        },
+        user: {
+          temple_id: user.temple_id
+        }
+      }
+    });
 
-  // Create registration
+    // Determine registration status based on temple registration count
+    const status = templeRegistrations.length < 3 ? 'ACCEPTED' : 'PENDING';
+
+    // Create registration
   const registration = await prisma.ind_event_registration.create({
     data: {
-      user_id: userId,
-      event_id: eventId,
-      status: 'PENDING'
+        user_id: user_id,
+        event_id: event_id,
+        status: status,
+        is_deleted: false
     }
   });
 
-  console.log('Registration created:', registration);
-
-  // Log the action
+    // Create audit log
   await prisma.audit_log.create({
     data: {
-      user_id: userId,
-      action: 'REGISTER_EVENT',
-      details: `Registered for event ${eventId}`,
-      ip_address: '127.0.0.1' // TODO: Get actual IP
+        user_id: user_id,
+        action: 'REGISTER_EVENT',
+        table_name: 'Ind_event_registration',
+        record_id: registration.id,
+        new_value: JSON.stringify(registration)
     }
   });
 
   return registration;
+  } catch (error) {
+    console.error('Error in registerParticipant:', error);
+    throw error;
+  }
 }
 
 async function registerTeamEvent(temple_id, event_id, member_user_ids) {
@@ -400,6 +417,105 @@ async function generateTempleReport(temple_id) {
   };
 }
 
+
+//get age categories
+
+async function getAgeCategories() {
+  try {
+    console.log('Fetching age categories...');
+    const ageCategories = await prisma.mst_age_category.findMany({
+      where: {
+        is_deleted: false
+      },
+      select: {
+        id: true,
+        name: true,
+        from_age: true,
+        to_age: true
+      },
+      orderBy: {
+        from_age: 'asc'
+      }
+    });
+    console.log('Found age categories:', ageCategories);
+    return ageCategories;
+  } catch (error) {
+    console.error('Error in getAgeCategories:', error);
+    throw error;
+  }
+}
+
+async function getEventsByAgeCategory(ageCategory, gender) {
+  try {
+    console.log('Fetching events for age category:', ageCategory, 'and gender:', gender);
+
+    // Build the where clause
+    const whereClause = {
+      is_deleted: false,
+      event_type: {
+        type: 'INDIVIDUAL'
+      }
+    };
+
+    // If age category is not "All", add age category filter
+    if (ageCategory !== 'All') {
+      // First get the age category details
+      const ageGroup = await prisma.mst_age_category.findFirst({
+        where: {
+          name: ageCategory,
+          is_deleted: false
+        }
+      });
+
+      if (!ageGroup) {
+        console.log('Age category not found:', ageCategory);
+        throw new Error('Age category not found');
+      }
+
+      console.log('Found age group:', ageGroup);
+      whereClause.age_category_id = ageGroup.id;
+    }
+
+    // Add gender filter if specified
+    if (gender) {
+      whereClause.gender = gender;
+    }
+
+    console.log('Using where clause:', whereClause);
+
+    // Get individual events with proper joins
+    const events = await prisma.mst_event.findMany({
+      where: whereClause,
+      include: {
+        event_type: true,
+        age_category: true
+      }
+    });
+
+    console.log('Found events:', events);
+
+    // Transform the data to include event type details directly
+    const transformedEvents = events.map(event => ({
+      id: event.id,
+      name: event.event_type.name,
+      type: event.event_type.type,
+      gender: event.gender,
+      age_category_id: event.age_category_id,
+      age_category: event.age_category.name,
+      participant_count: event.event_type.participant_count
+    }));
+
+    // Sort events by name
+    transformedEvents.sort((a, b) => a.name.localeCompare(b.name));
+
+    console.log('Transformed events:', transformedEvents);
+    return transformedEvents;
+  } catch (error) {
+    console.error('Error in getEventsByAgeCategory:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   registerParticipant,
   registerTeamEvent,
@@ -407,5 +523,7 @@ module.exports = {
   updateRegistrationStatus,
   getTempleParticipants,
   getTempleTeams,
-  generateTempleReport
+  generateTempleReport,
+  getAgeCategories,
+  getEventsByAgeCategory
 }; 

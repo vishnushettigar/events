@@ -90,11 +90,6 @@ const AvailableEvents = () => {
   }, [navigate]);
 
   const handleRegisterClick = (event) => {
-    const registeredCount = events.filter(e => e.is_registered).length;
-    if (registeredCount >= 3) {
-      alert('You can only register for a maximum of 3 events. Please cancel one of your existing registrations to register for a new event.');
-      return;
-    }
     setSelectedEvent(event);
     setShowModal(true);
   };
@@ -149,11 +144,11 @@ const AvailableEvents = () => {
           throw new Error('Failed to register for event. Please try again.');
         }
 
-        // Update the event's registration status
+        // Update the event's registration status with the status from the backend
         setEvents(prevEvents => 
           prevEvents.map(event => 
             event.id === selectedEvent.id 
-              ? { ...event, is_registered: true, registration_status: 'PENDING' }
+              ? { ...event, is_registered: true, registration_status: responseData.status }
               : event
           )
         );
@@ -164,13 +159,7 @@ const AvailableEvents = () => {
         console.error('Registration error details:', {
           error: error.message,
           userInfo: userInfo,
-          selectedEvent: selectedEvent,
-          userTempleId: userInfo.temple_id,
-          eventTempleId: selectedEvent.temple_id,
-          requestBody: {
-            user_id: parseInt(userInfo.id),
-            event_id: parseInt(selectedEvent.id)
-          }
+          selectedEvent: selectedEvent
         });
         alert(error.message);
       }
@@ -178,55 +167,12 @@ const AvailableEvents = () => {
   };
 
   const handleUnregister = (event) => {
-    setEventToUnregister(event);
-    setShowCancelModal(true);
-  };
-
-  const handleConfirmUnregister = async () => {
-    try {
-      const response = await fetch('http://localhost:4000/api/events/update-registration-status', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          registration_id: eventToUnregister.registration_id,
-          status: 'REJECTED'
-        })
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          navigate('/login');
-          return;
-        }
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to cancel registration');
-      }
-
-      // Update the event's registration status
-      setEvents(prevEvents => 
-        prevEvents.map(event => 
-          event.id === eventToUnregister.id 
-            ? { ...event, is_registered: false, registration_status: null }
-            : event
-        )
-      );
-
-      setShowCancelModal(false);
-      setEventToUnregister(null);
-    } catch (error) {
-      alert(error.message || 'Failed to cancel registration');
-    }
+    alert('Only temple administrators can cancel registrations. Please contact your temple admin if you need to cancel your registration.');
   };
 
   const handleCancel = () => {
     setShowModal(false);
     setSelectedEvent(null);
-  };
-
-  const handleCancelUnregister = () => {
-    setShowCancelModal(false);
-    setEventToUnregister(null);
   };
 
   if (loading) {
@@ -248,10 +194,38 @@ const AvailableEvents = () => {
   }
 
   return (
+    <>
+      <div className='flex-1'>
+      <div className='bg-blue-600 rounded-br-md rounded-bl-md'>
+          <div className='flex flex-col  w-[80%] mx-auto text-white items-start  p-6'>
+            <div className='flex flex-row'>
+              <ul className="text-white space-y-4 list-disc pl-6">
+                <li className="text-base">
+                  ಒಂದು ದೇವಸ್ಥಾನದಿಂದ ವೈಯಕ್ತಿಕ
+                  ವಿಭಾಗದಲ್ಲಿ ಪ್ರತಿ ಸ್ಪರ್ಧೆಗೆ ಗರಿಷ್ಠ 3 ಸ್ಪರ್ಧಿ ಮತ್ತು ಒಬ್ಬ ಸ್ಪರ್ಧಿ ಯಾವುದಾದರೂ ಗರಿಷ್ಠ 3 ಸ್ಪರ್ಧೆಗಳಲ್ಲಿ
+                  ಭಾಗವಹಿಸಬಹುದು. (ಈ ನಿಯಮ 10 ವರ್ಷ ಒಳಗಿನವರಿಗೆ ಮತ್ತು 60 ವರ್ಷ ಮೇಲ್ಪಟ್ಟವರಿಗೆ
+                  ಅನ್ವಯಿಸುವುದಿಲ್ಲ) ಒಂದು ಸ್ಪರ್ಧೆಯಲ್ಲಿ ಕನಿಷ್ಠ 5 ಸ್ಪರ್ಧಿಗಳಿಲ್ಲದಿದ್ದರೆ ಸ್ಪರ್ಧೆಯನ್ನು ಕೈಬಿಡಲಾಗುವುದು.
+                </li>
+                <li className="text-base">
+                  ಕ್ರೀಡಾಳುಗಳು ತಮ್ಮ ವೈಯಕ್ತಿಕ ಸ್ಪರ್ಧಾ ವಿಭಾಗಗಳಲ್ಲಿ ಸೇರಲು/ಬದಲಾವಣೆ ಬಯಸಿದಲ್ಲಿ ದೇವಸ್ಥಾನದ ಅಧಿಕೃತ ವ್ಯಕ್ತಿಗಳಿಂದ ಒಪ್ಪಿಗೆ ಪಡೆದು ದೃಢೀಕರಿಸಬೇಕು. (ಒಂದು ವೇಳೆ ಆ ವಿಭಾಗದಲ್ಲಿ ನೋಂದಣಿ ಪೂರ್ತಿ ಗೊಂಡಿದ್ದಲ್ಲಿ ಮಾತ್ರ)
+                </li>
+              </ul>
+            </div>
+            {userInfo && (
+              <div className='flex flex-row gap-4 pt-6'>
+                <h2>Point of contact for {userInfo.temple}:</h2>
+                <h2>{userInfo.temple_admin_name || 'Not available'}</h2>
+                <h2>{userInfo.temple_admin_phone || 'Not available'}</h2>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    
     <div className="container mx-auto px-4 py-8">
       {userInfo && (
         <div className="mb-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-4">Your Profile</h2>
+          <h2 className="text-2xl font-bold mb-4">{userInfo.first_name} {userInfo.last_name}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-gray-600">Age</p>
@@ -259,11 +233,11 @@ const AvailableEvents = () => {
             </div>
             <div>
               <p className="text-gray-600">Gender</p>
-              <p className="font-semibold">{userInfo.gender}</p>
+              <p className="font-semibold">{userInfo.gender === 'M' ? 'Male' : userInfo.gender === 'F' ? 'Female' : userInfo.gender}</p>
             </div>
             <div>
               <p className="text-gray-600">Temple</p>
-              <p className="font-semibold">{userInfo.temple}</p>
+              <p className="font-semibold">{userInfo.temple || 'Not specified'}</p>
             </div>
           </div>
         </div>
@@ -271,78 +245,91 @@ const AvailableEvents = () => {
 
       <h2 className="text-2xl font-bold mb-6">Available Events</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
-          <div key={event.id} className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
-            <div className="space-y-2 mb-4">
-              <p className="text-gray-600">
-                <span className="font-medium">Type:</span> {event.type}
-              </p>
-              <p className="text-gray-600">
-                <span className="font-medium">Age Category:</span> {event.age_category.name}
-              </p>
-              <p className="text-gray-600">
-                <span className="font-medium">Gender:</span> {event.gender}
-              </p>
-              <p className="text-gray-600">
-                <span className="font-medium">Participants:</span> {event.participant_count}
-              </p>
-            </div>
-            {event.is_registered ? (
-              <div className="flex flex-col gap-2">
-                <div className="bg-green-100 text-green-700 px-4 py-2 rounded">
-                  Registered ({event.registration_status})
-                </div>
-                <button
-                  onClick={() => handleUnregister(event)}
-                  className="w-full bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-                >
-                  Cancel Registration
-                </button>
+        {events.map((event) => {
+          const registeredCount = events.filter(e => e.is_registered).length;
+          const isMaxRegistrationsReached = registeredCount >= 3;
+          const isDisabled = isMaxRegistrationsReached && !event.is_registered;
+
+          return (
+            <div key={event.id} className="bg-white rounded-lg shadow p-6">
+              <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
+              <div className="space-y-2 mb-4">
+                <p className="text-gray-600">
+                  <span className="font-medium">Type:</span> {event.type}
+                </p>
+                <p className="text-gray-600">
+                  <span className="font-medium">Age Category:</span> {event.age_category.name}
+                </p>
+                <p className="text-gray-600">
+                  <span className="font-medium">Gender:</span> {event.gender}
+                </p>
+                <p className="text-gray-600">
+                  <span className="font-medium">Participants:</span> {event.participant_count}
+                </p>
               </div>
-            ) : (
-              <button
-                onClick={() => handleRegisterClick(event)}
-                className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-              >
-                Register
-              </button>
-            )}
-          </div>
-        ))}
+              {event.is_registered ? (
+                <div className="flex flex-col gap-2">
+                  <div className={`px-4 py-2 rounded ${
+                    event.registration_status === 'ACCEPTED' 
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {event.registration_status === 'ACCEPTED' 
+                      ? 'Registered'
+                      : 'Registration Pending'}
+                  </div>
+                  <div className="text-sm text-gray-600 italic">
+                    Contact temple admin to cancel registration
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleRegisterClick(event)}
+                  disabled={isDisabled}
+                  className={`w-full px-4 py-2 rounded transition-colors ${
+                    isDisabled
+                      ? 'bg-gray-300 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                  title={isDisabled ? 'Maximum registration limit reached (3 events)' : 'Register'}
+                >
+                  {isDisabled ? 'Registration Limit Reached' : 'Register'}
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Registration Confirmation Modal */}
-      {showModal && (
+      {showModal && selectedEvent && (
         <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
-          <div className="bg-white p-6 rounded shadow-lg min-w-[300px]">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-md">
             <h2 className="text-lg font-semibold mb-4">Confirm Registration</h2>
-            <p>Are you sure you want to register for <span className="font-bold">{selectedEvent?.name}</span>?</p>
-            <p className="text-sm text-gray-600 mt-2">
-              You have registered for {events.filter(e => e.is_registered).length} out of 3 allowed events.
+            <p>
+              Are you sure you want to register for{" "}
+              <span className="font-bold">{selectedEvent.name}</span>?
             </p>
-            <div className="flex justify-end gap-4 mt-6">
-              <button className="px-4 py-2 bg-gray-300 rounded" onClick={handleCancel}>Cancel</button>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={handleConfirm}>Confirm</button>
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                onClick={handleCancel}
+                className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Cancel Registration Confirmation Modal */}
-      {showCancelModal && (
-        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
-          <div className="bg-white p-6 rounded shadow-lg min-w-[300px]">
-            <h2 className="text-lg font-semibold mb-4">Cancel Registration</h2>
-            <p>Are you sure you want to cancel your registration for <span className="font-bold">{eventToUnregister?.name}</span>?</p>
-            <div className="flex justify-end gap-4 mt-6">
-              <button className="px-4 py-2 bg-gray-300 rounded" onClick={handleCancelUnregister}>No</button>
-              <button className="px-4 py-2 bg-red-600 text-white rounded" onClick={handleConfirmUnregister}>Yes, Cancel</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
+    </>
   );
 };
 

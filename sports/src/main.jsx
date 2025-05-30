@@ -14,7 +14,7 @@ import Events from './components/Events.jsx';
 import Alltemplereports from './Pages/Alltemplereports.jsx';
 import Templedetailedreports from './Pages/Templedetailedreports.jsx';
 import Participantslist from './Pages/Participantslist.jsx';
-import Error from './components/Error.jsx';
+import Error from './Pages/Error.jsx';
 import AvailableEvents from './components/AvailableEvents.jsx';
 
 // routing configurations//
@@ -50,6 +50,10 @@ import AvailableEvents from './components/AvailableEvents.jsx';
           {
             path: "groupevents",
             element: <GroupEvents />
+          },
+          {
+            path: "Participantslist",
+            element: <Participantslist />
           }
         ]
       },

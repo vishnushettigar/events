@@ -70,6 +70,9 @@ const SignInForm = () => {
                 localStorage.setItem('user', JSON.stringify(data.user));
             }
 
+            // Dispatch auth change event
+            window.dispatchEvent(new Event('authChange'));
+
             // Reset form
             setFormData({ aadhaar: '', password: '' });
             setErrors({});

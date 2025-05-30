@@ -1,6 +1,6 @@
 import React from 'react';
 import InstagramButton from './InstagramButton';
-
+import SFC_logo from '../assets/sfc_logo.png';
 
 const Footer = () => {
   return (
@@ -17,23 +17,18 @@ const Footer = () => {
             </div>
             <div className='logo pl-2'>
               <a href="https://www.instagram.com/friends_club_salikeri/" target="_blank" >
-                 <img className='w-12' src="http://localhost:8000/static/img/SFC_new.png" alt="SFC_logo" />
+                 <img className='w-12' src={SFC_logo} alt="SFC Logo" />
               </a>
-              
             </div>
-
           </div>
           
-           <div className='flex flex-col text-white  '> 
+           <div className='flex flex-col text-white'> 
               <div>
                  <a href="https://www.instagram.com/friends_club_salikeri/" target="_blank" rel="noopener noreferrer"><InstagramButton /></a>
               </div>
-              
            </div>
       </div>
-       
     </footer>
-    
   )
 }
 

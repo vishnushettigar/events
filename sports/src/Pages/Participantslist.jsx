@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 // Example data for demonstration. Replace with real data or fetch from API/props.
 const participantsList = [
@@ -72,11 +72,46 @@ const participantsList = [
 ];
 
 const Participantslist = () => {
+  const [selectedAgeCategory, setSelectedAgeCategory] = useState('');
+  const [selectedGender, setSelectedGender] = useState('');
+
+  const filteredParticipants = participantsList.filter(participant => {
+    return (selectedAgeCategory === '' || participant.age_category === selectedAgeCategory) &&
+           (selectedGender === '' || participant.gender === selectedGender);
+  });
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
       <h4 className="text-center text-2xl font-bold mb-6">30ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2022</h4>
       <div className="mb-10">
         <h4 className="text-center text-xl font-semibold mb-4">SIDDAKATTE</h4>
+        <div className="mb-4 flex space-x-4">
+          <select
+            value={selectedAgeCategory}
+            onChange={(e) => setSelectedAgeCategory(e.target.value)}
+            className="p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Age Categories</option>
+            <option value="0-5">0-5</option>
+            <option value="6-10">6-10</option>
+            <option value="11-14">11-14</option>
+            <option value="15-18">15-18</option>
+            <option value="19-24">19-24</option>
+            <option value="25-35">25-35</option>
+            <option value="36-48">36-48</option>
+            <option value="49-60">49-60</option>
+            <option value="61-90">61-90</option>
+          </select>
+          <select
+            value={selectedGender}
+            onChange={(e) => setSelectedGender(e.target.value)}
+            className="p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Genders</option>
+            <option value="MALE">Male</option>
+            <option value="FEMALE">Female</option>
+          </select>
+        </div>
         <div className="overflow-x-auto rounded-xl shadow bg-white">
           <table className="min-w-full divide-y divide-blue-200">
             <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
@@ -91,7 +126,7 @@ const Participantslist = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-blue-100">
-              {participantsList.map((participant, idx) => (
+              {filteredParticipants.map((participant, idx) => (
                 <tr key={idx} className="hover:bg-blue-50 transition">
                   <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
                   <td className="px-4 py-2">{participant.name}</td>
