@@ -63,8 +63,12 @@ async function login(username, password) {
       new_value: JSON.stringify(user)
     }
   });
-  // Generate JWT token
-  const token = jwt.sign({ id: user.id, role: user.profile.role_id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  // Generate JWT token with temple_id
+  const token = jwt.sign({ 
+    id: user.id, 
+    role: user.profile.role_id,
+    temple_id: user.profile.temple_id 
+  }, process.env.JWT_SECRET, { expiresIn: '1h' });
   return { user, token };
 }
 

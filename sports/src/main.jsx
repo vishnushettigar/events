@@ -15,6 +15,7 @@ import Alltemplereports from './Pages/Alltemplereports.jsx';
 import Templedetailedreports from './Pages/Templedetailedreports.jsx';
 import Participantslist from './Pages/Participantslist.jsx';
 import Error from './Pages/Error.jsx';
+import AvailableEvents from './components/AvailableEvents.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -40,7 +41,7 @@ import Error from './Pages/Error.jsx';
         children: [
           {
             index: true,
-            element: <Events />
+            element: <AvailableEvents />
           },
           {
             path: "templeparticipants",
@@ -49,6 +50,10 @@ import Error from './Pages/Error.jsx';
           {
             path: "groupevents",
             element: <GroupEvents />
+          },
+          {
+            path: "Participantslist",
+            element: <Participantslist />
           }
         ]
       },

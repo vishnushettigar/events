@@ -4,22 +4,22 @@ const prisma = new PrismaClient();
 async function main() {
   // Seed temples
   const temples = [
+    { code: 'SALIKERI', name: 'SALIKERI' },
     { code: 'BARKUR', name: 'BARKUR' },
-    { code: 'HALEYANGADI', name: 'HALEYANGADI' },
     { code: 'HOSADURGA', name: 'HOSADURGA' },
-    { code: 'KALYANPURA', name: 'KALYANPURA' },
-    { code: 'KAPU', name: 'KAPU' },
-    { code: 'KARKALA', name: 'KARKALA' },
-    { code: 'KINNIMULKI', name: 'KINNIMULKI' },
-    { code: 'MANGALORE', name: 'MANGALORE' },
     { code: 'MANJESHWARA', name: 'MANJESHWARA' },
+    { code: 'ULLALA', name: 'ULLALA' },
+    { code: 'SURATHKAL', name: 'SURATHKAL' },
+    { code: 'HALEYANGADI', name: 'HALEYANGADI' },
     { code: 'MULKI', name: 'MULKI' },
     { code: 'PADUBIDRI', name: 'PADUBIDRI' },
-    { code: 'SALIKERI', name: 'SALIKERI' },
+    { code: 'YERMAL', name: 'YERMAL' },
+    { code: 'KAPU', name: 'KAPU' },
+    { code: 'KINNIMULKI', name: 'KINNIMULKI' },
+    { code: 'KALYANPURA', name: 'KALYANPURA' },
+    { code: 'KARKALA', name: 'KARKALA' },
     { code: 'SIDDAKATTE', name: 'SIDDAKATTE' },
-    { code: 'SURATHKAL', name: 'SURATHKAL' },
-    { code: 'ULLALA', name: 'ULLALA' },
-    { code: 'YERMAL', name: 'YERMAL' }
+    { code: 'MANGALORE', name: 'MANGALORE' }
   ];
 
   for (const temple of temples) {
@@ -46,42 +46,18 @@ async function main() {
     });
   }
 
-  // Seed event types
-  const eventTypes = [
-    { name: '100m Race', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: '200m Race', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: '400m Race', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: '800m Race', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: '1500m Race', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: '4x100m Relay', type: 'TEAM', participant_count: 4 },
-    { name: '4x400m Relay', type: 'TEAM', participant_count: 4 },
-    { name: 'Long Jump', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'High Jump', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Shot Put', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Discus Throw', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Javelin Throw', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Tug of War', type: 'TEAM', participant_count: 8 },
-    { name: 'Kabaddi', type: 'TEAM', participant_count: 7 },
-    { name: 'Kho-Kho', type: 'TEAM', participant_count: 9 }
-  ];
-
-  for (const eventType of eventTypes) {
-    await prisma.mst_event_type.upsert({
-      where: { name: eventType.name },
-      update: {},
-      create: eventType
-    });
-  }
-
   // Seed age categories
   const ageCategories = [
-    { name: 'Under 12', from_age: 0, to_age: 12 },
-    { name: 'Under 15', from_age: 13, to_age: 15 },
-    { name: 'Under 18', from_age: 16, to_age: 18 },
-    { name: 'Under 21', from_age: 19, to_age: 21 },
-    { name: 'Open', from_age: 22, to_age: 35 },
-    { name: 'Senior', from_age: 36, to_age: 50 },
-    { name: 'Veteran', from_age: 51, to_age: 100 }
+    { name: '6-10', from_age: 6, to_age: 10 },
+    { name: '11-14', from_age: 11, to_age: 14 },
+    { name: '15-18', from_age: 15, to_age: 18 },
+    { name: '19-24', from_age: 19, to_age: 24 },
+    { name: '25-35', from_age: 25, to_age: 35 },
+    { name: '36-48', from_age: 36, to_age: 48 },
+    { name: '49-60', from_age: 49, to_age: 60 },
+    { name: 'All', from_age: 0, to_age: 99 },
+    { name: '61 - 90', from_age: 61, to_age: 90 },
+    { name: '0-5', from_age: 0, to_age: 5 }
   ];
 
   for (const ageCategory of ageCategories) {
@@ -92,57 +68,169 @@ async function main() {
     });
   }
 
-  // Seed event results
-  const eventResults = [
-    { event_type_id: 1, rank: 'FIRST', points: 10 },  // 100m Race
-    { event_type_id: 1, rank: 'SECOND', points: 8 },
-    { event_type_id: 1, rank: 'THIRD', points: 6 },
-    { event_type_id: 6, rank: 'FIRST', points: 15 },  // 4x100m Relay
-    { event_type_id: 6, rank: 'SECOND', points: 12 },
-    { event_type_id: 6, rank: 'THIRD', points: 9 },
-    { event_type_id: 13, rank: 'FIRST', points: 20 }, // Tug of War
-    { event_type_id: 13, rank: 'SECOND', points: 15 },
-    { event_type_id: 13, rank: 'THIRD', points: 10 },
-    { event_type_id: 14, rank: 'FIRST', points: 25 }, // Kabaddi
-    { event_type_id: 14, rank: 'SECOND', points: 20 },
-    { event_type_id: 14, rank: 'THIRD', points: 15 }
+  // Seed event types
+  const eventTypes = [
+    { name: 'Running - 50 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Running - 100 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Running - 200 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Running - 400 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Running - 800 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Running - 25 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Relay - 100 X 4', type: 'TEAM', participant_count: 4 },
+    { name: 'Lucky Circle', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Ball Passing', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Volleyball', type: 'TEAM', participant_count: 9 },
+    { name: 'Throwball', type: 'TEAM', participant_count: 10 },
+    { name: 'Tug of War', type: 'TEAM', participant_count: 9 },
+    { name: 'Couple Relay - 50 x 2', type: 'TEAM', participant_count: 2 },
+    { name: 'Frog Jump - 25 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Long jump', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'SHOT PUT', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Frog Jump - 15 mts', type: 'INDIVIDUAL', participant_count: 1 }
   ];
 
-  for (const result of eventResults) {
-    await prisma.mst_event_result.upsert({
-      where: {
-        event_type_id_rank: {
-          event_type_id: result.event_type_id,
-          rank: result.rank
-        }
-      },
+  for (const eventType of eventTypes) {
+    await prisma.mst_event_type.upsert({
+      where: { name: eventType.name },
       update: {},
-      create: result
+      create: eventType
     });
   }
 
-  // Create a super user
-  const superUser = await prisma.user.upsert({
-    where: { username: 'admin' },
-    update: {},
-    create: {
-      username: 'admin',
-      password: 'admin123', // In production, this should be hashed
-      email: 'admin@example.com',
-      profile: {
-        create: {
-          first_name: 'Super',
-          last_name: 'Admin',
-          email: 'admin@example.com',
-          phone: '1234567890',
-          dob: new Date('1990-01-01'),
-          gender: 'MALE',
-          role_id: 3, // SUPER_USER role
-          temple_id: 1 // BARKUR temple
-        }
-      }
-    }
-  });
+  // Seed events
+  const events = [
+    { event_type_id: 14, age_category_id: 1, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 1, age_category_id: 1, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 14, age_category_id: 1, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 1, age_category_id: 1, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 1, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 1, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 1, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 1, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 11, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 12, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 12, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 13, age_category_id: 8, gender: 'ALL', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 8, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 13, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 13, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 8, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 9, gender: 'FEMALE', is_deleted: false, is_closed: false }
+  ];
+
+  for (const event of events) {
+    await prisma.mst_event.create({
+      data: event
+    });
+  }
+
+  // Seed event results
+  const eventResults = [
+    { event_type_id: 1, rank: 'FIRST', points: 5 },
+    { event_type_id: 1, rank: 'SECOND', points: 3 },
+    { event_type_id: 1, rank: 'THIRD', points: 1 },
+    { event_type_id: 2, rank: 'FIRST', points: 5 },
+    { event_type_id: 2, rank: 'SECOND', points: 3 },
+    { event_type_id: 2, rank: 'THIRD', points: 1 },
+    { event_type_id: 3, rank: 'FIRST', points: 5 },
+    { event_type_id: 3, rank: 'SECOND', points: 3 },
+    { event_type_id: 3, rank: 'THIRD', points: 1 },
+    { event_type_id: 4, rank: 'FIRST', points: 5 },
+    { event_type_id: 4, rank: 'SECOND', points: 3 },
+    { event_type_id: 4, rank: 'THIRD', points: 1 },
+    { event_type_id: 5, rank: 'FIRST', points: 5 },
+    { event_type_id: 5, rank: 'SECOND', points: 3 },
+    { event_type_id: 5, rank: 'THIRD', points: 1 },
+    { event_type_id: 6, rank: 'FIRST', points: 5 },
+    { event_type_id: 6, rank: 'SECOND', points: 3 },
+    { event_type_id: 6, rank: 'THIRD', points: 1 },
+    { event_type_id: 7, rank: 'FIRST', points: 10 },
+    { event_type_id: 7, rank: 'SECOND', points: 5 },
+    { event_type_id: 7, rank: 'THIRD', points: 3 },
+    { event_type_id: 8, rank: 'FIRST', points: 5 },
+    { event_type_id: 8, rank: 'SECOND', points: 3 },
+    { event_type_id: 8, rank: 'THIRD', points: 1 },
+    { event_type_id: 9, rank: 'FIRST', points: 5 },
+    { event_type_id: 9, rank: 'SECOND', points: 3 },
+    { event_type_id: 9, rank: 'THIRD', points: 1 },
+    { event_type_id: 10, rank: 'FIRST', points: 10 },
+    { event_type_id: 10, rank: 'SECOND', points: 5 },
+    { event_type_id: 11, rank: 'FIRST', points: 10 },
+    { event_type_id: 11, rank: 'SECOND', points: 5 },
+    { event_type_id: 12, rank: 'FIRST', points: 10 },
+    { event_type_id: 12, rank: 'SECOND', points: 5 },
+    { event_type_id: 13, rank: 'FIRST', points: 5 },
+    { event_type_id: 13, rank: 'SECOND', points: 3 },
+    { event_type_id: 13, rank: 'THIRD', points: 1 },
+    { event_type_id: 14, rank: 'FIRST', points: 5 },
+    { event_type_id: 14, rank: 'SECOND', points: 3 },
+    { event_type_id: 14, rank: 'THIRD', points: 1 },
+    { event_type_id: 15, rank: 'FIRST', points: 5 },
+    { event_type_id: 15, rank: 'SECOND', points: 3 },
+    { event_type_id: 15, rank: 'THIRD', points: 1 }
+  ];
+
+  for (const result of eventResults) {
+    await prisma.mst_event_result.create({
+      data: result
+    });
+  }
 
   console.log('Database has been seeded. 🌱');
 }
