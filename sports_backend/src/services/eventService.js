@@ -198,7 +198,7 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
   const registration = await prisma.ind_event_registration.findUnique({
     where: { id: registration_id },
     include: {
-      event: {
+      user: {
         select: { temple_id: true }
       }
     }
@@ -208,14 +208,30 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
     throw new Error('Registration not found');
   }
 
-  // Verify the temple admin belongs to the same temple as the event
-  if (admin.temple_id !== registration.event.temple_id) {
+  // Verify the temple admin belongs to the same temple as the user
+  if (admin.temple_id !== registration.user.temple_id) {
     throw new Error('Unauthorized: Cannot manage registrations from other temples');
+  }
+
+  // Map the status to the correct enum value
+  let mappedStatus;
+  switch (status.toUpperCase()) {
+    case 'APPROVED':
+      mappedStatus = 'ACCEPTED';
+      break;
+    case 'REJECTED':
+      mappedStatus = 'DECLINED';
+      break;
+    case 'PENDING':
+      mappedStatus = 'PENDING';
+      break;
+    default:
+      throw new Error('Invalid status. Must be one of: PENDING, APPROVED, REJECTED');
   }
 
   const updatedRegistration = await prisma.ind_event_registration.update({
     where: { id: registration_id },
-    data: { status }
+    data: { status: mappedStatus }
   });
 
   // Log the action
@@ -223,7 +239,10 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
     data: {
       user_id: temple_admin_id,
       action: 'UPDATE_REGISTRATION_STATUS',
-      details: `Updated registration ${registration_id} status to ${status}`
+      table_name: 'Ind_event_registration',
+      record_id: registration_id,
+      old_value: JSON.stringify({ status: registration.status }),
+      new_value: JSON.stringify({ status: mappedStatus })
     }
   });
 
@@ -231,55 +250,128 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
 }
 
 async function getTempleParticipants(temple_id, filters = {}) {
-  const where = {
-    event: {
-      temple_id: temple_id
-    },
-    is_deleted: false
-  };
+  try {
+    console.log('getTempleParticipants called with:', { temple_id, filters });
 
-  // Add optional filters
-  if (filters.event_id) {
-    where.event_id = filters.event_id;
-  }
-  if (filters.status) {
-    where.status = filters.status;
-  }
+    // First verify the temple exists
+    const temple = await prisma.mst_temple.findUnique({
+      where: { id: temple_id }
+    });
 
-  const participants = await prisma.ind_event_registration.findMany({
-    where,
-    include: {
+    if (!temple) {
+      console.error('Temple not found:', temple_id);
+      throw new Error(`Temple with ID ${temple_id} not found`);
+    }
+
+    console.log('Found temple:', temple);
+
+    // First check if there are any users from this temple
+    const templeUsers = await prisma.profile.count({
+      where: {
+        temple_id: temple_id,
+        is_deleted: false
+      }
+    });
+    console.log('Number of users in temple:', templeUsers);
+
+    const where = {
       user: {
-        select: {
-          first_name: true,
-          last_name: true,
-          email: true,
-          phone: true,
-          gender: true,
-          dob: true
-        }
+        temple_id: temple_id
       },
-      event: {
-        select: {
-          name: true,
-          event_type: {
-            select: {
-              name: true,
-              type: true
+      is_deleted: false
+    };
+
+    // Add optional filters
+    if (filters.event_ids && filters.event_ids.length > 0) {
+      where.event_id = {
+        in: filters.event_ids
+      };
+    } else if (filters.event_id) {
+      where.event_id = filters.event_id;
+    }
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    console.log('Query where clause:', JSON.stringify(where, null, 2));
+
+    // First try a count query to verify we can find records
+    const count = await prisma.ind_event_registration.count({
+      where
+    });
+    console.log('Found registration count:', count);
+
+    if (count === 0) {
+      console.log('No registrations found for temple:', temple_id);
+      return []; // Return empty array instead of throwing error
+    }
+
+    const participants = await prisma.ind_event_registration.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
+            email: true,
+            phone: true,
+            gender: true,
+            dob: true,
+            user: {
+              select: {
+                email: true
+              }
             }
           }
-        }
-      },
-      event_result: {
-        select: {
-          rank: true,
-          points: true
+        },
+        event: {
+          include: {
+            event_type: {
+              select: {
+                name: true,
+                type: true
+              }
+            }
+          }
+        },
+        event_result: {
+          select: {
+            rank: true,
+            points: true
+          }
         }
       }
-    }
-  });
+    });
 
-  return participants;
+    // Transform the data to include event name from event_type and ensure email is available
+    const transformedParticipants = participants.map(participant => ({
+      ...participant,
+      user: {
+        ...participant.user,
+        email: participant.user.email || participant.user.user?.email || null
+      },
+      event: {
+        ...participant.event,
+        name: participant.event.event_type.name
+      }
+    }));
+
+    console.log('Query result:', {
+      participantCount: transformedParticipants.length,
+      firstParticipant: transformedParticipants[0] || null
+    });
+
+    return transformedParticipants;
+  } catch (error) {
+    console.error('Error in getTempleParticipants:', {
+      error: error.message,
+      stack: error.stack,
+      temple_id,
+      filters
+    });
+    throw error;
+  }
 }
 
 async function getTempleTeams(temple_id, filters = {}) {

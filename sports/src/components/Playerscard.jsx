@@ -1,84 +1,124 @@
-import React from 'react'
+import React from 'react';
 
-const Playerscard = () => {
-    const participants = [
-        {
-            name: 'Ankith Shettigar',
-            result: 'THIRD',
-            phone: '9686671369',
-            email: 'ankithshettigar47@gmail.com'
-        },
-        {
-            name: 'Rahul Shettigar',
-            result: 'FIRST',
-            phone: '9876543210',
-            email: 'rahul.shettigar@gmail.com'
-        },
-        {
-            name: 'Priya Shettigar',
-            result: 'SECOND',
-            phone: '9876543211',
-            email: 'priya.shettigar@gmail.com'
-        },
-        {
-            name: 'Extra Participant',
-            result: 'NONE',
-            phone: '9000000000',
-            email: 'extra@example.com'
+const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount }) => {
+    if (!participant) return null;
+
+    const handleStatusUpdate = async (newStatus) => {
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await fetch('http://localhost:4000/api/events/update-registration-status', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    registration_id: participant.id,
+                    status: newStatus
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to update status');
+            }
+
+            // Call the parent component's callback with the new status
+            if (onStatusUpdate) {
+                onStatusUpdate(newStatus);
+            }
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert(error.message);
         }
-    ];
+    };
+
+    const canAcceptMore = acceptedCount < 3;
+    const canRejectApproved = participant.status === 'ACCEPTED' && pendingCount > 0;
 
     return (
-        <div className="space-y-4">
-            {participants.map((participant, index) => (
-                <div 
-                    key={index}
-                    className="bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 rounded-xl shadow-sm p-6 transition-all duration-300 hover:shadow-md hover:border-amber-300 relative"
-                >
-                    {/* Status badge */}
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                        {index < 3 ? (
-                            <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">ACCEPTED</span>
-                        ) : (
-                            <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-bold">PENDING</span>
+        <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <div className="grid grid-cols-12 gap-4 items-center">
+                {/* Name - 2 columns */}
+                <div className="col-span-2">
+                    <div className="text-sm font-medium text-gray-500">Name</div>
+                    <div className="text-base text-gray-900">
+                        {participant.user?.first_name} {participant.user?.last_name}
+                    </div>
+                </div>
+
+                {/* Email - 4 columns */}
+                <div className="col-span-4">
+                    <div className="text-sm font-medium text-gray-500">Email</div>
+                    <div className="text-base text-gray-900">
+                        {participant.user?.email || 'Not provided'}
+                    </div>
+                </div>
+
+                {/* Phone - 2 columns */}
+                <div className="col-span-2">
+                    <div className="text-sm font-medium text-gray-500">Phone</div>
+                    <div className="text-base text-gray-900">
+                        {participant.user?.phone || 'Not provided'}
+                    </div>
+                </div>
+
+                {/* Result - 2 columns */}
+                <div className="col-span-2">
+                    <div className="text-sm font-medium text-gray-500">Result</div>
+                    <div className={`text-lg font-semibold ${
+                        participant.event_result?.rank === 'FIRST' ? 'text-yellow-500' :
+                        participant.event_result?.rank === 'SECOND' ? 'text-gray-400' :
+                        participant.event_result?.rank === 'THIRD' ? 'text-amber-600' :
+                        'text-gray-900'
+                    }`}>
+                        {participant.event_result?.rank || 'Not available'}
+                    </div>
+                </div>
+
+                {/* Status and Actions - 2 columns */}
+                <div className="col-span-2">
+                    <div className="text-sm font-medium text-gray-500">Status</div>
+                    <div className="flex flex-col gap-2">
+                        <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            participant.status === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                            participant.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                        }`}>
+                            {participant.status === 'ACCEPTED' ? 'APPROVED' :
+                             participant.status === 'DECLINED' ? 'REJECTED' :
+                             participant.status}
+                        </div>
+                        
+                        {participant.status === 'PENDING' && canAcceptMore && (
+                            <button
+                                onClick={() => handleStatusUpdate('APPROVED')}
+                                className="text-xs bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition-colors"
+                            >
+                                Accept
+                            </button>
                         )}
-                        {/* Delete button (UI only) */}
-                        <button
-                            className="ml-2 px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs font-semibold transition"
-                            title="Delete participant"
-                        >
-                            Delete
-                        </button>
+                        {(participant.status === 'PENDING' || canRejectApproved) && (
+                            <button
+                                onClick={() => handleStatusUpdate('REJECTED')}
+                                className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors"
+                            >
+                                Reject
+                            </button>
+                        )}
+                        {participant.status === 'PENDING' && !canAcceptMore && (
+                            <div className="text-xs text-gray-500 italic">
+                                Max participants reached
+                            </div>
+                        )}
+                    </div>
                 </div>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="space-y-1">
-                            <h6 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Participant Name</h6>
-                            <p className="text-lg font-medium text-gray-900">{participant.name}</p>
-                </div>
-                        <div className="space-y-1">
-                            <h6 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Result</h6>
-                            <p className={`text-lg font-medium ${
-                                participant.result === 'FIRST' ? 'text-yellow-600' :
-                                participant.result === 'SECOND' ? 'text-gray-600' :
-                                participant.result === 'THIRD' ? 'text-amber-700' :
-                                'text-gray-400'
-                            }`}>
-                                {participant.result}
-                            </p>
-                </div>
-                        <div className="space-y-1">
-                            <h6 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Phone No</h6>
-                            <p className="text-lg font-medium text-gray-900">{participant.phone}</p>
-                </div>
-                        <div className="space-y-1">
-                            <h6 className="text-sm font-semibold text-gray-600 uppercase tracking-wider">Email</h6>
-                            <p className="text-lg font-medium text-gray-900 truncate">{participant.email}</p>
             </div>
         </div>
-                </div>
-            ))}
-        </div>
-    )
-}
+    );
+};
 
-export default Playerscard
+export default Playerscard;

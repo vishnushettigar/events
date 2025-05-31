@@ -81,64 +81,74 @@ const Participantslist = () => {
   });
 
   return (
-    <div className="max-w-5xl mx-auto py-10 px-4">
-      <h4 className="text-center text-2xl font-bold mb-6">30ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2022</h4>
-      <div className="mb-10">
-        <h4 className="text-center text-xl font-semibold mb-4">SIDDAKATTE</h4>
-        <div className="mb-4 flex space-x-4">
-          <select
-            value={selectedAgeCategory}
-            onChange={(e) => setSelectedAgeCategory(e.target.value)}
-            className="p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Age Categories</option>
-            <option value="0-5">0-5</option>
-            <option value="6-10">6-10</option>
-            <option value="11-14">11-14</option>
-            <option value="15-18">15-18</option>
-            <option value="19-24">19-24</option>
-            <option value="25-35">25-35</option>
-            <option value="36-48">36-48</option>
-            <option value="49-60">49-60</option>
-            <option value="61-90">61-90</option>
-          </select>
-          <select
-            value={selectedGender}
-            onChange={(e) => setSelectedGender(e.target.value)}
-            className="p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Genders</option>
-            <option value="MALE">Male</option>
-            <option value="FEMALE">Female</option>
-          </select>
-        </div>
-        <div className="overflow-x-auto rounded-xl shadow bg-white">
-          <table className="min-w-full divide-y divide-blue-200">
-            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
-              <tr>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Name</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Category</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Aadhar No</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">DOB</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Gender</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Phone No</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-blue-100">
-              {filteredParticipants.map((participant, idx) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
-                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
-                  <td className="px-4 py-2">{participant.name}</td>
-                  <td className="px-4 py-2">{participant.age_category}</td>
-                  <td className="px-4 py-2">{participant.aadhar_number}</td>
-                  <td className="px-4 py-2">{participant.date_of_birth}</td>
-                  <td className="px-4 py-2">{participant.gender}</td>
-                  <td className="px-4 py-2">{participant.phone_number}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <h4 className="text-center text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-blue-800">30ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2022</h4>
+        <div className="mb-6 sm:mb-10">
+          <h4 className="text-center text-lg sm:text-xl font-semibold mb-4 text-purple-700">templename</h4>
+          
+          {/* Filters Section */}
+          <div className="mb-4 flex flex-col sm:flex-row gap-4 sm:space-x-4">
+            <select
+              value={selectedAgeCategory}
+              onChange={(e) => setSelectedAgeCategory(e.target.value)}
+              className="w-full sm:w-auto p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+            >
+              <option value="">All Age Categories</option>
+              <option value="0-5">0-5</option>
+              <option value="6-10">6-10</option>
+              <option value="11-14">11-14</option>
+              <option value="15-18">15-18</option>
+              <option value="19-24">19-24</option>
+              <option value="25-35">25-35</option>
+              <option value="36-48">36-48</option>
+              <option value="49-60">49-60</option>
+              <option value="61-90">61-90</option>
+            </select>
+            <select
+              value={selectedGender}
+              onChange={(e) => setSelectedGender(e.target.value)}
+              className="w-full sm:w-auto p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+            >
+              <option value="">All Genders</option>
+              <option value="MALE">Male</option>
+              <option value="FEMALE">Female</option>
+            </select>
+          </div>
+
+          {/* Table Section */}
+          <div className="w-full overflow-x-auto rounded-xl shadow-lg bg-white">
+            <div className="min-w-full inline-block align-middle">
+              <div className="overflow-hidden">
+                <table className="min-w-full divide-y divide-blue-200">
+                  <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+                    <tr>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">Name</th>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">Category</th>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">Aadhar No</th>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">DOB</th>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">Gender</th>
+                      <th scope="col" className="px-3 sm:px-4 py-2 text-xs font-bold text-white uppercase tracking-wider">Phone No</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-blue-100">
+                    {filteredParticipants.map((participant, idx) => (
+                      <tr key={idx} className="hover:bg-blue-50 transition">
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm font-semibold text-blue-900">{idx + 1}</td>
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{participant.name}</td>
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{participant.age_category}</td>
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{participant.aadhar_number}</td>
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{participant.date_of_birth}</td>
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{participant.gender}</td>
+                        <td className="px-3 sm:px-4 py-2 whitespace-nowrap text-sm text-gray-900">{participant.phone_number}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

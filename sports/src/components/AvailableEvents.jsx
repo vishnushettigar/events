@@ -175,6 +175,31 @@ const AvailableEvents = () => {
     setSelectedEvent(null);
   };
 
+  const getStatusDisplay = (status) => {
+    switch (status) {
+      case 'ACCEPTED':
+        return {
+          text: 'Approved',
+          className: 'bg-green-100 text-green-700'
+        };
+      case 'PENDING':
+        return {
+          text: 'Pending',
+          className: 'bg-yellow-100 text-yellow-700'
+        };
+      case 'DECLINED':
+        return {
+          text: 'Rejected',
+          className: 'bg-red-100 text-red-700'
+        };
+      default:
+        return {
+          text: status || 'Not Registered',
+          className: 'bg-gray-100 text-gray-700'
+        };
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -246,9 +271,10 @@ const AvailableEvents = () => {
       <h2 className="text-2xl font-bold mb-6">Available Events</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {events.map((event) => {
-          const registeredCount = events.filter(e => e.is_registered).length;
+          const registeredCount = events.filter(e => e.is_registered && e.registration_status === 'ACCEPTED').length;
           const isMaxRegistrationsReached = registeredCount >= 3;
           const isDisabled = isMaxRegistrationsReached && !event.is_registered;
+          const statusDisplay = getStatusDisplay(event.registration_status);
 
           return (
             <div key={event.id} className="bg-white rounded-lg shadow p-6">
@@ -269,18 +295,14 @@ const AvailableEvents = () => {
               </div>
               {event.is_registered ? (
                 <div className="flex flex-col gap-2">
-                  <div className={`px-4 py-2 rounded ${
-                    event.registration_status === 'ACCEPTED' 
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {event.registration_status === 'ACCEPTED' 
-                      ? 'Registered'
-                      : 'Registration Pending'}
+                  <div className={`px-4 py-2 rounded ${statusDisplay.className}`}>
+                    {statusDisplay.text}
                   </div>
-                  <div className="text-sm text-gray-600 italic">
-                    Contact temple admin to cancel registration
-                  </div>
+                  {event.registration_status !== 'DECLINED' && (
+                    <div className="text-sm text-gray-600 italic">
+                      {/* Contact temple admin to cancel registration */}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button

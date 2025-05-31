@@ -94,26 +94,41 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
     const updatedRegistration = await eventService.updateRegistrationStatus(registration_id, status, req.user.id);
     res.json(updatedRegistration);
   } catch (error) {
-    console.error(error);
+    console.error('Error updating registration status:', error);
     if (error.message.includes('Unauthorized')) {
       return res.status(403).json({ error: error.message });
     }
-    res.status(500).json({ error: 'Failed to update registration status' });
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Failed to update registration status' });
   }
 });
 
-// List temple participants
-router.get('/temple-participants', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+// Get temple participants
+router.get('/temple-participants', authenticate, requireRole(2), async (req, res) => {
   try {
-    const filters = {
-      event_id: req.query.event_id ? parseInt(req.query.event_id) : undefined,
-      status: req.query.status
-    };
-    const participants = await eventService.getTempleParticipants(req.user.temple_id, filters);
+        const { event_ids, status } = req.query;
+        
+        if (!req.user.temple_id) {
+            console.error('No temple_id found in user object');
+            return res.status(400).json({ error: 'User is not associated with any temple' });
+        }
+
+        // Convert event_ids string to array
+        const eventIdArray = event_ids ? event_ids.split(',').map(id => parseInt(id)) : [];
+
+        console.log('Fetching participants for events:', eventIdArray);
+        
+        const participants = await eventService.getTempleParticipants(req.user.temple_id, {
+            event_ids: eventIdArray,
+            status: status
+        });
+
     res.json(participants);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch participants' });
+        console.error('Error in /temple-participants route:', error);
+        res.status(500).json({ error: error.message });
   }
 });
 

@@ -285,11 +285,27 @@ router.get('/profile', authenticate, async (req, res) => {
             age--;
         }
 
+        // Get temple admin information
+        const templeAdmin = await prisma.profile.findFirst({
+            where: {
+                temple_id: user.profile.temple_id,
+                role_id: 2, // TEMPLE_ADMIN role
+                is_deleted: false
+            },
+            select: {
+                first_name: true,
+                last_name: true,
+                phone: true
+            }
+        });
+
         // Format response
         const profileData = {
             ...user.profile,
             age,
-            temple: user.profile.temple.name
+            temple: user.profile.temple.name,
+            temple_admin_name: templeAdmin ? `${templeAdmin.first_name} ${templeAdmin.last_name}` : null,
+            temple_admin_phone: templeAdmin?.phone || null
         };
 
         console.log('Profile found:', profileData);
@@ -406,6 +422,31 @@ router.get('/available-events', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error fetching available events:', error);
     res.status(500).json({ error: 'Failed to fetch available events' });
+  }
+});
+
+// Debug endpoint to check user info
+router.get('/debug-info', authenticate, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: {
+        profile: {
+          include: {
+            temple: true,
+            role: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      jwt_user: req.user,
+      db_user: user
+    });
+  } catch (error) {
+    console.error('Error in debug-info endpoint:', error);
+    res.status(500).json({ error: 'Failed to fetch debug info' });
   }
 });
 

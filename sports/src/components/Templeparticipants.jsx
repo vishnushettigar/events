@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import CollapsibleList from './CollapsibleList'
 
 const Templeparticipants = () => {
-    const [selectedAge, setSelectedAge] = useState('All');
+    const [selectedAge, setSelectedAge] = useState('0-5');
     const [selectedGender, setSelectedGender] = useState('MALE');
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
@@ -10,6 +10,7 @@ const Templeparticipants = () => {
     const [ageGroups, setAgeGroups] = useState([]);
     const [genders, setGenders] = useState([]);
     const [events, setEvents] = useState([]);
+    const [allParticipants, setAllParticipants] = useState([]);
 
     // Fetch all data when age category or gender changes
     useEffect(() => {
@@ -39,7 +40,9 @@ const Templeparticipants = () => {
                 const data = await response.json();
                 console.log('Received data:', data);
                 
-                setAgeGroups(data.ageCategories);
+                // Filter out the 'All' option from age groups
+                const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
+                setAgeGroups(filteredAgeGroups);
                 setGenders(data.genderOptions);
                 setEvents(data.events);
                 setLoading(false);
@@ -63,12 +66,63 @@ const Templeparticipants = () => {
         return acc;
     }, {});
 
+    // Get all event IDs from the current view
+    const getAllEventIds = () => {
+        return Object.values(groupedEvents).flat().map(event => event.id);
+    };
+
+    // Fetch participants for all events in the current view
+    const fetchAllParticipants = async () => {
+        try {
+            const eventIds = getAllEventIds();
+            if (eventIds.length === 0) return;
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await fetch(
+                `http://localhost:4000/api/events/temple-participants?event_ids=${eventIds.join(',')}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch participants');
+            }
+
+            const participants = await response.json();
+            console.log('Fetched participants for all events:', participants);
+            setAllParticipants(participants);
+        } catch (err) {
+            console.error('Error fetching participants:', err);
+            setError(err.message);
+        }
+    };
+
+    // Get participants for a specific event
+    const getParticipantsForEvent = (eventId) => {
+        return allParticipants.filter(participant => participant.event_id === eventId);
+    };
+
+    // Fetch participants when events change
+    useEffect(() => {
+        if (events.length > 0) {
+            fetchAllParticipants();
+        }
+    }, [events]);
+
     return (
         <section className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100 py-8">
             <div className="max-w-6xl mx-auto px-4">
                 <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
                     <h2 className="text-3xl font-bold text-blue-800 mb-6">Temple Participants</h2>
-                    
+
                     {/* Search Bar */}
                     {/* <div className="mb-6">
                         <div className="relative">
@@ -97,17 +151,17 @@ const Templeparticipants = () => {
 
                     {/* Filters */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                        {/* Age Filter */}
+                    {/* Age Filter */}
                         <div className="flex flex-col">
                             <label className="mb-2 text-gray-700 font-medium">Filter by Age</label>
-                            <select 
+                        <select 
                                 className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                value={selectedAge}
+                            value={selectedAge}
                                 onChange={(e) => {
                                     console.log('Selected age:', e.target.value);
                                     setSelectedAge(e.target.value);
                                 }}
-                            >
+                        >     
                                 {ageGroups && ageGroups.length > 0 ? (
                                     ageGroups.map((ageGroup) => (
                                         <option key={ageGroup.id} value={ageGroup.name}>
@@ -117,8 +171,8 @@ const Templeparticipants = () => {
                                 ) : (
                                     <option value="" disabled>Loading age groups...</option>
                                 )}
-                            </select>
-                        </div>
+                        </select>
+                    </div>
 
                         {/* Gender Filter */}
                         <div className="flex flex-col">
@@ -153,7 +207,7 @@ const Templeparticipants = () => {
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
                             <strong className="font-bold">Error!</strong>
                             <span className="block sm:inline"> {error}</span>
-                        </div>
+                </div>
                     )}
 
                     {/* Events List */}
@@ -172,12 +226,8 @@ const Templeparticipants = () => {
                                                 <CollapsibleList 
                                                     key={event.id} 
                                                     title={event.name}
-                                                    description={
-                                                        <div className="text-sm text-gray-600">
-                                                            <p>Event Type: {event.type}</p>
-                                                            <p>Participants: {event.participant_count} per event</p>
-                                                        </div>
-                                                    }
+                                                    eventId={event.id}
+                                                    participants={getParticipantsForEvent(event.id)}
                                                 />
                                             ))}
                                         </div>
