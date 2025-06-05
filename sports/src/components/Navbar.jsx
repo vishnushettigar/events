@@ -6,7 +6,7 @@ import ProfileDropdown from './ProfileDropdown';
 
 const Navbar = () => {
     return (
-        <nav id="header" className="header bg-gradient-to-r from-blue-800 to-purple-600 flex flex-row items-center justify-between sticky top-0 z-46">
+        <nav id="header" className="header fixed bg-gradient-to-r from-blue-800 to-purple-600 flex flex-row items-center justify-between sticky top-0 z-46">
             <div className='header flex flex-row items-center justify-between sticky top-0 z-10 w-[90%] mx-auto'>
                 <div className="flex flex-row items-center justify-between w-full">
                     <div className="pl-12 md:pl-0">

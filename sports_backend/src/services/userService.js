@@ -68,7 +68,7 @@ async function login(username, password) {
     id: user.id, 
     role: user.profile.role_id,
     temple_id: user.profile.temple_id 
-  }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  }, process.env.JWT_SECRET, { expiresIn: '24h' });
   return { user, token };
 }
 

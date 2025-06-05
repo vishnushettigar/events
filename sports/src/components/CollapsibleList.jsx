@@ -10,6 +10,12 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
     setLocalParticipants(participants);
   }, [participants]);
 
+  // Set initial open state based on pending participants
+  useEffect(() => {
+    const hasPendingParticipants = participants.some(p => p.status === 'PENDING');
+    setIsOpen(hasPendingParticipants);
+  }, [participants]);
+
   // Calculate the number of accepted participants for this event
   const acceptedCount = localParticipants.filter(p => p.status === 'ACCEPTED').length;
   const pendingCount = localParticipants.filter(p => p.status === 'PENDING').length;
@@ -28,6 +34,16 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
     );
   };
 
+  // Sort participants by status
+  const sortedParticipants = [...localParticipants].sort((a, b) => {
+    const statusOrder = {
+      'ACCEPTED': 0,  // First
+      'PENDING': 1,   // Second
+      'DECLINED': 2   // Last
+    };
+    return statusOrder[a.status] - statusOrder[b.status];
+  });
+
   return (
     <div className="border border-gray-200 rounded-xl shadow-sm overflow-hidden bg-white transition-all duration-300 hover:shadow-md">
       {/* Header button */}
@@ -37,6 +53,11 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
       >
         <div className="flex flex-col">
           <span className="text-lg">{title}</span>
+          {pendingCount > 0 && (
+            <span className="text-sm text-yellow-200 mt-1">
+              {pendingCount} pending participant{pendingCount !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
         <span className="transform transition-transform duration-300">
           {isOpen ? (
@@ -52,11 +73,15 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
       </button>
 
       {/* List items with animation */}
-      <div className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+      <div 
+        className={`transition-all duration-300 ease-in-out ${
+          isOpen ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
         <div className="p-4">
-          {localParticipants.length > 0 ? (
+          {sortedParticipants.length > 0 ? (
             <div className="space-y-4">
-              {localParticipants.map((participant) => (
+              {sortedParticipants.map((participant) => (
                 <Playerscard
                   key={participant.id}
                   participant={participant}
@@ -67,7 +92,7 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
               ))}
             </div>
           ) : (
-            <div className="bg-white shadow-sm p-4 border border-gray-200 text-center ">
+            <div className="bg-white shadow-sm p-4 border border-gray-200 text-center">
               <p className="text-amber-700">No participants registered for this event.</p>
             </div>
           )}

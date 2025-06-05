@@ -72,11 +72,11 @@ const Myevents = () => {
   }
 
   return (
-    <section className="flex min-h-screen">
+    <section className="flex h-screen overflow-hidden">
       {userRole === 2 && (
         <Sidebar />
       )}
-      <div className="flex-1">
+      <div className="flex-1 overflow-auto">
         {/* <div className='bg-blue-600 rounded-br-md rounded-bl-md'>
           <div className='flex flex-col  w-[80%] mx-auto text-white items-start  p-6'>
             <div className='flex flex-row'>

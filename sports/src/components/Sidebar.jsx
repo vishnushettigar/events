@@ -177,7 +177,7 @@ const Sidebar = () => {
 
           {/* Athletes Link */}
           <Link
-            to="/myevents"
+            to="/myevents/Participantslist"
             onClick={handleNavigation}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-700 hover:text-white ${
               location.pathname === '/myevents/Participantslist' 
