@@ -54,11 +54,17 @@ router.post('/register-team', authenticate, requireRole('TEMPLE_ADMIN'), [
     const registration = await eventService.registerTeamEvent(temple_id, event_id, member_user_ids);
     res.status(201).json(registration);
   } catch (error) {
-    console.error(error);
+    console.error('Team registration error:', error);
     if (error.message.includes('other temples') || error.message.includes('same temple')) {
       return res.status(403).json({ error: error.message });
     }
-    res.status(500).json({ error: 'Team registration failed' });
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('already registered')) {
+      return res.status(409).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Team registration failed' });
   }
 });
 
@@ -108,41 +114,52 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
 // Get temple participants
 router.get('/temple-participants', authenticate, requireRole(2), async (req, res) => {
   try {
-        const { event_ids, status } = req.query;
-        
-        if (!req.user.temple_id) {
-            console.error('No temple_id found in user object');
-            return res.status(400).json({ error: 'User is not associated with any temple' });
-        }
+    const { event_ids, status } = req.query;
 
-        // Convert event_ids string to array
-        const eventIdArray = event_ids ? event_ids.split(',').map(id => parseInt(id)) : [];
+    if (!req.user.temple_id) {
+      console.error('No temple_id found in user object');
+      return res.status(400).json({ error: 'User is not associated with any temple' });
+    }
 
-        console.log('Fetching participants for events:', eventIdArray);
-        
-        const participants = await eventService.getTempleParticipants(req.user.temple_id, {
-            event_ids: eventIdArray,
-            status: status
-        });
+    // Convert event_ids string to array
+    const eventIdArray = event_ids ? event_ids.split(',').map(id => parseInt(id)) : [];
+
+    console.log('Fetching participants for events:', eventIdArray);
+
+    const participants = await eventService.getTempleParticipants(req.user.temple_id, {
+      event_ids: eventIdArray,
+      status: status
+    });
 
     res.json(participants);
   } catch (error) {
-        console.error('Error in /temple-participants route:', error);
-        res.status(500).json({ error: error.message });
+    console.error('Error in /temple-participants route:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 // List temple teams
-router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+router.get('/temple-teams', authenticate, requireRole(2), async (req, res) => {
   try {
+    console.log('temple-teams route called by user:', req.user);
+    
+    if (!req.user.temple_id) {
+      console.error('No temple_id found in user object');
+      return res.status(400).json({ error: 'User is not associated with any temple' });
+    }
+
     const filters = {
       event_id: req.query.event_id ? parseInt(req.query.event_id) : undefined
     };
+    
+    console.log('Fetching teams for temple:', req.user.temple_id, 'with filters:', filters);
+    
     const teams = await eventService.getTempleTeams(req.user.temple_id, filters);
+    console.log('Successfully fetched teams:', teams.length);
     res.json(teams);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch teams' });
+    console.error('Error in /temple-teams route:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch teams' });
   }
 });
 
@@ -201,19 +218,19 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
 router.get('/temple-participant-data', authenticate, async (req, res) => {
   try {
     const { ageCategory = 'All', gender = 'MALE' } = req.query;
-    
+
     // Get age categories
     const ageCategories = await eventService.getAgeCategories();
-    
+
     // Hardcoded gender options
     const genderOptions = [
       { id: 1, name: 'Male', value: 'MALE' },
       { id: 2, name: 'Female', value: 'FEMALE' }
     ];
-    
+
     // Get events based on filters
     const events = await eventService.getEventsByAgeCategory(ageCategory, gender);
-    
+
     res.json({
       ageCategories,
       genderOptions,
@@ -222,6 +239,55 @@ router.get('/temple-participant-data', authenticate, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch temple participant data' });
+  }
+});
+
+// Get team events
+router.get('/team-events', authenticate, async (req, res) => {
+  try {
+    const events = await eventService.getTeamEvents();
+    res.json(events);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch team events' });
+  }
+});
+
+// Update team registration
+router.put('/update-team/:registrationId', authenticate, requireRole('TEMPLE_ADMIN'), [
+  body('member_user_ids').isArray().withMessage('Member user IDs must be an array')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  
+  const { registrationId } = req.params;
+  const { member_user_ids } = req.body;
+  
+  try {
+    const updatedRegistration = await eventService.updateTeamRegistration(parseInt(registrationId), member_user_ids, req.user.id);
+    res.json(updatedRegistration);
+  } catch (error) {
+    console.error('Team update error:', error);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('unauthorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Team update failed' });
+  }
+});
+
+// Get temple's registered teams
+router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+  try {
+    const teams = await eventService.getTempleTeams(req.user.temple_id);
+    res.json(teams);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch teams' });
   }
 });
 

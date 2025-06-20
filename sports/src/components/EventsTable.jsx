@@ -172,9 +172,9 @@ const EventsList = () => {
           throw new Error(data.error || 'Failed to register for event');
         }
 
-        setRegisteredEvents((prev) => [...prev, selectedEvent.name]);
-        setShowModal(false);
-        setSelectedEvent(null);
+      setRegisteredEvents((prev) => [...prev, selectedEvent.name]);
+    setShowModal(false);
+    setSelectedEvent(null);
       } catch (error) {
         alert(error.message || 'Failed to register for event');
       }
@@ -217,9 +217,9 @@ const EventsList = () => {
         throw new Error(data.error || 'Failed to cancel registration');
       }
 
-      setRegisteredEvents((prev) => prev.filter((name) => name !== eventToUnregister));
-      setShowCancelModal(false);
-      setEventToUnregister(null);
+    setRegisteredEvents((prev) => prev.filter((name) => name !== eventToUnregister));
+    setShowCancelModal(false);
+    setEventToUnregister(null);
     } catch (error) {
       alert(error.message || 'Failed to cancel registration');
     }

@@ -11,24 +11,24 @@ const Footer = () => {
             <div className="copyright text-sm md:text-base">© Copyright Presento. All Rights Reserved</div>
             <div className="credits text-sm md:text-base">Designed by 
               <a className="hover:text-pink-500 ml-1" href="https://www.instagram.com/friends_club_salikeri/" target="_blank" rel="noopener noreferrer">
-                Friends Club Salikeri
-              </a>
+                 Friends Club Salikeri
+                </a>
+              </div>
             </div>
-          </div>
           <div className="logo">
             <a href="https://www.instagram.com/friends_club_salikeri/" target="_blank" rel="noopener noreferrer">
               <img className="w-10 md:w-12" src={SFC_logo} alt="SFC Logo" />
-            </a>
+              </a>
           </div>
-        </div>
-        
+            </div>
+
         <div className="flex flex-col text-white"> 
           <div>
             <a href="https://www.instagram.com/friends_club_salikeri/" target="_blank" rel="noopener noreferrer">
               <InstagramButton />
             </a>
           </div>
-        </div>
+           </div>
       </div>
     </footer>
   );

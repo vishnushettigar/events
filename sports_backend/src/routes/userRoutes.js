@@ -260,7 +260,8 @@ router.get('/profile', authenticate, async (req, res) => {
             include: {
                 profile: {
                     include: {
-                        temple: true
+                        temple: true,
+                        role: true
                     }
                 }
             }
@@ -304,6 +305,7 @@ router.get('/profile', authenticate, async (req, res) => {
             ...user.profile,
             age,
             temple: user.profile.temple.name,
+            role: user.profile.role.name,
             temple_admin_name: templeAdmin ? `${templeAdmin.first_name} ${templeAdmin.last_name}` : null,
             temple_admin_phone: templeAdmin?.phone || null
         };
@@ -448,6 +450,191 @@ router.get('/debug-info', authenticate, async (req, res) => {
     console.error('Error in debug-info endpoint:', error);
     res.status(500).json({ error: 'Failed to fetch debug info' });
   }
+});
+
+// Search users by Aadhaar number
+router.get('/search-by-aadhar', authenticate, async (req, res) => {
+    try {
+        const { aadharNumber } = req.query;
+        
+        if (!aadharNumber) {
+            return res.status(400).json({ error: 'Aadhaar number is required' });
+        }
+
+        const user = await prisma.profile.findFirst({
+            where: {
+                aadhar_number: aadharNumber
+            },
+            select: {
+                id: true,
+                first_name: true,
+                last_name: true,
+                aadhar_number: true,
+                temple_id: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Combine first_name and last_name
+        const name = `${user.first_name} ${user.last_name || ''}`.trim();
+
+        res.json({
+            id: user.id,
+            name: name,
+            aadhar_number: user.aadhar_number,
+            temple_id: user.temple_id
+        });
+    } catch (error) {
+        console.error('Error searching user:', error);
+        res.status(500).json({ error: 'Error searching user' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/templeusers:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get all participants from a specific temple
+ *     description: Fetch all participants from the authenticated user's temple with their details
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of temple participants
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/templeusers', authenticate, async (req, res) => {
+    try {
+        // Get the authenticated user's profile to determine their temple
+        const userProfile = await prisma.profile.findUnique({
+            where: { user_id: req.user.id },
+            select: { temple_id: true }
+        });
+
+        if (!userProfile) {
+            return res.status(404).json({ error: 'User profile not found' });
+        }
+
+        // Fetch all participants from the same temple
+        const participants = await prisma.profile.findMany({
+            where: {
+                temple_id: userProfile.temple_id,
+                is_deleted: false
+            },
+            select: {
+                id: true,
+                first_name: true,
+                last_name: true,
+                aadhar_number: true,
+                dob: true,
+                gender: true,
+                phone: true
+            },
+            orderBy: {
+                first_name: 'asc'
+            }
+        });
+
+        // Calculate age category for each participant
+        const participantsWithAgeCategory = participants.map(participant => {
+            const today = new Date();
+            const birthDate = new Date(participant.dob);
+            let age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+            }
+
+            // Determine age category based on age
+            let ageCategory = '';
+            if (age >= 0 && age <= 5) ageCategory = '0-5';
+            else if (age >= 6 && age <= 10) ageCategory = '6-10';
+            else if (age >= 11 && age <= 14) ageCategory = '11-14';
+            else if (age >= 15 && age <= 18) ageCategory = '15-18';
+            else if (age >= 19 && age <= 24) ageCategory = '19-24';
+            else if (age >= 25 && age <= 35) ageCategory = '25-35';
+            else if (age >= 36 && age <= 48) ageCategory = '36-48';
+            else if (age >= 49 && age <= 60) ageCategory = '49-60';
+            else if (age >= 61 && age <= 90) ageCategory = '61-90';
+            else ageCategory = '90+';
+
+            return {
+                id: participant.id,
+                name: `${participant.first_name} ${participant.last_name || ''}`.trim(),
+                age_category: ageCategory,
+                aadhar_number: participant.aadhar_number,
+                date_of_birth: participant.dob.toISOString().split('T')[0], // Format as YYYY-MM-DD
+                gender: participant.gender,
+                phone_number: participant.phone
+            };
+        });
+
+        res.json(participantsWithAgeCategory);
+    } catch (error) {
+        console.error('Error fetching temple users:', error);
+        res.status(500).json({ error: 'Failed to fetch temple users' });
+    }
+});
+
+/**
+ * @swagger
+ * /api/users/temple/:templeId:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get temple information by temple ID
+ *     description: Fetch temple details using temple ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: templeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Temple ID
+ *     responses:
+ *       200:
+ *         description: Temple information
+ *       404:
+ *         description: Temple not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/temple/:templeId', authenticate, async (req, res) => {
+    try {
+        const { templeId } = req.params;
+        
+        const temple = await prisma.mst_temple.findUnique({
+            where: { 
+                id: parseInt(templeId),
+                is_deleted: false
+            },
+            select: {
+                id: true,
+                name: true,
+                code: true,
+                address: true,
+                contact_name: true,
+                contact_phone: true
+            }
+        });
+
+        if (!temple) {
+            return res.status(404).json({ error: 'Temple not found' });
+        }
+
+        res.json(temple);
+    } catch (error) {
+        console.error('Error fetching temple:', error);
+        res.status(500).json({ error: 'Failed to fetch temple information' });
+    }
 });
 
 module.exports = router; 

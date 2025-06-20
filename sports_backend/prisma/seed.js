@@ -227,10 +227,10 @@ async function main() {
   ];
 
   for (const result of eventResults) {
-    await prisma.mst_event_result.create({
-      data: result
-    });
-  }
+      await prisma.mst_event_result.create({
+        data: result
+      });
+    }
 
   console.log('Database has been seeded. 🌱');
 }

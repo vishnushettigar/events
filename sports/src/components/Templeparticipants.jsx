@@ -119,18 +119,18 @@ const Templeparticipants = () => {
                     <div className="mb-8">
                         <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Temple Participants</h1>
                         <p className="mt-2 text-sm text-gray-600">Manage and view all participants for temple events</p>
-                    </div>
+                        </div>
 
                     {/* Filters */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                         {/* Age Category Filter */}
                         <div className="flex flex-col">
                             <label className="mb-2 text-gray-700 font-medium">Filter by Age Category</label>
-                            <select 
+                        <select 
                                 className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                                value={selectedAge}
+                            value={selectedAge}
                                 onChange={(e) => setSelectedAge(e.target.value)}
-                            >
+                        >
                                 {ageGroups && ageGroups.length > 0 ? (
                                     ageGroups.map((group) => (
                                         <option key={group.id} value={group.value}>
@@ -140,8 +140,8 @@ const Templeparticipants = () => {
                                 ) : (
                                     <option value="" disabled>Loading age groups...</option>
                                 )}
-                            </select>
-                        </div>
+                        </select>
+                    </div>
 
                         {/* Gender Filter */}
                         <div className="flex flex-col">
@@ -176,7 +176,7 @@ const Templeparticipants = () => {
                         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
                             <strong className="font-bold">Error!</strong>
                             <span className="block sm:inline"> {error}</span>
-                        </div>
+                </div>
                     )}
 
                     {/* Events List */}

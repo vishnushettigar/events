@@ -7,9 +7,9 @@ import Register from './Pages/Register.jsx';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import Templeparticipants from './components/Templeparticipants.jsx';
+import TempleParticipants from './components/Templeparticipants.jsx';
 import Myevents from './components/Myevents.jsx';
-import GroupEvents from './components/GroupEvents.jsx';
+import TeamEvents from './components/TeamEvents.jsx';
 import Events from './components/Events.jsx';
 import Alltemplereports from './Pages/Alltemplereports.jsx';
 import Templedetailedreports from './Pages/Templedetailedreports.jsx';
@@ -45,11 +45,11 @@ import AvailableEvents from './components/AvailableEvents.jsx';
           },
           {
             path: "templeparticipants",
-            element: <Templeparticipants />
+            element: <TempleParticipants />
           },
           {
             path: "groupevents",
-            element: <GroupEvents />
+            element: <TeamEvents />
           },
           {
             path: "Participantslist",
