@@ -30,6 +30,8 @@ const Register = () => {
 
     const validateForm = () => {
         const newErrors = {};
+        
+        console.log('Validating form data:', formData);
 
         if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
         if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
@@ -66,49 +68,91 @@ const Register = () => {
             newErrors.terms = 'You must accept the terms and conditions';
         }
 
+        console.log('Validation errors:', newErrors);
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log('Form submission started');
+        
         if (validateForm()) {
+            console.log('Form validation passed, starting registration');
             setIsSubmitting(true);
             try {
+                const requestData = {
+                    username: formData.aadhaar,
+                    password: formData.password,
+                    email: formData.email,
+                    first_name: formData.firstName,
+                    last_name: formData.lastName,
+                    phone: formData.mobile,
+                    aadhar_number: formData.aadhaar,
+                    dob: formData.dob,
+                    gender: formData.gender.toUpperCase(),
+                    temple_name: formData.temple
+                };
+                
+                console.log('Sending registration request:', requestData);
+                
                 const response = await fetch('http://localhost:4000/api/users/register', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        username: formData.aadhaar,
-                        password: formData.password,
-                        email: formData.email,
-                        first_name: formData.firstName,
-                        last_name: formData.lastName,
-                        phone: formData.mobile,
-                        aadhar_number: formData.aadhaar,
-                        dob: formData.dob,
-                        gender: formData.gender.toUpperCase(),
-                        temple_id: temples.indexOf(formData.temple) + 1
-                    }),
+                    body: JSON.stringify(requestData),
                 });
 
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Registration failed');
+                    // Check for duplicate username error
+                    if (data.error?.code === 'P2002' && data.error?.meta?.target?.includes('username')) {
+                        throw new Error('This Aadhaar number is already registered. Please use a different Aadhaar number or try logging in.');
+                    }
+                    
+                    // Handle validation errors
+                    if (data.errors && Array.isArray(data.errors)) {
+                        const validationErrors = data.errors.map(err => err.msg).join(', ');
+                        throw new Error(validationErrors);
+                    }
+                    
+                    // Handle other error types
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    throw new Error('Registration failed');
                 }
 
+                // Store the JWT token
+                localStorage.setItem('token', data.token);
+                
                 // Registration successful
                 console.log('Registration successful:', data);
-                // Redirect to login page
-                window.location.href = '/login';
+                // Redirect to MyEvents page
+                window.location.href = '/myevents';
             } catch (error) {
                 console.error('Registration error:', error);
+                
+                // Handle different types of errors
+                let errorMessage = 'Registration failed. Please try again.';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.errors && Array.isArray(error.errors)) {
+                    // Handle validation errors from backend
+                    errorMessage = error.errors.map(err => err.msg).join(', ');
+                } else if (typeof error === 'string') {
+                    errorMessage = error;
+                }
+                
                 setErrors(prev => ({
                     ...prev,
-                    submit: error.message || 'Registration failed. Please try again.'
+                    submit: errorMessage
                 }));
             } finally {
                 setIsSubmitting(false);
@@ -182,7 +226,7 @@ const Register = () => {
 
                     <div className="flex gap-6 items-center text-white">
                         <span>Gender:</span>
-                        {['Male', 'Female'].map((g) => (
+                        {['MALE', 'FEMALE'].map((g) => (
                             <label key={g}>
                                 <input
                                     type="radio"
@@ -192,7 +236,7 @@ const Register = () => {
                                     onChange={handleChange}
                                     className="mr-1"
                                 />
-                                {g}
+                                {g === 'MALE' ? 'Male' : 'Female'}
                             </label>
                         ))}
                         {errors.gender && <span className="text-red-500 text-sm">{errors.gender}</span>}
