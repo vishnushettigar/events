@@ -151,7 +151,8 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
       data: {
         temple_id,
         event_id,
-        member_user_ids: member_user_ids.join(',')
+        member_user_ids: member_user_ids.join(','),
+        status: 'ACCEPTED' // Temple admins can directly register teams as accepted
       }
     });
 
@@ -365,6 +366,11 @@ async function getTempleParticipants(temple_id, filters = {}) {
               name: true,
               type: true
             }
+          },
+          age_category: {
+            select: {
+              name: true
+            }
           }
         }
       },
@@ -427,7 +433,12 @@ async function getTempleTeams(temple_id, filters = {}) {
       include: {
         event: {
           include: {
-            event_type: true
+            event_type: true,
+            age_category: {
+              select: {
+                name: true
+              }
+            }
           }
         },
         event_result: {
@@ -692,26 +703,217 @@ async function getTeamEvents() {
 
     console.log('Found team events:', events);
 
-    // Transform the data to include event type details directly
-    const transformedEvents = events.map(event => ({
-      id: event.id,
-      event_type: {
-        name: event.event_type.name,
-        type: event.event_type.type,
-        participant_count: event.event_type.participant_count
-      },
-      gender: event.gender,
-      age_category_id: event.age_category_id,
-      age_category: event.age_category.name
+    // Transform the data to include event type details and registered temples
+    const transformedEvents = await Promise.all(events.map(async (event) => {
+      // Get registered temples for this event
+      const teamRegistrations = await prisma.team_event_registration.findMany({
+        where: {
+          event_id: event.id,
+          is_deleted: false
+        },
+        include: {
+          temple: true,
+          event_result: true
+        }
+      });
+
+      // Group registrations by temple and count teams/members
+      const templeStats = {};
+      teamRegistrations.forEach(registration => {
+        const templeId = registration.temple_id;
+        const templeName = registration.temple.name;
+        
+        if (!templeStats[templeId]) {
+                  templeStats[templeId] = {
+          temple_name: templeName,
+          team_count: 0,
+          member_count: 0,
+          result: null,
+          registration_ids: []
+        };
+        }
+        
+        templeStats[templeId].team_count += 1;
+        templeStats[templeId].registration_ids.push(registration.id);
+        if (registration.member_user_ids) {
+          templeStats[templeId].member_count += registration.member_user_ids.split(',').length;
+        }
+        // Store the result from the first registration (assuming all registrations for a temple have the same result)
+        if (registration.event_result && !templeStats[templeId].result) {
+          templeStats[templeId].result = {
+            rank: registration.event_result.rank,
+            points: registration.event_result.points
+          };
+        }
+      });
+
+      const registeredTemples = Object.values(templeStats);
+
+      return {
+        id: event.id,
+        event_type: {
+          name: event.event_type.name,
+          type: event.event_type.type,
+          participant_count: event.event_type.participant_count
+        },
+        gender: event.gender,
+        age_category_id: event.age_category_id,
+        age_category: event.age_category.name,
+        registered_temples: registeredTemples
+      };
     }));
 
     // Sort events by name
     transformedEvents.sort((a, b) => a.event_type.name.localeCompare(b.event_type.name));
 
-    console.log('Transformed team events:', transformedEvents);
+    console.log('Transformed team events with registered temples:', transformedEvents);
     return transformedEvents;
   } catch (error) {
     console.error('Error in getTeamEvents:', error);
+    throw error;
+  }
+}
+
+// Get participants for a specific event
+async function getEventParticipants(eventId) {
+  try {
+    console.log('Fetching participants for event:', eventId);
+
+    // First, get the event details to determine if it's individual or team
+    const event = await prisma.mst_event.findUnique({
+      where: { 
+        id: eventId,
+        is_deleted: false
+      },
+      include: {
+        event_type: true,
+        age_category: true
+      }
+    });
+
+    if (!event) {
+      throw new Error('Event not found');
+    }
+
+    console.log('Event found:', event);
+    console.log('Event type:', event.event_type.type);
+
+    let participants = [];
+
+    if (event.event_type.type === 'INDIVIDUAL') {
+      console.log('Fetching individual registrations for event:', eventId);
+      
+      // First, let's check if there are any registrations at all
+      const registrationCount = await prisma.ind_event_registration.count({
+        where: {
+          event_id: eventId,
+          is_deleted: false,
+          status: 'ACCEPTED'
+        }
+      });
+      console.log('Total approved individual registrations found:', registrationCount);
+
+      // Get individual registrations for this event
+      const individualRegistrations = await prisma.ind_event_registration.findMany({
+        where: {
+          event_id: eventId,
+          is_deleted: false,
+          status: 'ACCEPTED'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              first_name: true,
+              last_name: true,
+              email: true,
+              phone: true,
+              aadhar_number: true,
+              gender: true,
+              dob: true,
+              temple: {
+                select: {
+                  name: true
+                }
+              }
+            }
+          },
+          event_result: true
+        }
+      });
+
+      console.log('Individual registrations found:', individualRegistrations.length);
+      console.log('First registration sample:', individualRegistrations[0] || 'None');
+
+      participants = individualRegistrations.map(reg => ({
+        id: reg.id,
+        registration_type: 'INDIVIDUAL',
+        participant_name: `${reg.user.first_name} ${reg.user.last_name}`,
+        temple_name: reg.user.temple.name,
+        age_category: event.age_category.name,
+        gender: reg.user.gender,
+        phone: reg.user.phone,
+        aadhar_number: reg.user.aadhar_number,
+        registration_status: reg.status,
+        result: reg.event_result ? {
+          rank: reg.event_result.rank,
+          points: reg.event_result.points
+        } : null,
+        registered_at: reg.created_at
+      }));
+
+    } else if (event.event_type.type === 'TEAM') {
+      console.log('Fetching team registrations for event:', eventId);
+      
+      // First, let's check if there are any team registrations
+      const teamRegistrationCount = await prisma.team_event_registration.count({
+        where: {
+          event_id: eventId,
+          is_deleted: false,
+          status: 'ACCEPTED'
+        }
+      });
+      console.log('Total approved team registrations found:', teamRegistrationCount);
+
+      // Get team registrations for this event
+      const teamRegistrations = await prisma.team_event_registration.findMany({
+        where: {
+          event_id: eventId,
+          is_deleted: false,
+          status: 'ACCEPTED'
+        },
+        include: {
+          temple: true,
+          event_result: true
+        }
+      });
+
+      console.log('Team registrations found:', teamRegistrations.length);
+      console.log('First team registration sample:', teamRegistrations[0] || 'None');
+
+      participants = teamRegistrations.map(reg => ({
+        id: reg.id,
+        registration_type: 'TEAM',
+        team_name: `${reg.temple.name} Team`,
+        temple_name: reg.temple.name,
+        age_category: event.age_category.name,
+        gender: event.gender,
+        member_count: reg.member_user_ids ? reg.member_user_ids.split(',').length : 0,
+        registration_status: reg.status,
+        result: reg.event_result ? {
+          rank: reg.event_result.rank,
+          points: reg.event_result.points
+        } : null,
+        registered_at: reg.created_at
+      }));
+    }
+
+    console.log('Final participants array length:', participants.length);
+    console.log('First participant sample:', participants[0] || 'None');
+    return participants;
+
+  } catch (error) {
+    console.error('Error in getEventParticipants:', error);
     throw error;
   }
 }
@@ -815,6 +1017,162 @@ async function updateTeamRegistration(registrationId, member_user_ids, temple_ad
   }
 }
 
+// Get event result ID by rank and event type
+async function getEventResultId(eventTypeId, rank) {
+  try {
+    const result = await prisma.mst_event_result.findFirst({
+      where: {
+        event_type_id: eventTypeId,
+        rank: rank
+      }
+    });
+    return result?.id;
+  } catch (error) {
+    console.error('Error getting event result ID:', error);
+    throw error;
+  }
+}
+
+// Update individual event result
+async function updateIndividualEventResult(registrationId, rank, staffUserId) {
+  try {
+    console.log('Updating individual event result:', { registrationId, rank, staffUserId });
+
+    // Get the registration with event details
+    const registration = await prisma.ind_event_registration.findUnique({
+      where: { id: registrationId },
+      include: {
+        event: {
+          include: {
+            event_type: true
+          }
+        }
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Registration not found');
+    }
+
+    let resultId = null;
+    let rankValue = null;
+
+    if (rank === 'CLEAR') {
+      // Clear the result by setting event_result_id to null
+      resultId = null;
+      rankValue = 'CLEARED';
+    } else {
+      // Get the event result ID for the specified rank
+      resultId = await getEventResultId(registration.event.event_type_id, rank);
+      if (!resultId) {
+        throw new Error(`Result not found for rank: ${rank}`);
+      }
+      rankValue = rank;
+    }
+
+    // Update the registration with the result
+    const updatedRegistration = await prisma.ind_event_registration.update({
+      where: { id: registrationId },
+      data: { 
+        event_result_id: resultId,
+        modified_at: new Date()
+      },
+      include: {
+        event_result: true,
+        user: true
+      }
+    });
+
+    // Log the action
+    await prisma.audit_log.create({
+      data: {
+        user_id: staffUserId,
+        action: 'UPDATE_INDIVIDUAL_RESULT',
+        table_name: 'Ind_event_registration',
+        record_id: registrationId,
+        old_value: JSON.stringify({ event_result_id: registration.event_result_id }),
+        new_value: JSON.stringify({ event_result_id: resultId, rank: rankValue })
+      }
+    });
+
+    console.log('Individual event result updated successfully');
+    return updatedRegistration;
+  } catch (error) {
+    console.error('Error updating individual event result:', error);
+    throw error;
+  }
+}
+
+// Update team event result
+async function updateTeamEventResult(registrationId, rank, staffUserId) {
+  try {
+    console.log('Updating team event result:', { registrationId, rank, staffUserId });
+
+    // Get the registration with event details
+    const registration = await prisma.team_event_registration.findUnique({
+      where: { id: registrationId },
+      include: {
+        event: {
+          include: {
+            event_type: true
+          }
+        }
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Team registration not found');
+    }
+
+    let resultId = null;
+    let rankValue = null;
+
+    if (rank === 'CLEAR') {
+      // Clear the result by setting event_result_id to null
+      resultId = null;
+      rankValue = 'CLEARED';
+    } else {
+      // Get the event result ID for the specified rank
+      resultId = await getEventResultId(registration.event.event_type_id, rank);
+      if (!resultId) {
+        throw new Error(`Result not found for rank: ${rank}`);
+      }
+      rankValue = rank;
+    }
+
+    // Update the registration with the result
+    const updatedRegistration = await prisma.team_event_registration.update({
+      where: { id: registrationId },
+      data: { 
+        event_result_id: resultId,
+        modified_at: new Date()
+      },
+      include: {
+        event_result: true,
+        temple: true
+      }
+    });
+
+    // Log the action
+    await prisma.audit_log.create({
+      data: {
+        user_id: staffUserId,
+        action: 'UPDATE_TEAM_RESULT',
+        table_name: 'Team_event_registration',
+        record_id: registrationId,
+        old_value: JSON.stringify({ event_result_id: registration.event_result_id }),
+        new_value: JSON.stringify({ event_result_id: resultId, rank: rankValue })
+      }
+    });
+
+    console.log('Team event result updated successfully');
+    return updatedRegistration;
+  } catch (error) {
+    console.error('Error updating team event result:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   registerParticipant,
   registerTeamEvent,
@@ -826,5 +1184,9 @@ module.exports = {
   generateTempleReport,
   getAgeCategories,
   getEventsByAgeCategory,
-  getTeamEvents
+  getTeamEvents,
+  getEventParticipants,
+  updateIndividualEventResult,
+  updateTeamEventResult,
+  getEventResultId
 }; 

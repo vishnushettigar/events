@@ -1,48 +1,96 @@
-import React from 'react'
-
-// Example data for demonstration. Replace with real data or fetch from API/props.
-const individualEvents = [
-  { event: 'Running - 25 mts - MALE', age: '0 - 5', gender: 'MALE', first: '', second: 'Ranjan Shettigar', third: '', points: 3 },
-  { event: 'Frog Jump - 15 mts - MALE', age: '0 - 5', gender: 'MALE', first: '', second: 'Ranjan Shettigar', third: '', points: 3 },
-  { event: 'Running - 50 mts - MALE', age: '6 - 10', gender: 'MALE', first: 'Vikram Shettigar', second: '', third: '', points: 5 },
-  { event: 'Frog Jump - 25 mts - MALE', age: '6 - 10', gender: 'MALE', first: 'Lathish Shettigar', second: '', third: 'Likhith S Shettigar', points: 6 },
-  { event: 'SHOT PUT - MALE', age: '11 - 14', gender: 'MALE', first: 'UTTHAM -', second: '', third: '', points: 5 },
-  { event: 'Long jump - FEMALE', age: '11 - 14', gender: 'FEMALE', first: 'Rashmitha Shettigsr', second: '', third: '', points: 5 },
-  { event: 'Running - 800 mts - MALE', age: '15 - 18', gender: 'MALE', first: '', second: 'Gautham Shettigar', third: '', points: 3 },
-  { event: 'SHOT PUT - FEMALE', age: '15 - 18', gender: 'FEMALE', first: '', second: 'Vaishnavi Vaishnavi', third: 'Shilpa shettigar', points: 4 },
-  { event: 'Running - 100 mts - FEMALE', age: '15 - 18', gender: 'FEMALE', first: '', second: 'Pallavi J.S', third: '', points: 3 },
-  { event: 'Running - 200 mts - FEMALE', age: '15 - 18', gender: 'FEMALE', first: 'Pallavi J.S', second: '', third: '', points: 5 },
-  { event: 'Long jump - FEMALE', age: '15 - 18', gender: 'FEMALE', first: 'Pallavi J.S', second: '', third: '', points: 5 },
-  { event: 'Running - 100 mts - FEMALE', age: '19 - 24', gender: 'FEMALE', first: '', second: 'Deeksha Shettigar', third: 'Akshatha .', points: 4 },
-  { event: 'Running - 200 mts - MALE', age: '19 - 24', gender: 'MALE', first: 'Uttam Shettigar', second: '', third: '', points: 5 },
-  { event: 'Running - 200 mts - FEMALE', age: '19 - 24', gender: 'FEMALE', first: '', second: 'Akshatha .', third: 'Deeksha Shettigar', points: 4 },
-  { event: 'Long jump - MALE', age: '19 - 24', gender: 'MALE', first: '', second: 'Jayaraj Shettigar', third: 'Chirag Shettigar', points: 4 },
-  { event: 'SHOT PUT - FEMALE', age: '19 - 24', gender: 'FEMALE', first: '', second: '', third: 'Deeksha Shettigar', points: 1 },
-  { event: 'Running - 400 mts - FEMALE', age: '19 - 24', gender: 'FEMALE', first: '', second: 'Akshatha .', third: '', points: 3 },
-  { event: 'Running - 800 mts - FEMALE', age: '19 - 24', gender: 'FEMALE', first: 'Keerthana Shettigsr', second: '', third: '', points: 5 },
-  { event: 'SHOT PUT - MALE', age: '19 - 24', gender: 'MALE', first: 'Uttam Shettigar', second: '', third: '', points: 5 },
-  { event: 'Running - 100 mts - MALE', age: '19 - 24', gender: 'MALE', first: 'Uttam Shettigar', second: '', third: '', points: 5 },
-  { event: 'Long jump - MALE', age: '25 - 35', gender: 'MALE', first: '', second: 'Kiran K', third: '', points: 3 },
-  { event: 'Running - 200 mts - MALE', age: '25 - 35', gender: 'MALE', first: 'Kiran K', second: '', third: '', points: 5 },
-  { event: 'Running - 100 mts - MALE', age: '25 - 35', gender: 'MALE', first: '', second: 'Kiran K', third: '', points: 3 },
-  { event: 'Running - 400 mts - MALE', age: '25 - 35', gender: 'MALE', first: 'Shiva prasad', second: '', third: '', points: 5 },
-  { event: 'Long jump - FEMALE', age: '25 - 35', gender: 'FEMALE', first: '', second: '', third: 'Yogeshwari Shettigar', points: 1 },
-  { event: 'Running - 100 mts - FEMALE', age: '36 - 48', gender: 'FEMALE', first: '', second: 'Mohini s', third: '', points: 3 },
-  { event: 'Running - 200 mts - FEMALE', age: '36 - 48', gender: 'FEMALE', first: '', second: 'Mohini s', third: '', points: 3 },
-  { event: 'Running - 50 mts - MALE', age: '49 - 60', gender: 'MALE', first: '', second: 'Surendra s', third: '', points: 3 },
-  { event: 'Running - 100 mts - MALE', age: '49 - 60', gender: 'MALE', first: '', second: 'Surendra s', third: '', points: 3 },
-];
-
-const teamEvents = [
-  { event: 'Relay - 100 X 4 - MALE', gender: 'MALE', result: 'THIRD', points: 3 },
-  { event: 'Relay - 100 X 4 - FEMALE', gender: 'FEMALE', result: 'FIRST', points: 10 },
-];
-
-const totalPoints = { individual: 112, team: 13, total: 125 };
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom';
 
 const Templedetailedreports = () => {
+  const [searchParams] = useSearchParams();
+  const [individualEvents, setIndividualEvents] = useState([]);
+  const [teamEvents, setTeamEvents] = useState([]);
+  const [totalPoints, setTotalPoints] = useState({ individual: 0, team: 0, total: 0 });
+  const [templeInfo, setTempleInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTempleDetailedReport = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const templeId = searchParams.get('temple_id');
+        if (!templeId) {
+          throw new Error('Temple ID is required');
+        }
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch(`http://localhost:4000/api/users/temple-detailed-report/${templeId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch temple detailed report');
+        }
+
+        const data = await response.json();
+        
+        setIndividualEvents(data.individualEvents || []);
+        setTeamEvents(data.teamEvents || []);
+        setTotalPoints(data.totalPoints || { individual: 0, team: 0, total: 0 });
+        setTempleInfo(data.temple);
+      } catch (err) {
+        console.error('Error fetching temple detailed report:', err);
+        setError(err.message);
+        setIndividualEvents([]);
+        setTeamEvents([]);
+        setTotalPoints({ individual: 0, team: 0, total: 0 });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTempleDetailedReport();
+  }, [searchParams]);
+  // Loading State
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto py-10 px-4">
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-blue-800">Loading temple detailed report...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="max-w-5xl mx-auto py-10 px-4">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+          <strong className="font-bold">Error!</strong>
+          <span className="block sm:inline"> {error}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto py-10 px-4">
+      {/* Temple Header */}
+      {templeInfo && (
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl font-extrabold text-blue-800 mb-2">{templeInfo.name} - Detailed Report</h1>
+          <p className="text-lg text-gray-600">Temple Code: {templeInfo.code}</p>
+        </div>
+      )}
+
+      {/* Individual Events */}
       <div className="mb-10">
         <h2 className="text-3xl font-extrabold text-blue-800 mb-4">Individual Events</h2>
         <div className="overflow-x-auto rounded-xl shadow bg-white">
@@ -60,23 +108,32 @@ const Templedetailedreports = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-blue-100">
-              {individualEvents.map((row, idx) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
-                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
-                  <td className="px-4 py-2">{row.event}</td>
-                  <td className="px-4 py-2">{row.age}</td>
-                  <td className="px-4 py-2">{row.gender}</td>
-                  <td className="px-4 py-2">{row.first}</td>
-                  <td className="px-4 py-2">{row.second}</td>
-                  <td className="px-4 py-2">{row.third}</td>
-                  <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+              {individualEvents.length > 0 ? (
+                individualEvents.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-blue-50 transition">
+                    <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
+                    <td className="px-4 py-2">{row.event}</td>
+                    <td className="px-4 py-2">{row.age}</td>
+                    <td className="px-4 py-2">{row.gender}</td>
+                    <td className="px-4 py-2">{row.first}</td>
+                    <td className="px-4 py-2">{row.second}</td>
+                    <td className="px-4 py-2">{row.third}</td>
+                    <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                    No individual events with results found
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Team Events */}
       <div className="mb-10">
         <h2 className="text-3xl font-extrabold text-blue-800 mb-4">Team Events</h2>
         <div className="overflow-x-auto rounded-xl shadow bg-white">
@@ -91,20 +148,29 @@ const Templedetailedreports = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-blue-100">
-              {teamEvents.map((row, idx) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
-                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
-                  <td className="px-4 py-2">{row.event}</td>
-                  <td className="px-4 py-2">{row.gender}</td>
-                  <td className="px-4 py-2">{row.result}</td>
-                  <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+              {teamEvents.length > 0 ? (
+                teamEvents.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-blue-50 transition">
+                    <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
+                    <td className="px-4 py-2">{row.event}</td>
+                    <td className="px-4 py-2">{row.gender}</td>
+                    <td className="px-4 py-2">{row.result}</td>
+                    <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    No team events with results found
+                  </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Total Points */}
       <div className="mb-10">
         <h2 className="text-3xl font-extrabold text-blue-800 mb-4">Total Points</h2>
         <div className="overflow-x-auto rounded-xl shadow bg-white max-w-md mx-auto">

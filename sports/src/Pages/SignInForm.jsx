@@ -77,8 +77,14 @@ const SignInForm = () => {
             setFormData({ aadhaar: '', password: '' });
             setErrors({});
 
-            // Redirect to myevents page
-            navigate('/myevents');
+            // Check user role and redirect accordingly
+            if (data.user && data.user.profile && data.user.profile.role_id === 3) {
+                // Staff user - redirect to staff panel
+                navigate('/staffpanel');
+            } else {
+                // Regular user - redirect to myevents page
+                navigate('/myevents');
+            }
         } catch (err) {
             console.error('Login error:', err);
             setErrors({ 

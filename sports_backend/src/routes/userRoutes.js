@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const userService = require('../services/userService');
+const eventService = require('../services/eventService');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { TEMPLES } = require('../constants');
 const { PrismaClient } = require('@prisma/client');
@@ -634,6 +635,534 @@ router.get('/temple/:templeId', authenticate, async (req, res) => {
     } catch (error) {
         console.error('Error fetching temple:', error);
         res.status(500).json({ error: 'Failed to fetch temple information' });
+    }
+});
+
+/**
+ * @swagger
+ * /api/users/temples:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get all temples with total points
+ *     description: Fetch all temples from the database with their calculated total points
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all temples with total points
+ *       500:
+ *         description: Server error
+ */
+router.get('/temples', authenticate, async (req, res) => {
+    try {
+        const temples = await prisma.mst_temple.findMany({
+            where: {
+                is_deleted: false
+            },
+            select: {
+                id: true,
+                name: true,
+                code: true,
+                address: true,
+                contact_name: true,
+                contact_phone: true
+            },
+            orderBy: {
+                name: 'asc'
+            }
+        });
+
+        // Calculate total points for each temple
+        const templesWithPoints = await Promise.all(
+            temples.map(async (temple) => {
+                try {
+                    const templeReport = await eventService.generateTempleReport(temple.id);
+                    return {
+                        ...temple,
+                        total_points: templeReport.stats.total_points
+                    };
+                } catch (error) {
+                    console.error(`Error calculating points for temple ${temple.id}:`, error);
+                    return {
+                        ...temple,
+                        total_points: 0
+                    };
+                }
+            })
+        );
+
+        // Sort by total points in descending order
+        templesWithPoints.sort((a, b) => b.total_points - a.total_points);
+
+        res.json(templesWithPoints);
+    } catch (error) {
+        console.error('Error fetching temples:', error);
+        res.status(500).json({ error: 'Failed to fetch temples' });
+    }
+});
+
+/**
+ * @swagger
+ * /api/users/temple-detailed-report/:templeId:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get detailed temple report by temple ID
+ *     description: Fetch detailed temple report including individual and team events with results
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: templeId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Temple ID
+ *     responses:
+ *       200:
+ *         description: Detailed temple report
+ *       404:
+ *         description: Temple not found
+ *       500:
+ *         description: Server error
+ */
+router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) => {
+    try {
+        const { templeId } = req.params;
+        
+        // Verify temple exists
+        const temple = await prisma.mst_temple.findUnique({
+            where: { 
+                id: parseInt(templeId),
+                is_deleted: false
+            }
+        });
+
+        if (!temple) {
+            return res.status(404).json({ error: 'Temple not found' });
+        }
+
+        // Generate detailed temple report
+        const templeReport = await eventService.generateTempleReport(parseInt(templeId));
+        
+        // Transform the data for frontend consumption
+        const individualEvents = templeReport.participants
+            .filter(participant => participant.event_result)
+            .map(participant => {
+                const eventName = participant.event.name;
+                const ageCategory = participant.event.age_category?.name || 'Unknown';
+                const gender = participant.user.gender;
+                const rank = participant.event_result.rank;
+                const points = participant.event_result.points;
+                const participantName = `${participant.user.first_name} ${participant.user.last_name || ''}`.trim();
+                
+                return {
+                    event: eventName,
+                    age: ageCategory,
+                    gender: gender,
+                    first: rank === 'FIRST' ? participantName : '',
+                    second: rank === 'SECOND' ? participantName : '',
+                    third: rank === 'THIRD' ? participantName : '',
+                    points: points
+                };
+            });
+
+        const teamEvents = templeReport.teams
+            .filter(team => team.event_result)
+            .map(team => {
+                const eventName = team.event.name;
+                const gender = team.event.gender;
+                const rank = team.event_result.rank;
+                const points = team.event_result.points;
+                
+                return {
+                    event: eventName,
+                    gender: gender,
+                    result: rank,
+                    points: points
+                };
+            });
+
+        const totalPoints = {
+            individual: individualEvents.reduce((sum, event) => sum + event.points, 0),
+            team: teamEvents.reduce((sum, event) => sum + event.points, 0),
+            total: templeReport.stats.total_points
+        };
+
+        res.json({
+            temple: {
+                id: temple.id,
+                name: temple.name,
+                code: temple.code
+            },
+            individualEvents,
+            teamEvents,
+            totalPoints,
+            stats: templeReport.stats
+        });
+    } catch (error) {
+        console.error('Error fetching temple detailed report:', error);
+        res.status(500).json({ error: 'Failed to fetch temple detailed report' });
+    }
+});
+
+/**
+ * @swagger
+ * /api/users/champions:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get highest point getters by age category and gender
+ *     description: Fetch the participants with the highest total points in each age category and gender combination
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Highest point getters organized by age category and gender
+ *       500:
+ *         description: Server error
+ */
+router.get('/champions', authenticate, async (req, res) => {
+    try {
+        // Get all individual events with results
+        const individualRegistrations = await prisma.ind_event_registration.findMany({
+            where: {
+                is_deleted: false,
+                status: 'ACCEPTED',
+                event_result: {
+                    isNot: null
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        first_name: true,
+                        last_name: true,
+                        temple: {
+                            select: {
+                                name: true
+                            }
+                        }
+                    }
+                },
+                event: {
+                    include: {
+                        event_type: true,
+                        age_category: true
+                    }
+                },
+                event_result: {
+                    select: {
+                        rank: true,
+                        points: true
+                    }
+                }
+            }
+        });
+
+        // Group participants by age category and gender, then calculate total points per participant
+        const participantsByCategory = {};
+
+        individualRegistrations.forEach(registration => {
+            const ageCategory = registration.event.age_category.name;
+            const gender = registration.event.gender;
+            const userId = registration.user.id;
+            const participantName = `${registration.user.first_name} ${registration.user.last_name || ''}`.trim();
+            const templeName = registration.user.temple.name;
+            const points = registration.event_result.points;
+
+            // Create key for grouping
+            const key = `${ageCategory}::${gender}`;
+            
+            if (!participantsByCategory[key]) {
+                participantsByCategory[key] = {
+                    age_category: ageCategory,
+                    gender: gender,
+                    participants: {}
+                };
+            }
+
+            // If participant doesn't exist, create entry
+            if (!participantsByCategory[key].participants[userId]) {
+                participantsByCategory[key].participants[userId] = {
+                    id: userId,
+                    name: participantName,
+                    temple: templeName,
+                    total_points: 0,
+                    events: []
+                };
+            }
+
+            // Add points to participant's total and track the event
+            participantsByCategory[key].participants[userId].total_points += points;
+            participantsByCategory[key].participants[userId].events.push({
+                event_name: registration.event.event_type.name,
+                points: points,
+                rank: registration.event_result.rank
+            });
+        });
+
+        // Find highest point getters for each category (handle ties)
+        const championsArray = Object.values(participantsByCategory).map(category => {
+            // Convert participants object to array and sort by total points (highest first)
+            const participantsArray = Object.values(category.participants);
+            const sortedParticipants = participantsArray.sort((a, b) => b.total_points - a.total_points);
+            
+            // Find all participants with the same highest points (handle ties)
+            const highestPoints = sortedParticipants.length > 0 ? sortedParticipants[0].total_points : 0;
+            const champions = sortedParticipants.filter(participant => participant.total_points === highestPoints);
+
+            return {
+                age_category: category.age_category,
+                gender: category.gender,
+                champions: champions.length > 0 ? champions.map(champion => ({
+                    name: champion.name,
+                    temple: champion.temple,
+                    points: champion.total_points,
+                    events: champion.events
+                })) : [],
+                total_participants: participantsArray.length,
+                total_points_in_category: participantsArray.reduce((sum, p) => sum + p.total_points, 0)
+            };
+        });
+
+        // Sort by age category and gender
+        championsArray.sort((a, b) => {
+            if (a.age_category !== b.age_category) {
+                return a.age_category.localeCompare(b.age_category);
+            }
+            return a.gender.localeCompare(b.gender);
+        });
+
+        res.json(championsArray);
+    } catch (error) {
+        console.error('Error fetching champions:', error);
+        res.status(500).json({ error: 'Failed to fetch champions' });
+    }
+});
+
+/**
+ * @swagger
+ * /api/users/all-results:
+ *   get:
+ *     tags: [Users]
+ *     summary: Get all results for individual and team events
+ *     description: Fetch all winners (1st, 2nd, 3rd place) for both individual and team events organized by age category and gender
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All results organized by event type, age category and gender
+ *       500:
+ *         description: Server error
+ */
+router.get('/all-results', authenticate, async (req, res) => {
+    try {
+        // Get all individual events with results
+        const individualRegistrations = await prisma.ind_event_registration.findMany({
+            where: {
+                is_deleted: false,
+                status: 'ACCEPTED',
+                event_result: {
+                    isNot: null
+                }
+            },
+            include: {
+                user: {
+                    select: {
+                        first_name: true,
+                        last_name: true,
+                        temple: {
+                            select: {
+                                name: true
+                            }
+                        }
+                    }
+                },
+                event: {
+                    include: {
+                        event_type: true,
+                        age_category: true
+                    }
+                },
+                event_result: {
+                    select: {
+                        rank: true,
+                        points: true
+                    }
+                }
+            },
+            orderBy: [
+                { event: { age_category: { name: 'asc' } } },
+                { event: { gender: 'asc' } },
+                { event: { event_type: { name: 'asc' } } },
+                { event_result: { rank: 'asc' } }
+            ]
+        });
+
+        // Get all team events with results
+        const teamRegistrations = await prisma.team_event_registration.findMany({
+            where: {
+                is_deleted: false,
+                status: 'ACCEPTED',
+                event_result: {
+                    isNot: null
+                }
+            },
+            include: {
+                temple: {
+                    select: {
+                        name: true
+                    }
+                },
+                event: {
+                    include: {
+                        event_type: true,
+                        age_category: true
+                    }
+                },
+                event_result: {
+                    select: {
+                        rank: true,
+                        points: true
+                    }
+                }
+            },
+            orderBy: [
+                { event: { age_category: { name: 'asc' } } },
+                { event: { gender: 'asc' } },
+                { event: { event_type: { name: 'asc' } } },
+                { event_result: { rank: 'asc' } }
+            ]
+        });
+
+        console.log('Team registrations found:', teamRegistrations.length);
+        console.log('Sample team registration:', teamRegistrations[0]);
+
+        // Group individual events by age category and gender
+        const individualEventsByCategory = {};
+
+        individualRegistrations.forEach(registration => {
+            const ageCategory = registration.event.age_category.name;
+            const gender = registration.event.gender;
+            const eventName = registration.event.event_type.name;
+            const participantName = `${registration.user.first_name} ${registration.user.last_name || ''}`.trim();
+            const templeName = registration.user.temple.name;
+            const rank = registration.event_result.rank;
+            const points = registration.event_result.points;
+
+            // Create key for grouping
+            const key = `${ageCategory}::${gender}`;
+            
+            if (!individualEventsByCategory[key]) {
+                individualEventsByCategory[key] = {
+                    age_category: ageCategory,
+                    gender: gender,
+                    events: {}
+                };
+            }
+
+            if (!individualEventsByCategory[key].events[eventName]) {
+                individualEventsByCategory[key].events[eventName] = {
+                    first: null,
+                    second: null,
+                    third: null
+                };
+            }
+
+            // Add participant to appropriate rank
+            const participantData = {
+                name: participantName,
+                temple: templeName,
+                points: points
+            };
+
+            if (rank === 'FIRST' && !individualEventsByCategory[key].events[eventName].first) {
+                individualEventsByCategory[key].events[eventName].first = participantData;
+            } else if (rank === 'SECOND' && !individualEventsByCategory[key].events[eventName].second) {
+                individualEventsByCategory[key].events[eventName].second = participantData;
+            } else if (rank === 'THIRD' && !individualEventsByCategory[key].events[eventName].third) {
+                individualEventsByCategory[key].events[eventName].third = participantData;
+            }
+        });
+
+        // Group team events by age category and gender
+        const teamEventsByCategory = {};
+
+        teamRegistrations.forEach(registration => {
+            const ageCategory = registration.event.age_category.name;
+            const gender = registration.event.gender;
+            const eventName = registration.event.event_type.name;
+            const templeName = registration.temple.name;
+            const rank = registration.event_result.rank;
+            const points = registration.event_result.points;
+
+            // Create key for grouping
+            const key = `${ageCategory}::${gender}`;
+            
+            if (!teamEventsByCategory[key]) {
+                teamEventsByCategory[key] = {
+                    age_category: ageCategory,
+                    gender: gender,
+                    events: {}
+                };
+            }
+
+            if (!teamEventsByCategory[key].events[eventName]) {
+                teamEventsByCategory[key].events[eventName] = {
+                    first: null,
+                    second: null,
+                    third: null
+                };
+            }
+
+            // Add team to appropriate rank
+            const teamData = {
+                temple: templeName,
+                points: points
+            };
+
+            if (rank === 'FIRST' && !teamEventsByCategory[key].events[eventName].first) {
+                teamEventsByCategory[key].events[eventName].first = teamData;
+            } else if (rank === 'SECOND' && !teamEventsByCategory[key].events[eventName].second) {
+                teamEventsByCategory[key].events[eventName].second = teamData;
+            } else if (rank === 'THIRD' && !teamEventsByCategory[key].events[eventName].third) {
+                teamEventsByCategory[key].events[eventName].third = teamData;
+            }
+        });
+
+        // Convert to array format for easier frontend consumption
+        const individualResults = Object.values(individualEventsByCategory).map(category => ({
+            age_category: category.age_category,
+            gender: category.gender,
+            events: Object.entries(category.events).map(([eventName, winners]) => ({
+                event_name: eventName,
+                first: winners.first,
+                second: winners.second,
+                third: winners.third
+            }))
+        }));
+
+        const teamResults = Object.values(teamEventsByCategory).map(category => ({
+            age_category: category.age_category,
+            gender: category.gender,
+            events: Object.entries(category.events).map(([eventName, winners]) => ({
+                event_name: eventName,
+                first: winners.first,
+                second: winners.second,
+                third: winners.third
+            }))
+        }));
+
+        console.log('Team results:', teamResults.length, 'categories');
+        console.log('Individual results:', individualResults.length, 'categories');
+
+        res.json({
+            individual: individualResults,
+            team: teamResults
+        });
+    } catch (error) {
+        console.error('Error fetching all results:', error);
+        res.status(500).json({ error: 'Failed to fetch all results' });
     }
 });
 

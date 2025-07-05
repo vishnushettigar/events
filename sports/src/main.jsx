@@ -16,6 +16,7 @@ import Templedetailedreports from './Pages/Templedetailedreports.jsx';
 import Participantslist from './Pages/Participantslist.jsx';
 import Error from './Pages/Error.jsx';
 import AvailableEvents from './components/AvailableEvents.jsx';
+import StaffPanel from './staff/StaffPanel.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -34,6 +35,10 @@ import AvailableEvents from './components/AvailableEvents.jsx';
       {
         path: "/register",
         element: <Register />
+      },
+      {
+        path: "/staffpanel",
+        element: <StaffPanel />
       },
       {
         path: "/myevents",

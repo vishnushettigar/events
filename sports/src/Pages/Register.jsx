@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getTempleNames } from '../utils/templeUtils';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -19,6 +20,30 @@ const Register = () => {
 
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [temples, setTemples] = useState([]);
+    const [isLoadingTemples, setIsLoadingTemples] = useState(true);
+
+    // Fetch temples from backend on component mount
+    useEffect(() => {
+        const fetchTemples = async () => {
+            try {
+                const templeNames = await getTempleNames();
+                setTemples(templeNames);
+            } catch (error) {
+                console.error('Failed to fetch temples:', error);
+                // Fallback to hardcoded list if API fails
+                setTemples([
+                    'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
+                    'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
+                    'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
+                ]);
+            } finally {
+                setIsLoadingTemples(false);
+            }
+        };
+
+        fetchTemples();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -160,12 +185,6 @@ const Register = () => {
         }
     };
 
-    const temples = [
-        'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
-        'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
-        'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
-    ];
-
     return (
         <div className="pt-4 pb-4">
             <div
@@ -249,9 +268,12 @@ const Register = () => {
                             id="temple"
                             value={formData.temple}
                             onChange={handleChange}
-                            className="w-full bg-transparent text-white border-b-2 border-gray-300 focus:outline-none focus:border-purple-500"
+                            disabled={isLoadingTemples}
+                            className="w-full bg-transparent text-white border-b-2 border-gray-300 focus:outline-none focus:border-purple-500 disabled:opacity-50"
                         >
-                            <option value="">Select Your Temple</option>
+                            <option value="">
+                                {isLoadingTemples ? 'Loading temples...' : 'Select Your Temple'}
+                            </option>
                             {temples.map((temple, index) => (
                                 <option key={index} value={temple}>{temple}</option>
                             ))}

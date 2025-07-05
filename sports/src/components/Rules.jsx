@@ -14,15 +14,15 @@ const Rules = () => {
     return (
         <section className="w-[90%] mx-auto my-10">
             <div className="text-center mb-8">
-                <h2 className="text-4xl font-extrabold text-blue-800 mb-2 drop-shadow">ನಿಯಮಗಳು</h2>
-                <p className="text-lg text-gray-600">ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು</p>
+                <h2 className="text-4xl font-extrabold text-[#2A2A2A] mb-2 drop-shadow">ನಿಯಮಗಳು</h2>
+                <p className="text-lg text-[#2A2A2A]">ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl shadow-lg p-8">
+            <div className="bg-[#E0E0E0] rounded-2xl shadow-lg p-8">
                 <ol className="space-y-6 list-decimal list-inside">
                     {rules.map((rule, idx) => (
                         <li key={idx} className="flex items-start gap-3">
-                            <span className="inline-block mt-1 text-blue-700 text-2xl">•</span>
-                            <span className="text-lg text-gray-800 leading-relaxed">{rule}</span>
+                            <span className="inline-block mt-1 text-[#2A2A2A] text-2xl">•</span>
+                            <span className="text-lg text-[#2A2A2A] leading-relaxed">{rule}</span>
                         </li>
                     ))}
                 </ol>

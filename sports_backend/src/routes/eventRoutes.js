@@ -215,7 +215,7 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
 // });
 
 // Get combined temple participant data (age categories, gender options, and events)
-router.get('/temple-participant-data', authenticate, async (req, res) => {
+router.get('/participant-data', authenticate, async (req, res) => {
   try {
     const { ageCategory = 'All', gender = 'MALE' } = req.query;
 
@@ -288,6 +288,206 @@ router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (re
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to fetch teams' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/event-participants/{eventId}:
+ *   get:
+ *     tags: [Events]
+ *     summary: Get participants for a specific event
+ *     description: Retrieve all participants (individual and team) registered for a specific event
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID of the event
+ *     responses:
+ *       200:
+ *         description: Event participants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     description: Registration ID
+ *                   registration_type:
+ *                     type: string
+ *                     enum: [INDIVIDUAL, TEAM]
+ *                     description: Type of registration
+ *                   participant_name:
+ *                     type: string
+ *                     description: Name of individual participant (for individual events)
+ *                   team_name:
+ *                     type: string
+ *                     description: Name of team (for team events)
+ *                   temple_name:
+ *                     type: string
+ *                     description: Temple name
+ *                   age_category:
+ *                     type: string
+ *                     description: Age category name
+ *                   gender:
+ *                     type: string
+ *                     description: Gender
+ *                   phone:
+ *                     type: string
+ *                     description: Phone number (for individual participants)
+ *                   aadhar_number:
+ *                     type: string
+ *                     description: Aadhaar number (for individual participants)
+ *                   member_count:
+ *                     type: integer
+ *                     description: Number of team members (for team events)
+ *                   registration_status:
+ *                     type: string
+ *                     description: Registration status
+ *                   result:
+ *                     type: object
+ *                     description: Event result if available
+ *                   registered_at:
+ *                     type: string
+ *                     format: date-time
+ *                     description: Registration timestamp
+ *       400:
+ *         description: Invalid event ID
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Event not found
+ *       500:
+ *         description: Server error
+ */
+// Get participants for a specific event
+router.get('/event-participants/:eventId', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    if (!eventId || isNaN(parseInt(eventId))) {
+      return res.status(400).json({ error: 'Valid event ID is required' });
+    }
+
+    const participants = await eventService.getEventParticipants(parseInt(eventId));
+    res.json(participants);
+  } catch (error) {
+    console.error('Error fetching event participants:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch event participants' });
+  }
+});
+
+// Debug route to check database structure
+router.get('/debug-event/:eventId', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    if (!eventId || isNaN(parseInt(eventId))) {
+      return res.status(400).json({ error: 'Valid event ID is required' });
+    }
+
+    // Check the event
+    const event = await prisma.mst_event.findUnique({
+      where: { id: parseInt(eventId) },
+      include: {
+        event_type: true,
+        age_category: true
+      }
+    });
+
+    // Check individual registrations
+    const individualRegistrations = await prisma.ind_event_registration.findMany({
+      where: { event_id: parseInt(eventId) },
+      include: {
+        user: true
+      }
+    });
+
+    // Check team registrations
+    const teamRegistrations = await prisma.team_event_registration.findMany({
+      where: { event_id: parseInt(eventId) },
+      include: {
+        temple: true
+      }
+    });
+
+    res.json({
+      event,
+      individualRegistrations: {
+        count: individualRegistrations.length,
+        data: individualRegistrations
+      },
+      teamRegistrations: {
+        count: teamRegistrations.length,
+        data: teamRegistrations
+      }
+    });
+  } catch (error) {
+    console.error('Error in debug route:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update individual event result
+router.put('/update-individual-result/:registrationId', authenticate, requireRole([2, 3]), [
+  body('rank').optional().isIn(['FIRST', 'SECOND', 'THIRD', 'CLEAR']).withMessage('Invalid rank')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  
+  const { registrationId } = req.params;
+  const { rank } = req.body;
+  
+  try {
+    const updatedRegistration = await eventService.updateIndividualEventResult(
+      parseInt(registrationId), 
+      rank, 
+      req.user.id
+    );
+    res.json(updatedRegistration);
+  } catch (error) {
+    console.error('Individual result update error:', error);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Individual result update failed' });
+  }
+});
+
+// Update team event result
+router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 3]), [
+  body('rank').optional().isIn(['FIRST', 'SECOND', 'THIRD', 'CLEAR']).withMessage('Invalid rank')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  
+  const { registrationId } = req.params;
+  const { rank } = req.body;
+  
+  try {
+    const updatedRegistration = await eventService.updateTeamEventResult(
+      parseInt(registrationId), 
+      rank, 
+      req.user.id
+    );
+    res.json(updatedRegistration);
+  } catch (error) {
+    console.error('Team result update error:', error);
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Team result update failed' });
   }
 });
 

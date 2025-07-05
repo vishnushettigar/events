@@ -59,7 +59,7 @@ const Sidebar = () => {
       {/* Mobile Menu Toggle Button */}
       <button
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 bg-blue-600 text-white p-2 rounded-lg shadow-lg hover:bg-blue-700 transition-colors duration-200"
+        className="md:hidden fixed top-4 left-4 z-50 bg-[#D35D38] text-white p-2 rounded-lg shadow-lg hover:bg-[#B84A2E] transition-colors duration-200"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -78,7 +78,7 @@ const Sidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:relative min-h-screen bg-gradient-to-b from-blue-800 to-blue-500 shadow-2xl flex flex-col transition-all duration-300 ease-in-out
+        className={`fixed md:relative min-h-screen bg-[#F0F0F0] shadow-2xl flex flex-col transition-all duration-300 ease-in-out
           ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
           ${isCollapsed ? 'w-20' : 'w-64'}
           z-40`}
@@ -86,7 +86,7 @@ const Sidebar = () => {
         {/* Collapse Button - Only visible on desktop */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden md:block absolute -right-3 top-6 bg-blue-600 text-white p-1.5 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-200 border-2 border-white"
+          className="hidden md:block absolute -right-3 top-6 bg-[#D35D38] text-white p-1.5 rounded-full shadow-lg hover:bg-[#B84A2E] transition-colors duration-200 border-2 border-white"
         >
           {isCollapsed ? (
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,15 +100,15 @@ const Sidebar = () => {
         </button>
 
         {/* Navigation Links */}
-        <nav className="flex flex-col gap-2 mt-8 px-3">
+        <nav className="flex flex-col gap-3 mt-8 px-3">
           {/* My Events Link */}
           <Link
             to="/myevents"
             onClick={handleNavigation}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-700 hover:text-white ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-[#F8DFBE] hover:text-[#D35D38] ${
               location.pathname === '/myevents' 
-                ? 'bg-blue-900 text-white' 
-                : 'bg-white text-blue-600'
+                ? 'bg-[#D35D38] text-white shadow-lg' 
+                : 'bg-white text-[#2A2A2A] shadow-md'
             }`}
           >
             <span className={`text-xl flex items-center justify-center ${isCollapsed ? 'w-full' : ''}`}>
@@ -124,10 +124,10 @@ const Sidebar = () => {
             <Link
               to="/myevents/templeparticipants"
               onClick={handleNavigation}
-              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-700 hover:text-white ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-[#F8DFBE] hover:text-[#D35D38] ${
                 location.pathname === '/myevents/templeparticipants' 
-                  ? 'bg-blue-900 text-white' 
-                  : 'bg-white text-blue-600'
+                  ? 'bg-[#D35D38] text-white shadow-lg' 
+                  : 'bg-white text-[#2A2A2A] shadow-md'
               }`}
             >
               <span className={`text-xl flex items-center justify-center ${isCollapsed ? 'w-full' : ''}`}>
@@ -138,7 +138,7 @@ const Sidebar = () => {
               </span>
             </Link>
             {pendingCount > 0 && (
-              <span className={`absolute bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] flex items-center justify-center ${
+              <span className={`absolute bg-[#D35D38] text-white text-xs font-bold px-2 py-1 rounded-full min-w-[20px] flex items-center justify-center ${
                 isCollapsed 
                   ? 'top-0 right-0 transform translate-x-1/2 -translate-y-1/2' 
                   : 'top-1/2 right-4 transform -translate-y-1/2'
@@ -155,16 +155,16 @@ const Sidebar = () => {
                 )}
               </span>
             )}
-      </div>
+          </div>
 
           {/* Team Events Link */}
           <Link
             to="/myevents/groupevents"
             onClick={handleNavigation}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-700 hover:text-white ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-[#F8DFBE] hover:text-[#D35D38] ${
               location.pathname === '/myevents/groupevents' 
-                ? 'bg-blue-900 text-white' 
-                : 'bg-white text-blue-600'
+                ? 'bg-[#D35D38] text-white shadow-lg' 
+                : 'bg-white text-[#2A2A2A] shadow-md'
             }`}
           >
             <span className={`text-xl flex items-center justify-center ${isCollapsed ? 'w-full' : ''}`}>
@@ -179,10 +179,10 @@ const Sidebar = () => {
           <Link
             to="/myevents/Participantslist"
             onClick={handleNavigation}
-            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-blue-700 hover:text-white ${
+            className={`flex items-center gap-3 px-4 py-3 rounded-lg font-semibold transition-all duration-200 hover:bg-[#F8DFBE] hover:text-[#D35D38] ${
               location.pathname === '/myevents/Participantslist' 
-                ? 'bg-blue-900 text-white' 
-                : 'bg-white text-blue-600'
+                ? 'bg-[#D35D38] text-white shadow-lg' 
+                : 'bg-white text-[#2A2A2A] shadow-md'
             }`}
           >
             <span className={`text-xl flex items-center justify-center ${isCollapsed ? 'w-full' : ''}`}>
@@ -192,15 +192,15 @@ const Sidebar = () => {
               Athletes
             </span>
           </Link>
-      </nav>
+        </nav>
 
         {/* Copyright Section */}
         <div className="mt-auto mb-6 px-3">
-          <p className={`text-xs text-blue-100 text-center transition-all duration-300 ${isCollapsed ? 'hidden' : ''}`}>
+          <p className={`text-xs text-[#5A5A5A] text-center transition-all duration-300 ${isCollapsed ? 'hidden' : ''}`}>
             © {new Date().getFullYear()} Padmashali Kreedothsava
           </p>
-      </div>
-    </aside>
+        </div>
+      </aside>
 
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (

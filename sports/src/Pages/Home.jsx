@@ -12,26 +12,38 @@ const Home = () => {
   return (
     <>
       {/* Hero Section Redesigned */}
-      <section className="relative pt-[84px] min-h-[70vh] flex items-center justify-center bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden">
-        {/* Blurred Background Image */}
-        <div className="absolute inset-0 bg-[url('./assets/Padmashali_bg.jpg')] bg-cover bg-center blur-[3px] opacity-60"></div>
+      <section className="relative pt-[2px] min-h-[80vh] flex items-center justify-center bg-[#F0F0F0] overflow-hidden">
         {/* Foreground Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 py-16">
-          <h1 className="text-5xl md:text-6xl font-extrabold text-blue-900 drop-shadow mb-4">Padmashali Kreedothsava</h1>
-          <p className="text-2xl md:text-3xl text-blue-700 font-semibold mb-6">Welcome to the Grand Sports Event!</p>
-          <div className="flex flex-row gap-6 mt-4">
-            <a href="/login" className="px-8 py-3 rounded-lg bg-blue-700 text-white font-bold text-lg shadow-lg hover:bg-blue-900 transition">Login</a>
-            <a href="/register" className="px-8 py-3 rounded-lg bg-gradient-to-br from-purple-600 to-blue-500 text-white font-bold text-lg shadow-lg hover:from-purple-800 hover:to-blue-700 transition">Register</a>
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-center px-4 py-4 max-w-7xl mx-auto">
+          {/* Left Side - Charaka Image */}
+          <div className="flex-1 flex justify-center md:justify-start mb-8 md:mb-0">
+            <img 
+              src="/src/assets/charaka.png" 
+              alt="Charaka" 
+              className="max-w-xs md:max-w-md lg:max-w-lg h-auto drop-shadow-2xl"
+            />
+          </div>
+          
+          {/* Right Side - Content */}
+          <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
+            <h1 className="text-5xl md:text-6xl font-extrabold text-[#2A2A2A] drop-shadow mb-4">Padmashali Annual Sports Meet</h1>
+            <p className="text-[20px] md:text-[20px] text-[#5A5A5A] mb-6">Hosted by Sri Brahmalinga Veerabhadra Durgaparameshwari temple, Salikeri</p>
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-4">
+              <a href="/login" className="px-8 py-3 rounded-lg bg-white text-[#D35D38] border-2 border-[#D35D38] font-bold text-lg shadow-lg hover:bg-[#D35D38] hover:text-white transition">Login</a>
+              <a href="/register" className="px-8 py-3 rounded-lg bg-[#D35D38] text-white font-bold text-lg shadow-lg hover:bg-[#B84A2E] transition">Register</a>
+            </div>
           </div>
         </div>
       </section>
-      <div>
-       <Counts />
+      <div className='bg-[#F0F0F0]'>
+        <div> <Counts /></div>
+        <div><Sponsors /></div>
+        <div><Rules /></div>
+        <div><Location /></div>
+        <div><Contacts /></div>
       </div>
-      <div><Sponsors /></div>
-      <div><Rules /></div>
-      <div><Location /></div>
-      <div><Contacts /></div>
+
+      
     </>
   );
 };

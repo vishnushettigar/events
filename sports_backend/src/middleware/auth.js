@@ -27,20 +27,31 @@ function requireRole(role) {
   return (req, res, next) => {
     // Map role names to role IDs
     const roleMap = {
-      'SUPER_USER': 1,
+      'SUPER_USER': 4,
       'TEMPLE_ADMIN': 2,
       'STAFF': 3,
-      'PARTICIPANT': 4
+      'PARTICIPANT': 1
     };
 
-    // Get the role ID (either from the map or use the number directly)
-    const requiredRoleId = typeof role === 'string' ? roleMap[role] : role;
-
-    if (!requiredRoleId) {
-      return res.status(403).json({ error: 'Invalid role specified' });
+    // Get the role ID(s) (either from the map or use the number directly)
+    let requiredRoleIds;
+    if (Array.isArray(role)) {
+      // If role is an array, use the numbers directly
+      requiredRoleIds = role;
+    } else if (typeof role === 'string') {
+      // If role is a string, map it to role ID
+      const roleId = roleMap[role];
+      if (!roleId) {
+        return res.status(403).json({ error: 'Invalid role specified' });
+      }
+      requiredRoleIds = [roleId];
+    } else {
+      // If role is a number, use it directly
+      requiredRoleIds = [role];
     }
 
-    if (req.user.role !== requiredRoleId) {
+    // Check if user has any of the required roles
+    if (!requiredRoleIds.includes(req.user.role)) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     next();

@@ -23,7 +23,7 @@ const Templeparticipants = () => {
                 }
 
                 const response = await fetch(
-                    `http://localhost:4000/api/events/temple-participant-data?ageCategory=${selectedAge}&gender=${selectedGender}`,
+                    `http://localhost:4000/api/events/participant-data?ageCategory=${selectedAge}&gender=${selectedGender}`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,

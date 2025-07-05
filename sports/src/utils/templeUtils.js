@@ -78,4 +78,52 @@ export const getCurrentUserTemple = async () => {
         console.error('Error fetching current user temple:', error);
         throw error;
     }
+};
+
+/**
+ * Get all temples from the backend
+ * @returns {Promise<Array>} Array of temple objects
+ */
+export const getAllTemples = async () => {
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            throw new Error('No authentication token found');
+        }
+
+        const response = await fetch('http://localhost:4000/api/users/temples', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch temples');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching temples:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get temple names as an array
+ * @returns {Promise<Array<string>>} Array of temple names
+ */
+export const getTempleNames = async () => {
+    try {
+        const temples = await getAllTemples();
+        return temples.map(temple => temple.name);
+    } catch (error) {
+        console.error('Error fetching temple names:', error);
+        // Fallback to hardcoded list if API fails
+        return [
+            'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
+            'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
+            'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
+        ];
+    }
 }; 

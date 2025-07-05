@@ -55,30 +55,31 @@ const Myevents = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-screen bg-[#F0F0F0]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#D35D38]"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+      <div className="flex justify-center items-center min-h-screen bg-[#F0F0F0]">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg shadow-lg">
+          <h3 className="font-bold text-lg mb-2">Error</h3>
+          <p>{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <section className="flex h-screen overflow-hidden">
+    <section className="flex h-screen overflow-hidden bg-[#F0F0F0]">
       {userRole === 2 && (
-      <Sidebar />
+        <Sidebar />
       )}
-      <div className="flex-1 overflow-auto">
-        {/* <div className='bg-blue-600 rounded-br-md rounded-bl-md'>
-          <div className='flex flex-col  w-[80%] mx-auto text-white items-start  p-6'>
+      <div className="flex-1 overflow-auto bg-[#F0F0F0]">
+        {/* <div className='bg-[#D35D38] rounded-br-md rounded-bl-md shadow-lg'>
+          <div className='flex flex-col w-[80%] mx-auto text-white items-start p-6'>
             <div className='flex flex-row'>
               <ul className="text-white space-y-4 list-disc pl-6">
                 <li className="text-base">
