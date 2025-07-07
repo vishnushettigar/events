@@ -75,33 +75,9 @@ const Myevents = () => {
   return (
     <section className="flex h-screen overflow-hidden bg-[#F0F0F0]">
       {userRole === 2 && (
-        <Sidebar />
+      <Sidebar />
       )}
       <div className="flex-1 overflow-auto bg-[#F0F0F0]">
-        {/* <div className='bg-[#D35D38] rounded-br-md rounded-bl-md shadow-lg'>
-          <div className='flex flex-col w-[80%] mx-auto text-white items-start p-6'>
-            <div className='flex flex-row'>
-              <ul className="text-white space-y-4 list-disc pl-6">
-                <li className="text-base">
-                    ಒಂದು ದೇವಸ್ಥಾನದಿಂದ ವೈಯಕ್ತಿಕ
-                    ವಿಭಾಗದಲ್ಲಿ ಪ್ರತಿ ಸ್ಪರ್ಧೆಗೆ ಗರಿಷ್ಠ 3 ಸ್ಪರ್ಧಿ ಮತ್ತು ಒಬ್ಬ ಸ್ಪರ್ಧಿ ಯಾವುದಾದರೂ ಗರಿಷ್ಠ 3 ಸ್ಪರ್ಧೆಗಳಲ್ಲಿ
-                    ಭಾಗವಹಿಸಬಹುದು. (ಈ ನಿಯಮ 10 ವರ್ಷ ಒಳಗಿನವರಿಗೆ ಮತ್ತು 60 ವರ್ಷ ಮೇಲ್ಪಟ್ಟವರಿಗೆ
-                    ಅನ್ವಯಿಸುವುದಿಲ್ಲ) ಒಂದು ಸ್ಪರ್ಧೆಯಲ್ಲಿ ಕನಿಷ್ಠ 5 ಸ್ಪರ್ಧಿಗಳಿಲ್ಲದಿದ್ದರೆ ಸ್ಪರ್ಧೆಯನ್ನು ಕೈಬಿಡಲಾಗುವುದು.
-                </li>
-                <li className="text-base">
-                    ಕ್ರೀಡಾಳುಗಳು ತಮ್ಮ ವೈಯಕ್ತಿಕ ಸ್ಪರ್ಧಾ ವಿಭಾಗಗಳಲ್ಲಿ ಸೇರಲು/ಬದಲಾವಣೆ ಬಯಸಿದಲ್ಲಿ ದೇವಸ್ಥಾನದ ಅಧಿಕೃತ ವ್ಯಕ್ತಿಗಳಿಂದ ಒಪ್ಪಿಗೆ ಪಡೆದು ದೃಢೀಕರಿಸಬೇಕು. (ಒಂದು ವೇಳೆ ಆ ವಿಭಾಗದಲ್ಲಿ ನೋಂದಣಿ ಪೂರ್ತಿ ಗೊಂಡಿದ್ದಲ್ಲಿ ಮಾತ್ರ)
-                </li>
-                </ul>
-            </div>
-            {userInfo && (
-            <div className='flex flex-row gap-4 pt-6'>
-                <h2>Point of contact for {userInfo.temple}:</h2>
-                <h2>{userInfo.temple_admin_name || 'Not available'}</h2>
-                <h2>{userInfo.temple_admin_phone || 'Not available'}</h2>
-            </div>
-            )}
-          </div>
-        </div> */}
         <Outlet />
       </div>
     </section>

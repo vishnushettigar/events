@@ -105,7 +105,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
       id: { in: member_user_ids }
     },
       select: { temple_id: true, id: true }
-    });
+  });
 
     console.log('Found members:', members);
 
@@ -130,7 +130,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
 
   if (!event) {
       throw new Error(`Event with ID ${event_id} not found`);
-    }
+  }
 
     // Check if team is already registered for this event
     const existingRegistration = await prisma.team_event_registration.findFirst({
@@ -469,8 +469,8 @@ async function getTempleTeams(temple_id, filters = {}) {
         gender: true,
             dob: true,
             aadhar_number: true
-          }
-        });
+      }
+    });
         
         console.log('Found members for team', team.id, ':', members);
         
@@ -493,7 +493,7 @@ async function getTempleTeams(temple_id, filters = {}) {
           }
         };
       }
-    }));
+  }));
 
     console.log('Teams with members:', teamsWithMembers);
   return teamsWithMembers;

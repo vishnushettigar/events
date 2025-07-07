@@ -155,7 +155,7 @@ const Sidebar = () => {
                 )}
               </span>
             )}
-          </div>
+      </div>
 
           {/* Team Events Link */}
           <Link
@@ -192,15 +192,15 @@ const Sidebar = () => {
               Athletes
             </span>
           </Link>
-        </nav>
+      </nav>
 
         {/* Copyright Section */}
         <div className="mt-auto mb-6 px-3">
           <p className={`text-xs text-[#5A5A5A] text-center transition-all duration-300 ${isCollapsed ? 'hidden' : ''}`}>
             © {new Date().getFullYear()} Padmashali Kreedothsava
           </p>
-        </div>
-      </aside>
+      </div>
+    </aside>
 
       {/* Overlay for mobile menu */}
       {isMobileMenuOpen && (

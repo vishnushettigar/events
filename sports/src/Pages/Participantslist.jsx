@@ -59,25 +59,35 @@ const Participantslist = () => {
   });
 
   return (
-    <div className="h-full w-full bg-gradient-to-br from-blue-50 to-purple-100 ">
-      <div className="h-full w-full px-2 sm:px-3 md:px-4 py-3 sm:py-4 md:py-6 pb-10">
-        <div className="h-full w-full mx-auto pb-[50px]">
-          <h4 className="text-center text-base sm:text-lg lg:text-xl font-bold mb-2 sm:mb-3 lg:mb-4 text-blue-800">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2025</h4>
-          <div className="mb-3 sm:mb-4 lg:mb-6 pb-[30px] ">
-            {loading ? (
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700 mx-auto"></div>
-              </div>
-            ) : (
-              <h4 className="text-center text-sm sm:text-base lg:text-lg font-semibold mb-2 sm:mb-3 text-purple-700">{templeName}</h4>
-            )}
-            
-            {/* Filters Section */}
-            <div className="mb-2 sm:mb-3 flex flex-col sm:flex-row gap-2 sm:gap-3">
+    <div className="min-h-screen bg-[#F0F0F0] py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
+            33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2025
+          </h1>
+          {loading ? (
+            <div className="flex justify-center items-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+            </div>
+          ) : (
+            <p className="text-xl text-[#5A5A5A] font-semibold">{templeName}</p>
+          )}
+        </div>
+
+        {/* Filters Section */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+          <h2 className="text-2xl font-bold text-[#2A2A2A] mb-4">Filter Participants</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="ageCategory" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                Age Category
+              </label>
               <select
+                id="ageCategory"
                 value={selectedAgeCategory}
                 onChange={(e) => setSelectedAgeCategory(e.target.value)}
-                className="w-full sm:w-auto p-1.5 sm:p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-xs sm:text-sm"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
               >
                 <option value="">All Age Categories</option>
                 <option value="0-5">0-5</option>
@@ -90,64 +100,152 @@ const Participantslist = () => {
                 <option value="49-60">49-60</option>
                 <option value="61-90">61-90</option>
               </select>
+            </div>
+            <div>
+              <label htmlFor="gender" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                Gender
+              </label>
               <select
+                id="gender"
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value)}
-                className="w-full sm:w-auto p-1.5 sm:p-2 border rounded bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-xs sm:text-sm"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
               >
                 <option value="">All Genders</option>
                 <option value="MALE">Male</option>
                 <option value="FEMALE">Female</option>
               </select>
             </div>
+          </div>
+        </div>
 
-            {/* Table Section */}
-            <div className="rounded-lg shadow-lg bg-white overflow-hidden ">
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-blue-200 ">
-                  <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
-                    <tr>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">SL.NO</th>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">Name</th>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">Category</th>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">Aadhar No</th>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">DOB</th>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">Gender</th>
-                      <th scope="col" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">Phone No</th>
+        {/* Participants Table */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
+            <h2 className="text-2xl font-bold text-white">Participants List</h2>
+            <p className="text-white/80 text-sm mt-1">
+              {filteredParticipants.length} participant{filteredParticipants.length !== 1 ? 's' : ''} found
+            </p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    SL.NO
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    Aadhar No
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    Date of Birth
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    Gender
+                  </th>
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                    Phone No
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {participantsLoading ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-8 text-center">
+                      <div className="flex justify-center items-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+                        <span className="ml-3 text-[#5A5A5A]">Loading participants...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredParticipants.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-8 text-center">
+                      <div className="text-center">
+                        <p className="text-[#5A5A5A] text-lg">No participants found</p>
+                        <p className="text-[#5A5A5A] text-sm mt-1">Try adjusting your filters</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredParticipants.map((participant, idx) => (
+                    <tr key={participant.id} className="hover:bg-[#F8DFBE] transition-colors duration-200">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center justify-center w-8 h-8 bg-[#D35D38] text-white text-sm font-bold rounded-full">
+                          {idx + 1}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-[#2A2A2A]">{participant.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {participant.age_category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-[#5A5A5A] font-mono">{participant.aadhar_number}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-[#5A5A5A]">{participant.date_of_birth}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          participant.gender === 'MALE' 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-pink-100 text-pink-800'
+                        }`}>
+                          {participant.gender}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-[#5A5A5A]">{participant.phone_number}</div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-blue-100">
-                    {participantsLoading ? (
-                      <tr>
-                        <td colSpan="7" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-700 mx-auto"></div>
-                        </td>
-                      </tr>
-                    ) : filteredParticipants.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 text-center text-gray-500">
-                          No participants found
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredParticipants.map((participant, idx) => (
-                        <tr key={participant.id} className="hover:bg-blue-50 transition">
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm font-semibold text-blue-900">{idx + 1}</td>
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm text-gray-900">{participant.name}</td>
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm text-gray-900">{participant.age_category}</td>
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm text-gray-900">{participant.aadhar_number}</td>
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm text-gray-900">{participant.date_of_birth}</td>
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm text-gray-900">{participant.gender}</td>
-                          <td className="px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 md:py-2 whitespace-nowrap text-[10px] sm:text-[11px] md:text-sm text-gray-900">{participant.phone_number}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Summary Stats */}
+        {!participantsLoading && filteredParticipants.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 mt-8">
+            <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">📊 Summary Statistics</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">{filteredParticipants.length}</p>
+                <p className="text-sm text-[#5A5A5A]">Total Participants</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">
+                  {filteredParticipants.filter(p => p.gender === 'MALE').length}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Male Participants</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">
+                  {filteredParticipants.filter(p => p.gender === 'FEMALE').length}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Female Participants</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">
+                  {new Set(filteredParticipants.map(p => p.age_category)).size}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Age Categories</p>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

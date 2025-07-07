@@ -201,10 +201,13 @@ const StaffPanel = () => {
       setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
+      console.log('Fetching all results with token:', token ? 'Token exists' : 'No token');
+      
       if (!token) {
         throw new Error('No authentication token found');
       }
 
+      console.log('Making request to all-results endpoint...');
       const response = await fetch('http://localhost:4000/api/users/all-results', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -212,8 +215,13 @@ const StaffPanel = () => {
         }
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to fetch all results');
+        const errorText = await response.text();
+        console.error('Response error text:', errorText);
+        throw new Error(`Failed to fetch all results: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
@@ -1183,6 +1191,7 @@ const StaffPanel = () => {
                             <div>
                               <p className="text-xl font-bold text-[#D35D38]">{champion.name || 'Unknown'}</p>
                               <p className="text-sm text-[#5A5A5A]">{champion.temple || 'Unknown'}</p>
+                              <p className="text-xs text-[#5A5A5A] mt-1">Aadhar: {champion.aadhar_number || 'N/A'}</p>
                             </div>
                             
                             <div className="mt-3">
@@ -1286,6 +1295,8 @@ const StaffPanel = () => {
 
   const renderAllResults = () => {
     console.log('renderAllResults - data:', data); // Debug logging
+    console.log('renderAllResults - loading:', loading);
+    console.log('renderAllResults - error:', error);
     
     if (loading) {
       return (
@@ -1296,19 +1307,47 @@ const StaffPanel = () => {
     }
 
     if (error) {
+      console.log('renderAllResults - Showing error:', error);
       return (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
+        <div className="space-y-4">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+            <strong className="font-bold">Error!</strong>
+            <span className="block sm:inline"> {error}</span>
+          </div>
+          <button 
+            onClick={fetchAllResults}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            Retry Fetch
+          </button>
         </div>
       );
     }
 
     if (!data || typeof data !== 'object' || (!data.individual && !data.team)) {
       console.log('renderAllResults - No data or invalid structure:', data); // Debug logging
+      const token = localStorage.getItem('token');
       return (
         <div className="text-center py-8">
           <p className="text-[#5A5A5A]">No results data available yet.</p>
+          <button 
+            onClick={fetchAllResults}
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
+          >
+            Load Data
+          </button>
+          
+          {/* Debug Information */}
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left">
+            <h4 className="font-bold mb-2">Debug Information:</h4>
+            <p><strong>Token exists:</strong> {token ? 'Yes' : 'No'}</p>
+            <p><strong>Active tab:</strong> {activeTab}</p>
+            <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
+            <p><strong>Error:</strong> {error || 'None'}</p>
+            <p><strong>Data type:</strong> {typeof data}</p>
+            <p><strong>Data keys:</strong> {data ? Object.keys(data).join(', ') : 'No data'}</p>
+          </div>
+          
           {data && (
             <div className="mt-4 text-sm text-gray-500">
               <p>Data structure: {JSON.stringify(data, null, 2)}</p>
@@ -1317,6 +1356,36 @@ const StaffPanel = () => {
         </div>
       );
     }
+
+    // Helper function to render winners list
+    const renderWinnersList = (winners, isIndividual = true) => {
+      if (!winners || winners.length === 0) {
+        return <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>;
+      }
+
+      return (
+        <div className="space-y-2">
+          {winners.map((winner, index) => (
+            <div key={winner.aadhar || index} className="text-center border-b border-gray-100 pb-2 last:border-b-0">
+              {isIndividual ? (
+                <>
+                  <p className="font-medium text-[#D35D38]">{winner.name}</p>
+                  <p className="text-sm text-[#5A5A5A]">{winner.temple}</p>
+                  {winner.aadhar && (
+                    <p className="text-xs text-[#5A5A5A] mt-1">Aadhar: {winner.aadhar}</p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="font-medium text-[#D35D38]">{winner.temple}</p>
+                  <p className="text-xs text-[#5A5A5A] mt-1">{winner.points} points</p>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    };
 
     return (
       <div className="space-y-8">
@@ -1359,16 +1428,10 @@ const StaffPanel = () => {
                             <div className="flex items-center justify-center mb-2">
                               <span className="text-2xl">🥇</span>
                             </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">1st Place</h5>
-                            {event.first ? (
-                              <div className="text-center">
-                                <p className="font-medium text-[#D35D38]">{event.first.name}</p>
-                                <p className="text-sm text-[#5A5A5A]">{event.first.temple}</p>
-                                <p className="text-xs text-[#5A5A5A] mt-1">{event.first.points} points</p>
-                              </div>
-                            ) : (
-                              <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>
-                            )}
+                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
+                              1st Place {Array.isArray(event.first) && event.first.length > 1 && `(${event.first.length} winners)`}
+                            </h5>
+                            {renderWinnersList(event.first, true)}
                           </div>
 
                           {/* Second Place */}
@@ -1376,16 +1439,10 @@ const StaffPanel = () => {
                             <div className="flex items-center justify-center mb-2">
                               <span className="text-2xl">🥈</span>
                             </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">2nd Place</h5>
-                            {event.second ? (
-                              <div className="text-center">
-                                <p className="font-medium text-[#D35D38]">{event.second.name}</p>
-                                <p className="text-sm text-[#5A5A5A]">{event.second.temple}</p>
-                                <p className="text-xs text-[#5A5A5A] mt-1">{event.second.points} points</p>
-                              </div>
-                            ) : (
-                              <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>
-                            )}
+                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
+                              2nd Place {Array.isArray(event.second) && event.second.length > 1 && `(${event.second.length} winners)`}
+                            </h5>
+                            {renderWinnersList(event.second, true)}
                           </div>
 
                           {/* Third Place */}
@@ -1393,16 +1450,10 @@ const StaffPanel = () => {
                             <div className="flex items-center justify-center mb-2">
                               <span className="text-2xl">🥉</span>
                             </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">3rd Place</h5>
-                            {event.third ? (
-                              <div className="text-center">
-                                <p className="font-medium text-[#D35D38]">{event.third.name}</p>
-                                <p className="text-sm text-[#5A5A5A]">{event.third.temple}</p>
-                                <p className="text-xs text-[#5A5A5A] mt-1">{event.third.points} points</p>
-                              </div>
-                            ) : (
-                              <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>
-                            )}
+                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
+                              3rd Place {Array.isArray(event.third) && event.third.length > 1 && `(${event.third.length} winners)`}
+                            </h5>
+                            {renderWinnersList(event.third, true)}
                           </div>
                         </div>
                       </div>
@@ -1448,15 +1499,10 @@ const StaffPanel = () => {
                             <div className="flex items-center justify-center mb-2">
                               <span className="text-2xl">🥇</span>
                             </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">1st Place</h5>
-                            {event.first ? (
-                              <div className="text-center">
-                                <p className="font-medium text-[#D35D38]">{event.first.temple}</p>
-                                <p className="text-xs text-[#5A5A5A] mt-1">{event.first.points} points</p>
-                              </div>
-                            ) : (
-                              <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>
-                            )}
+                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
+                              1st Place {Array.isArray(event.first) && event.first.length > 1 && `(${event.first.length} winners)`}
+                            </h5>
+                            {renderWinnersList(event.first, false)}
                           </div>
 
                           {/* Second Place */}
@@ -1464,15 +1510,10 @@ const StaffPanel = () => {
                             <div className="flex items-center justify-center mb-2">
                               <span className="text-2xl">🥈</span>
                             </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">2nd Place</h5>
-                            {event.second ? (
-                              <div className="text-center">
-                                <p className="font-medium text-[#D35D38]">{event.second.temple}</p>
-                                <p className="text-xs text-[#5A5A5A] mt-1">{event.second.points} points</p>
-                              </div>
-                            ) : (
-                              <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>
-                            )}
+                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
+                              2nd Place {Array.isArray(event.second) && event.second.length > 1 && `(${event.second.length} winners)`}
+                            </h5>
+                            {renderWinnersList(event.second, false)}
                           </div>
 
                           {/* Third Place */}
@@ -1480,15 +1521,10 @@ const StaffPanel = () => {
                             <div className="flex items-center justify-center mb-2">
                               <span className="text-2xl">🥉</span>
                             </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">3rd Place</h5>
-                            {event.third ? (
-                              <div className="text-center">
-                                <p className="font-medium text-[#D35D38]">{event.third.temple}</p>
-                                <p className="text-xs text-[#5A5A5A] mt-1">{event.third.points} points</p>
-                              </div>
-                            ) : (
-                              <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>
-                            )}
+                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
+                              3rd Place {Array.isArray(event.third) && event.third.length > 1 && `(${event.third.length} winners)`}
+                            </h5>
+                            {renderWinnersList(event.third, false)}
                           </div>
                         </div>
                       </div>

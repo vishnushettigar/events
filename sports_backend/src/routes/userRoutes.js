@@ -880,6 +880,7 @@ router.get('/champions', authenticate, async (req, res) => {
             const userId = registration.user.id;
             const participantName = `${registration.user.first_name} ${registration.user.last_name || ''}`.trim();
             const templeName = registration.user.temple.name;
+            const aadharNumber = registration.user.aadhar_number;
             const points = registration.event_result.points;
 
             // Create key for grouping
@@ -899,6 +900,7 @@ router.get('/champions', authenticate, async (req, res) => {
                     id: userId,
                     name: participantName,
                     temple: templeName,
+                    aadhar_number: aadharNumber,
                     total_points: 0,
                     events: []
                 };
@@ -929,6 +931,7 @@ router.get('/champions', authenticate, async (req, res) => {
                 champions: champions.length > 0 ? champions.map(champion => ({
                     name: champion.name,
                     temple: champion.temple,
+                    aadhar_number: champion.aadhar_number,
                     points: champion.total_points,
                     events: champion.events
                 })) : [],

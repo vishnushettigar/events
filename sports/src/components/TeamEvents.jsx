@@ -17,18 +17,25 @@ const useDebounce = (callback, delay) => {
     }, [callback, delay]);
 };
 
-const CollapsibleList = ({ title, children }) => {
+const CollapsibleList = ({ title, children, categoryColor }) => {
     const [open, setOpen] = useState(false);
     return (
-        <div className="mb-6 border rounded shadow">
+        <div className="mb-6 border border-gray-200 rounded-lg shadow-md overflow-hidden">
             <button
-                className="w-full text-left px-4 py-3 bg-blue-100 hover:bg-blue-200 font-semibold text-lg rounded-t focus:outline-none flex justify-between items-center"
+                className={`w-full text-left px-6 py-4 ${categoryColor} hover:opacity-90 font-bold text-lg text-white focus:outline-none flex justify-between items-center transition-all duration-200`}
                 onClick={() => setOpen((prev) => !prev)}
             >
-                {title}
-                <span>{open ? '-' : '+'}</span>
+                <span className="flex items-center">
+                    <span className="mr-3">{open ? '−' : '+'}</span>
+                    {title}
+                </span>
+                <span className="text-sm opacity-80">{open ? 'Collapse' : 'Expand'}</span>
             </button>
-            {open && <div className="p-4 bg-white rounded-b">{children}</div>}
+            {open && (
+                <div className="p-6 bg-white border-t border-gray-100">
+                    {children}
+                </div>
+            )}
         </div>
     );
 };
@@ -481,83 +488,106 @@ const TeamEvents = () => {
         };
 
         return (
-            <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {players.map((player, i) => (
-                        <div key={i} className="flex gap-2 items-center">
-                            <span className="w-8 text-right">{i + 1}.</span>
-                            <div className="w-1/2 relative">
+            <div className="space-y-6">
+                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {players.map((player, i) => (
+                            <div key={i} className="flex gap-3 items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                                <span className="w-8 h-8 flex items-center justify-center bg-[#D35D38] text-white rounded-full text-sm font-bold">
+                                    {i + 1}
+                                </span>
+                                <div className="flex-1 relative">
+                                    <input
+                                        type="text"
+                                        placeholder="Aadhaar Number"
+                                        className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D35D38] focus:border-[#D35D38] transition-all ${
+                                            !editMode && isEditing ? 'bg-gray-100 text-gray-600' : 'bg-white'
+                                        }`}
+                                        value={player.aadharNumber}
+                                        onChange={(e) => handlePlayerChange(i, 'aadharNumber', e.target.value)}
+                                        maxLength={12}
+                                        readOnly={!editMode && isEditing}
+                                    />
+                                    {loadingPlayers[i] && editMode && (
+                                        <div className="text-sm text-[#D35D38] mt-1">Loading...</div>
+                                    )}
+                                    {errors[i] && editMode && (
+                                        <div className="text-sm text-red-600 mt-1">{errors[i]}</div>
+                                    )}
+                                    
+                                    {/* Suggestions Dropdown */}
+                                    {showSuggestions[i] && suggestions.length > 0 && !(!editMode && isEditing) && (
+                                        <div className="suggestions-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                            {loadingSuggestions ? (
+                                                <div className="p-3 text-sm text-gray-500">Loading suggestions...</div>
+                                            ) : (
+                                                suggestions.map((suggestion, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`p-3 hover:bg-[#F0F0F0] cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
+                                                            idx === activeSuggestionIndex ? 'bg-[#F0F0F0]' : ''
+                                                        }`}
+                                                        onClick={() => handleSuggestionSelect(suggestion, i)}
+                                                    >
+                                                        <div className="font-semibold text-sm text-[#2A2A2A]">{suggestion.aadhar_number}</div>
+                                                        <div className="text-xs text-[#5A5A5A]">{suggestion.name}</div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                                 <input
                                     type="text"
-                                    placeholder="Aadhaar Number"
-                                    className={`w-full p-2 border rounded ${!editMode && isEditing ? 'bg-gray-100' : ''}`}
-                                    value={player.aadharNumber}
-                                    onChange={(e) => handlePlayerChange(i, 'aadharNumber', e.target.value)}
-                                    maxLength={12}
-                                    readOnly={!editMode && isEditing}
+                                    placeholder="Name"
+                                    className={`flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D35D38] focus:border-[#D35D38] transition-all ${
+                                        !editMode && isEditing ? 'bg-gray-100 text-gray-600' : 'bg-white'
+                                    }`}
+                                    value={player.name}
+                                    onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
+                                    readOnly={(!editMode && isEditing) || loadingPlayers[i]}
                                 />
-                                {loadingPlayers[i] && editMode && (
-                                    <div className="text-sm text-gray-500">Loading...</div>
-                                )}
-                                {errors[i] && editMode && (
-                                    <div className="text-sm text-red-500">{errors[i]}</div>
-                                )}
-                                
-                                {/* Suggestions Dropdown */}
-                                {showSuggestions[i] && suggestions.length > 0 && !(!editMode && isEditing) && (
-                                    <div className="suggestions-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                        {loadingSuggestions ? (
-                                            <div className="p-2 text-sm text-gray-500">Loading suggestions...</div>
-                                        ) : (
-                                            suggestions.map((suggestion, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className={`p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                                                        idx === activeSuggestionIndex ? 'bg-blue-50' : ''
-                                                    }`}
-                                                    onClick={() => handleSuggestionSelect(suggestion, i)}
-                                                >
-                                                    <div className="font-medium text-sm text-gray-900">{suggestion.aadhar_number}</div>
-                                                    <div className="text-xs text-gray-600">{suggestion.name}</div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                )}
                             </div>
-                            <input
-                                type="text"
-                                placeholder="Name"
-                                className={`w-1/2 p-2 border rounded ${!editMode && isEditing ? 'bg-gray-100' : ''}`}
-                                value={player.name}
-                                onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
-                                readOnly={(!editMode && isEditing) || loadingPlayers[i]}
-                            />
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </div>
-                <div className="flex gap-2">
+                
+                <div className="flex gap-3">
                     {!isEditing ? (
                         // New team registration
                         <button
-                            className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
+                            className={`px-6 py-3 ${buttonColor} text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-semibold transition-all duration-200 shadow-md`}
                             onClick={handleSubmitForm}
                             disabled={loading || errors.some(error => error !== null) || !userProfile}
                         >
-                            {loading ? 'Processing...' : `Submit ${eventName} Team`}
+                            {loading ? (
+                                <span className="flex items-center">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Processing...
+                                </span>
+                            ) : (
+                                `Submit ${eventName} Team`
+                            )}
                         </button>
                     ) : editMode ? (
                         // Edit mode - show Save and Cancel buttons
                         <>
                             <button
-                                className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
+                                className={`px-6 py-3 ${buttonColor} text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-semibold transition-all duration-200 shadow-md`}
                                 onClick={handleSubmitForm}
                                 disabled={loading || errors.some(error => error !== null) || !userProfile}
                             >
-                                {loading ? 'Processing...' : 'Save Changes'}
+                                {loading ? (
+                                    <span className="flex items-center">
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                        Processing...
+                                    </span>
+                                ) : (
+                                    'Save Changes'
+                                )}
                             </button>
                             <button
-                                className="px-4 py-2 bg-gray-500 text-white rounded hover:opacity-90"
+                                className="px-6 py-3 bg-[#5A5A5A] text-white rounded-lg hover:bg-[#2A2A2A] font-semibold transition-all duration-200 shadow-md"
                                 onClick={handleCancelEdit}
                                 disabled={loading}
                             >
@@ -567,7 +597,7 @@ const TeamEvents = () => {
                     ) : (
                         // Read-only mode - show Edit button
                         <button
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:opacity-90"
+                            className="px-6 py-3 bg-[#D35D38] text-white rounded-lg hover:bg-[#B84A2E] font-semibold transition-all duration-200 shadow-md"
                             onClick={handleEditClick}
                         >
                             Edit Team
@@ -580,11 +610,11 @@ const TeamEvents = () => {
 
     if (!userProfile) {
         return (
-            <section className="p-6 bg-gray-100 min-h-screen">
-                <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+            <section className="min-h-screen bg-[#F0F0F0]">
+                <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
                     <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700 mx-auto"></div>
-                        <p className="mt-2">Loading...</p>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38] mx-auto"></div>
+                        <p className="mt-4 text-[#5A5A5A] text-lg">Loading...</p>
                     </div>
                 </div>
             </section>
@@ -594,18 +624,18 @@ const TeamEvents = () => {
     // Check if user has TEMPLE_ADMIN role
     if (userProfile.role !== 'TEMPLE_ADMIN') {
         return (
-            <section className="p-6 bg-gray-100 min-h-screen">
-                <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold mb-6">Group Events Registration</h2>
-                    <div className="text-center p-8">
-                        <div className="text-red-600 text-xl font-semibold mb-4">
+            <section className="min-h-screen bg-[#F0F0F0]">
+                <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+                    <h2 className="text-3xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
+                    <div className="text-center p-12">
+                        <div className="text-[#D35D38] text-2xl font-bold mb-4">
                             Access Denied
                         </div>
-                        <p className="text-gray-600 mb-4">
+                        <p className="text-[#5A5A5A] mb-4 text-lg">
                             Only Temple Administrators can register teams for group events.
                         </p>
-                        <p className="text-sm text-gray-500">
-                            Your current role: {userProfile.role}
+                        <p className="text-sm text-[#5A5A5A] bg-[#F0F0F0] p-3 rounded-lg inline-block">
+                            Your current role: <span className="font-semibold">{userProfile.role}</span>
                         </p>
                     </div>
                 </div>
@@ -614,66 +644,109 @@ const TeamEvents = () => {
     }
 
     return (
-        <section className="min-h-screen">
-            <div className="px-4 py-6 max-w-6xl mx-auto bg-white">
-                <h2 className="text-2xl font-bold mb-6">Group Events Registration</h2>
-                <p className='font-extrabold text-red-500 pb-4'>**Participants in team events must register before the temple admin adds their names.**</p>
-
-                {error && (
-                    <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                        {error}
+        <section className="min-h-screen bg-[#F0F0F0]">
+            <div className="px-4 py-8 max-w-6xl mx-auto">
+                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-8 py-6">
+                        <h2 className="text-3xl font-bold text-white mb-2">Group Events Registration</h2>
+                        <p className="text-white opacity-90">Manage team registrations for temple sports events</p>
                     </div>
-                )}
 
-                {success && (
-                    <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                        {success}
-                    </div>
-                )}
-
-                {/* Registration Forms */}
-                <div className="mb-10">
-                    <h3 className="text-xl font-semibold mb-4 text-blue-700">Team Registration</h3>
-                    
-                    {/* Men's Section */}
-                    <div className="mb-8">
-                        <h4 className="text-lg font-semibold mb-4 text-blue-600">Men's Events</h4>
-                        <div className="space-y-6">
-                            <CollapsibleList title="Volleyball (9 Players)">
-                                <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
-                            </CollapsibleList>
-                            <CollapsibleList title="Tug of War (9 Players)">
-                                <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
-                            </CollapsibleList>
-                            <CollapsibleList title="Relay - 100 X 4 (4 Players)">
-                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-blue-600" />
-                            </CollapsibleList>
+                    <div className="p-8">
+                        {/* Important Notice */}
+                        <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
+                            <div className="flex items-center">
+                                <div className="flex-shrink-0">
+                                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div className="ml-3">
+                                    <p className="text-sm text-red-700 font-semibold">
+                                        <strong>Important:</strong> Participants in team events must register before the temple admin adds their names.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Women's Section */}
-                    <div className="mb-8">
-                        <h4 className="text-lg font-semibold mb-4 text-pink-600">Women's Events</h4>
-                        <div className="space-y-6">
-                            <CollapsibleList title="Throwball (10 Players)">
-                                <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-pink-600" />
-                            </CollapsibleList>
-                            <CollapsibleList title="Tug of War (9 Players)">
-                                <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-pink-600" />
-                            </CollapsibleList>
-                            <CollapsibleList title="Relay - 100 X 4 (4 Players)">
-                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-pink-600" />
-                            </CollapsibleList>
-                        </div>
-                    </div>
+                        {/* Status Messages */}
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center">
+                                <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                                {error}
+                            </div>
+                        )}
 
-                    {/* Mixed Gender Events */}
-                    <div>
-                        <h4 className="text-lg font-semibold mb-4 text-green-600">Mixed Gender Events</h4>
-                        <div className="space-y-6">
-                            <CollapsibleList title="Couple Relay - 50 x 2 (2 Players)">
-                                <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-green-600" />
-                            </CollapsibleList>
+                        {success && (
+                            <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center">
+                                <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                {success}
+                            </div>
+                        )}
+
+                        {/* Registration Forms */}
+                        <div className="space-y-8">
+                            {/* Men's Section */}
+                            <div>
+                                <h3 className="text-2xl font-bold mb-6 text-[#2A2A2A] flex items-center">
+                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3">
+                                        <span className="text-white font-bold text-sm">M</span>
+                                    </div>
+                                    Men's Events
+                                </h3>
+                                <div className="space-y-6">
+                                    <CollapsibleList title="Volleyball (9 Players)" categoryColor="bg-blue-600">
+                                        <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
+                                    </CollapsibleList>
+                                    <CollapsibleList title="Tug of War (9 Players)" categoryColor="bg-blue-600">
+                                        <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
+                                    </CollapsibleList>
+                                    <CollapsibleList title="Relay - 100 X 4 (4 Players)" categoryColor="bg-blue-600">
+                                        <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-blue-600" />
+                                    </CollapsibleList>
+                                </div>
+                            </div>
+
+                            {/* Women's Section */}
+                            <div>
+                                <h3 className="text-2xl font-bold mb-6 text-[#2A2A2A] flex items-center">
+                                    <div className="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center mr-3">
+                                        <span className="text-white font-bold text-sm">W</span>
+                                    </div>
+                                    Women's Events
+                                </h3>
+                                <div className="space-y-6">
+                                    <CollapsibleList title="Throwball (10 Players)" categoryColor="bg-pink-600">
+                                        <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-pink-600" />
+                                    </CollapsibleList>
+                                    <CollapsibleList title="Tug of War (9 Players)" categoryColor="bg-pink-600">
+                                        <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-pink-600" />
+                                    </CollapsibleList>
+                                    <CollapsibleList title="Relay - 100 X 4 (4 Players)" categoryColor="bg-pink-600">
+                                        <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-pink-600" />
+                                    </CollapsibleList>
+                                </div>
+                            </div>
+
+                            {/* Mixed Gender Events */}
+                            <div>
+                                <h3 className="text-2xl font-bold mb-6 text-[#2A2A2A] flex items-center">
+                                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
+                                        <span className="text-white font-bold text-sm">M</span>
+                                    </div>
+                                    Mixed Gender Events
+                                </h3>
+                                <div className="space-y-6">
+                                    <CollapsibleList title="Couple Relay - 50 x 2 (2 Players)" categoryColor="bg-green-600">
+                                        <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-green-600" />
+                                    </CollapsibleList>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
