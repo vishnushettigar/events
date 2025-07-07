@@ -18,6 +18,6 @@ const TEMPLES = {
   MANGALORE: { id: 16, name: 'MANGALORE' }
 };
 
-module.exports = {
+export {
   TEMPLES
 }; 

@@ -1,7 +1,10 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
-const eventService = require('../services/eventService');
-const { authenticate, requireRole } = require('../middleware/auth');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import * as eventService from '../services/eventService.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 const router = express.Router();
 
 router.post('/register-participant', authenticate, [
@@ -491,4 +494,4 @@ router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 
   }
 });
 
-module.exports = router; 
+export default router; 

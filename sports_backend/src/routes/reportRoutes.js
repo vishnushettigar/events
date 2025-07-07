@@ -1,6 +1,7 @@
-const express = require('express');
-const { authenticate, requireRole } = require('../middleware/auth');
-const reportService = require('../services/reportService');
+import express from 'express';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import * as reportService from '../services/reportService.js';
+
 const router = express.Router();
 
 /**
@@ -202,4 +203,4 @@ router.get('/gender', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

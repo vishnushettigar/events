@@ -1,5 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const jwt = require('jsonwebtoken');
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+
 const prisma = new PrismaClient();
 
 // JWT verification
@@ -58,7 +59,7 @@ function requireRole(role) {
   };
 }
 
-module.exports = {
+export {
   authenticate,
   requireRole
 }; 

@@ -1,10 +1,10 @@
-const { PrismaClient } = require('@prisma/client');
-const fs = require('fs').promises;
-const path = require('path');
-const { exec } = require('child_process');
-const util = require('util');
-const execPromise = util.promisify(exec);
+import { PrismaClient } from '@prisma/client';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
+const execPromise = promisify(exec);
 const prisma = new PrismaClient();
 
 // System Settings Management
@@ -13,116 +13,93 @@ async function getSystemSettings() {
   return settings;
 }
 
-async function updateSystemSetting(name, value) {
-  const setting = await prisma.settings.upsert({
-    where: { name },
-    update: { value },
-    create: { name, value }
+async function updateSystemSetting(id, value) {
+  const setting = await prisma.settings.update({
+    where: { id },
+    data: { value }
   });
 
   await prisma.audit_log.create({
     data: {
       action: 'UPDATE_SYSTEM_SETTING',
-      table_name: 'Settings',
-      record_id: setting.id,
-      new_value: JSON.stringify({ name, value })
+      details: `Updated setting: ${setting.name} to ${value}`
     }
   });
 
   return setting;
 }
 
-// Backup and Restore
+// Backup Management
 async function createBackup() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupDir = path.join(__dirname, '../../backups');
-  const backupPath = path.join(backupDir, `backup-${timestamp}.db`);
+  const backupDir = path.join(process.cwd(), 'backups');
+  const backupPath = path.join(backupDir, `backup-${timestamp}.sql`);
 
-  // Create backups directory if it doesn't exist
+  // Ensure backup directory exists
   await fs.mkdir(backupDir, { recursive: true });
 
-  // Copy the database file
-  await fs.copyFile(
-    path.join(__dirname, '../../prisma/dev.db'),
-    backupPath
-  );
+  // Create backup using mysqldump
+  const { stdout, stderr } = await execPromise(`mysqldump -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} > ${backupPath}`);
 
-  // Log the backup creation
+  if (stderr) {
+    console.error('Backup stderr:', stderr);
+  }
+
   await prisma.audit_log.create({
     data: {
       action: 'CREATE_BACKUP',
-      table_name: 'System',
-      new_value: JSON.stringify({ backupPath })
+      details: `Created backup: ${backupPath}`
     }
   });
 
-  return {
-    path: backupPath,
-    timestamp,
-    size: (await fs.stat(backupPath)).size
-  };
+  return { backupPath, message: 'Backup created successfully' };
 }
 
 async function listBackups() {
-  const backupDir = path.join(__dirname, '../../backups');
+  const backupDir = path.join(process.cwd(), 'backups');
   
   try {
-    await fs.mkdir(backupDir, { recursive: true });
     const files = await fs.readdir(backupDir);
-    
-    const backups = await Promise.all(
-      files
-        .filter(file => file.endsWith('.db'))
-        .map(async file => {
-          const filePath = path.join(backupDir, file);
-          const stats = await fs.stat(filePath);
-          return {
-            name: file,
-            path: filePath,
-            size: stats.size,
-            created: stats.birthtime
-          };
-        })
-    );
+    const backups = files
+      .filter(file => file.endsWith('.sql'))
+      .map(file => ({
+        name: file,
+        path: path.join(backupDir, file),
+        size: fs.stat(path.join(backupDir, file)).then(stat => stat.size)
+      }));
 
-    return backups.sort((a, b) => b.created - a.created);
+    return backups;
   } catch (error) {
-    console.error('Error listing backups:', error);
-    throw new Error('Failed to list backups');
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
   }
 }
 
 async function restoreBackup(backupPath) {
+  // Verify backup file exists
   try {
-    // Verify backup file exists
     await fs.access(backupPath);
-
-    // Stop the current database connection
-    await prisma.$disconnect();
-
-    // Copy backup to database location
-    await fs.copyFile(
-      backupPath,
-      path.join(__dirname, '../../prisma/dev.db')
-    );
-
-    // Log the restore action
-    await prisma.audit_log.create({
-      data: {
-        action: 'RESTORE_BACKUP',
-        table_name: 'System',
-        new_value: JSON.stringify({ backupPath })
-      }
-    });
-
-    // Reconnect to the database
-    await prisma.$connect();
-
-    return { message: 'Backup restored successfully' };
   } catch (error) {
-    console.error('Error restoring backup:', error);
-    throw new Error('Failed to restore backup');
+    throw new Error('Backup file not found');
   }
+
+  // Restore backup using mysql
+  const { stdout, stderr } = await execPromise(`mysql -u ${process.env.DB_USER} -p${process.env.DB_PASSWORD} ${process.env.DB_NAME} < ${backupPath}`);
+
+  if (stderr) {
+    console.error('Restore stderr:', stderr);
+  }
+
+  await prisma.audit_log.create({
+    data: {
+      action: 'RESTORE_BACKUP',
+      details: `Restored backup: ${backupPath}`
+    }
+  });
+
+  return { message: 'Backup restored successfully' };
 }
 
 async function deleteBackup(backupPath) {
@@ -132,19 +109,17 @@ async function deleteBackup(backupPath) {
     await prisma.audit_log.create({
       data: {
         action: 'DELETE_BACKUP',
-        table_name: 'System',
-        new_value: JSON.stringify({ backupPath })
+        details: `Deleted backup: ${backupPath}`
       }
     });
 
     return { message: 'Backup deleted successfully' };
   } catch (error) {
-    console.error('Error deleting backup:', error);
-    throw new Error('Failed to delete backup');
+    throw new Error('Failed to delete backup file');
   }
 }
 
-module.exports = {
+export {
   getSystemSettings,
   updateSystemSetting,
   createBackup,

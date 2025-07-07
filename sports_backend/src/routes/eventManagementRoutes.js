@@ -1,7 +1,8 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
-const eventManagementService = require('../services/eventManagementService');
-const { authenticate, requireRole } = require('../middleware/auth');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import * as eventManagementService from '../services/eventManagementService.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
+
 const router = express.Router();
 
 /**
@@ -439,4 +440,4 @@ router.get('/events/:event_id/schedules', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

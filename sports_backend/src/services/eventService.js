@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function registerParticipant(user_id, event_id) {
@@ -780,7 +780,7 @@ async function getEventParticipants(eventId) {
     console.log('Fetching participants for event:', eventId);
 
     // First, get the event details to determine if it's individual or team
-    const event = await prisma.mst_event.findUnique({
+    const event = await prisma.mst_event.findFirst({
       where: { 
         id: eventId,
         is_deleted: false
@@ -848,7 +848,7 @@ async function getEventParticipants(eventId) {
       participants = individualRegistrations.map(reg => ({
         id: reg.id,
         registration_type: 'INDIVIDUAL',
-        participant_name: `${reg.user.first_name} ${reg.user.last_name}`,
+        participant_name: `${reg.user.first_name} ${reg.user.last_name || ''}`.trim(),
         temple_name: reg.user.temple.name,
         age_category: event.age_category.name,
         gender: reg.user.gender,
@@ -1173,7 +1173,7 @@ async function updateTeamEventResult(registrationId, rank, staffUserId) {
   }
 }
 
-module.exports = {
+export {
   registerParticipant,
   registerTeamEvent,
   updateTeamRegistration,

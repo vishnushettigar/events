@@ -1,10 +1,11 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
-const userService = require('../services/userService');
-const eventService = require('../services/eventService');
-const { authenticate, requireRole } = require('../middleware/auth');
-const { TEMPLES } = require('../constants');
-const { PrismaClient } = require('@prisma/client');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import * as userService from '../services/userService.js';
+import * as eventService from '../services/eventService.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import { TEMPLES } from '../constants.js';
+import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 const router = express.Router();
 
@@ -1166,4 +1167,4 @@ router.get('/all-results', authenticate, async (req, res) => {
     }
 });
 
-module.exports = router; 
+export default router; 

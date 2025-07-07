@@ -1,16 +1,17 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import swaggerUi from 'swagger-ui-express';
+import swaggerSpec from './config/swagger.js';
+import dotenv from 'dotenv';
+import userRoutes from './routes/userRoutes.js';
+import eventRoutes from './routes/eventRoutes.js';
+import eventManagementRoutes from './routes/eventManagementRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
+import systemRoutes from './routes/systemRoutes.js';
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
-require('dotenv').config();
-const userRoutes = require('./routes/userRoutes');
-const eventRoutes = require('./routes/eventRoutes');
-const eventManagementRoutes = require('./routes/eventManagementRoutes');
-const reportRoutes = require('./routes/reportRoutes');
-const systemRoutes = require('./routes/systemRoutes');
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;

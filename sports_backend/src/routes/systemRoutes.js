@@ -1,7 +1,8 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
-const { authenticate, requireRole } = require('../middleware/auth');
-const systemService = require('../services/systemService');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import * as systemService from '../services/systemService.js';
+
 const router = express.Router();
 
 /**
@@ -287,4 +288,4 @@ router.delete('/backups/:path', authenticate, requireRole('SUPER_USER'), async (
   }
 });
 
-module.exports = router; 
+export default router; 
