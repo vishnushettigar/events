@@ -99,11 +99,11 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
   try {
     console.log('registerTeamEvent called with:', { temple_id, event_id, member_user_ids });
 
-    // Verify all members belong to the same temple
-    const members = await prisma.profile.findMany({
-      where: {
-        id: { in: member_user_ids }
-      },
+  // Verify all members belong to the same temple
+  const members = await prisma.profile.findMany({
+    where: {
+      id: { in: member_user_ids }
+    },
       select: { temple_id: true, id: true }
     });
 
@@ -116,19 +116,19 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
       throw new Error(`Some member IDs not found: ${missingIds.join(', ')}`);
     }
 
-    const invalidMembers = members.filter(member => member.temple_id !== temple_id);
-    if (invalidMembers.length > 0) {
+  const invalidMembers = members.filter(member => member.temple_id !== temple_id);
+  if (invalidMembers.length > 0) {
       throw new Error(`All team members must belong to the same temple. Invalid members: ${invalidMembers.map(m => m.id).join(', ')}`);
-    }
+  }
 
     // Verify the event exists
-    const event = await prisma.mst_event.findUnique({
+  const event = await prisma.mst_event.findUnique({
       where: { id: event_id }
-    });
+  });
 
     console.log('Found event:', event);
 
-    if (!event) {
+  if (!event) {
       throw new Error(`Event with ID ${event_id} not found`);
     }
 
@@ -147,31 +147,31 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
 
     console.log('Creating team registration...');
 
-    const registration = await prisma.team_event_registration.create({
-      data: {
-        temple_id,
-        event_id,
+  const registration = await prisma.team_event_registration.create({
+    data: {
+      temple_id,
+      event_id,
         member_user_ids: member_user_ids.join(','),
         status: 'ACCEPTED' // Temple admins can directly register teams as accepted
-      }
-    });
+    }
+  });
 
     console.log('Team registration created:', registration);
 
-    // Log the action
-    await prisma.audit_log.create({
-      data: {
-        user_id: member_user_ids[0], // Log with first member's ID
-        action: 'REGISTER_TEAM',
+  // Log the action
+  await prisma.audit_log.create({
+    data: {
+      user_id: member_user_ids[0], // Log with first member's ID
+      action: 'REGISTER_TEAM',
         table_name: 'Team_event_registration',
         record_id: registration.id,
         new_value: JSON.stringify(registration)
-      }
-    });
+    }
+  });
 
     console.log('Audit log created successfully');
 
-    return registration;
+  return registration;
   } catch (error) {
     console.error('Error in registerTeamEvent:', error);
     throw error;
@@ -417,56 +417,56 @@ async function getTempleTeams(temple_id, filters = {}) {
   try {
     console.log('getTempleTeams called with:', { temple_id, filters });
 
-    const where = {
-      temple_id: temple_id,
-      is_deleted: false
-    };
+  const where = {
+    temple_id: temple_id,
+    is_deleted: false
+  };
 
-    if (filters.event_id) {
-      where.event_id = filters.event_id;
-    }
+  if (filters.event_id) {
+    where.event_id = filters.event_id;
+  }
 
     console.log('Using where clause:', where);
 
-    const teams = await prisma.team_event_registration.findMany({
-      where,
-      include: {
-        event: {
+  const teams = await prisma.team_event_registration.findMany({
+    where,
+    include: {
+      event: {
           include: {
             event_type: true,
             age_category: {
-              select: {
+        select: {
                 name: true
-              }
             }
           }
-        },
-        event_result: {
-          select: {
-            rank: true,
-            points: true
-          }
+        }
+      },
+      event_result: {
+        select: {
+          rank: true,
+          points: true
         }
       }
-    });
+    }
+  });
 
     console.log('Found teams:', teams);
 
-    // Get member details for each team
-    const teamsWithMembers = await Promise.all(teams.map(async (team) => {
+  // Get member details for each team
+  const teamsWithMembers = await Promise.all(teams.map(async (team) => {
       try {
         const memberIds = team.member_user_ids ? team.member_user_ids.split(',').map(id => parseInt(id)) : [];
         console.log('Member IDs for team', team.id, ':', memberIds);
         
-        const members = await prisma.profile.findMany({
-          where: { id: { in: memberIds } },
-          select: {
-            id: true,
-            first_name: true,
-            last_name: true,
-            email: true,
-            phone: true,
-            gender: true,
+    const members = await prisma.profile.findMany({
+      where: { id: { in: memberIds } },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        email: true,
+        phone: true,
+        gender: true,
             dob: true,
             aadhar_number: true
           }
@@ -496,7 +496,7 @@ async function getTempleTeams(temple_id, filters = {}) {
     }));
 
     console.log('Teams with members:', teamsWithMembers);
-    return teamsWithMembers;
+  return teamsWithMembers;
   } catch (error) {
     console.error('Error in getTempleTeams:', error);
     throw error;

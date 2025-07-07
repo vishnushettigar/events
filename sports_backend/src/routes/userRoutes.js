@@ -613,7 +613,7 @@ router.get('/temple/:templeId', authenticate, async (req, res) => {
     try {
         const { templeId } = req.params;
         
-        const temple = await prisma.mst_temple.findUnique({
+        const temple = await prisma.mst_temple.findFirst({
             where: { 
                 id: parseInt(templeId),
                 is_deleted: false
@@ -729,9 +729,10 @@ router.get('/temples', authenticate, async (req, res) => {
 router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) => {
     try {
         const { templeId } = req.params;
+        console.log('Temple detailed report requested for temple ID:', templeId);
         
         // Verify temple exists
-        const temple = await prisma.mst_temple.findUnique({
+        const temple = await prisma.mst_temple.findFirst({
             where: { 
                 id: parseInt(templeId),
                 is_deleted: false
@@ -739,13 +740,19 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
         });
 
         if (!temple) {
+            console.log('Temple not found:', templeId);
             return res.status(404).json({ error: 'Temple not found' });
         }
 
+        console.log('Temple found:', temple.name);
+
         // Generate detailed temple report
+        console.log('Generating temple report...');
         const templeReport = await eventService.generateTempleReport(parseInt(templeId));
+        console.log('Temple report generated successfully');
         
         // Transform the data for frontend consumption
+        console.log('Transforming data for frontend...');
         const individualEvents = templeReport.participants
             .filter(participant => participant.event_result)
             .map(participant => {
@@ -789,6 +796,8 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
             total: templeReport.stats.total_points
         };
 
+        console.log('Data transformation completed. Sending response...');
+
         res.json({
             temple: {
                 id: temple.id,
@@ -802,7 +811,8 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
         });
     } catch (error) {
         console.error('Error fetching temple detailed report:', error);
-        res.status(500).json({ error: 'Failed to fetch temple detailed report' });
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: 'Failed to fetch temple detailed report', details: error.message });
     }
 });
 
@@ -838,6 +848,7 @@ router.get('/champions', authenticate, async (req, res) => {
                         id: true,
                         first_name: true,
                         last_name: true,
+                        aadhar_number: true,
                         temple: {
                             select: {
                                 name: true
@@ -972,6 +983,7 @@ router.get('/all-results', authenticate, async (req, res) => {
                     select: {
                         first_name: true,
                         last_name: true,
+                        aadhar_number: true,
                         temple: {
                             select: {
                                 name: true
@@ -1048,6 +1060,7 @@ router.get('/all-results', authenticate, async (req, res) => {
             const eventName = registration.event.event_type.name;
             const participantName = `${registration.user.first_name} ${registration.user.last_name || ''}`.trim();
             const templeName = registration.user.temple.name;
+            const aadharNumber = registration.user.aadhar_number;
             const rank = registration.event_result.rank;
             const points = registration.event_result.points;
 
@@ -1074,15 +1087,46 @@ router.get('/all-results', authenticate, async (req, res) => {
             const participantData = {
                 name: participantName,
                 temple: templeName,
+                aadhar: aadharNumber,
                 points: points
             };
 
-            if (rank === 'FIRST' && !individualEventsByCategory[key].events[eventName].first) {
-                individualEventsByCategory[key].events[eventName].first = participantData;
-            } else if (rank === 'SECOND' && !individualEventsByCategory[key].events[eventName].second) {
-                individualEventsByCategory[key].events[eventName].second = participantData;
-            } else if (rank === 'THIRD' && !individualEventsByCategory[key].events[eventName].third) {
-                individualEventsByCategory[key].events[eventName].third = participantData;
+            if (rank === 'FIRST') {
+                if (!individualEventsByCategory[key].events[eventName].first) {
+                    individualEventsByCategory[key].events[eventName].first = [participantData];
+                } else {
+                    // Check if participant already exists to avoid duplicates using Aadhar number
+                    const exists = individualEventsByCategory[key].events[eventName].first.some(
+                        winner => winner.aadhar === aadharNumber
+                    );
+                    if (!exists) {
+                        individualEventsByCategory[key].events[eventName].first.push(participantData);
+                    }
+                }
+            } else if (rank === 'SECOND') {
+                if (!individualEventsByCategory[key].events[eventName].second) {
+                    individualEventsByCategory[key].events[eventName].second = [participantData];
+                } else {
+                    // Check if participant already exists to avoid duplicates using Aadhar number
+                    const exists = individualEventsByCategory[key].events[eventName].second.some(
+                        winner => winner.aadhar === aadharNumber
+                    );
+                    if (!exists) {
+                        individualEventsByCategory[key].events[eventName].second.push(participantData);
+                    }
+                }
+            } else if (rank === 'THIRD') {
+                if (!individualEventsByCategory[key].events[eventName].third) {
+                    individualEventsByCategory[key].events[eventName].third = [participantData];
+                } else {
+                    // Check if participant already exists to avoid duplicates using Aadhar number
+                    const exists = individualEventsByCategory[key].events[eventName].third.some(
+                        winner => winner.aadhar === aadharNumber
+                    );
+                    if (!exists) {
+                        individualEventsByCategory[key].events[eventName].third.push(participantData);
+                    }
+                }
             }
         });
 
@@ -1122,12 +1166,42 @@ router.get('/all-results', authenticate, async (req, res) => {
                 points: points
             };
 
-            if (rank === 'FIRST' && !teamEventsByCategory[key].events[eventName].first) {
-                teamEventsByCategory[key].events[eventName].first = teamData;
-            } else if (rank === 'SECOND' && !teamEventsByCategory[key].events[eventName].second) {
-                teamEventsByCategory[key].events[eventName].second = teamData;
-            } else if (rank === 'THIRD' && !teamEventsByCategory[key].events[eventName].third) {
-                teamEventsByCategory[key].events[eventName].third = teamData;
+            if (rank === 'FIRST') {
+                if (!teamEventsByCategory[key].events[eventName].first) {
+                    teamEventsByCategory[key].events[eventName].first = [teamData];
+                } else {
+                    // Check if team already exists to avoid duplicates
+                    const exists = teamEventsByCategory[key].events[eventName].first.some(
+                        winner => winner.temple === templeName
+                    );
+                    if (!exists) {
+                        teamEventsByCategory[key].events[eventName].first.push(teamData);
+                    }
+                }
+            } else if (rank === 'SECOND') {
+                if (!teamEventsByCategory[key].events[eventName].second) {
+                    teamEventsByCategory[key].events[eventName].second = [teamData];
+                } else {
+                    // Check if team already exists to avoid duplicates
+                    const exists = teamEventsByCategory[key].events[eventName].second.some(
+                        winner => winner.temple === templeName
+                    );
+                    if (!exists) {
+                        teamEventsByCategory[key].events[eventName].second.push(teamData);
+                    }
+                }
+            } else if (rank === 'THIRD') {
+                if (!teamEventsByCategory[key].events[eventName].third) {
+                    teamEventsByCategory[key].events[eventName].third = [teamData];
+                } else {
+                    // Check if team already exists to avoid duplicates
+                    const exists = teamEventsByCategory[key].events[eventName].third.some(
+                        winner => winner.temple === templeName
+                    );
+                    if (!exists) {
+                        teamEventsByCategory[key].events[eventName].third.push(teamData);
+                    }
+                }
             }
         });
 
