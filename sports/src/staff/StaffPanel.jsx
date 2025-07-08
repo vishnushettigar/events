@@ -1104,21 +1104,19 @@ const StaffPanel = () => {
   };
 
   const renderChampions = () => {
-    console.log('renderChampions - data:', data); // Debug logging
-    
     if (loading) {
       return (
         <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+          <span className="ml-2 text-[#2A2A2A]">Loading champions...</span>
         </div>
       );
     }
 
     if (error) {
       return (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <strong>Error:</strong> {error}
         </div>
       );
     }
@@ -1127,164 +1125,142 @@ const StaffPanel = () => {
       return (
         <div className="text-center py-8">
           <p className="text-[#5A5A5A]">No champions data available yet.</p>
-          {data && (
-            <div className="mt-4 text-sm text-gray-500">
-              <p>Data structure: {JSON.stringify(data, null, 2)}</p>
-            </div>
-          )}
         </div>
       );
     }
 
+    // Flatten champions data for table display
+    const allChampions = [];
+    data.forEach((category, categoryIndex) => {
+      if (category.champions && Array.isArray(category.champions)) {
+        category.champions.forEach((champion, championIndex) => {
+          allChampions.push({
+            rank: championIndex + 1,
+            category: `${category.age_category} - ${category.gender}`,
+            name: champion.name,
+            temple: champion.temple,
+            aadhar_number: champion.aadhar_number,
+            points: champion.points,
+            events_count: champion.events ? champion.events.length : 0,
+            events: champion.events || []
+          });
+        });
+      }
+    });
+
+    // Sort by points (highest first)
+    allChampions.sort((a, b) => b.points - a.points);
+
     return (
       <div className="space-y-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">🏆 Champions </h1>
-          <p className="text-[#5A5A5A]">Highest Point Getters by Age Category and Gender</p>
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-[#2A2A2A]">🏆 Champions</h1>
+          <p className="text-[#5A5A5A] mt-1">Top performers from all categories</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {data.map((category, categoryIndex) => {
-            // Defensive check for category structure
-            if (!category || typeof category !== 'object') {
-              console.warn('Invalid category data:', category);
-              return null;
-            }
-            
-            return (
-              <div key={categoryIndex} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                {/* Category Header */}
-                <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
-                  <h2 className="text-xl font-bold text-white">
-                    {category.age_category || 'Unknown'} - {category.gender || 'Unknown'}
-                  </h2>
-                  <p className="text-white/80 text-sm mt-1">
-                    {category.total_participants || 0} Participants
-                  </p>
-                </div>
-
-              {/* Champion Details */}
-              <div className="p-6">
-                {category.champions && category.champions.length > 0 ? (
-                  <div className="text-center">
-                    {/* Champion Badge */}
-                    <div className="mb-4">
-                      <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full mb-3">
-                        <span className="text-2xl">👑</span>
-                      </div>
-                      <h3 className="text-lg font-bold text-[#2A2A2A] mb-1">
-                        {category.champions.length === 1 ? 'Category Champion' : 'Category Champions'}
-                      </h3>
-                    </div>
-
-                    {/* Champions Info */}
-                    <div className="space-y-4">
-                      {category.champions.map((champion, championIndex) => {
-                        // Defensive check for champion structure
-                        if (!champion || typeof champion !== 'object') {
-                          console.warn('Invalid champion data:', champion);
-                          return null;
-                        }
-                        
-                        return (
-                          <div key={championIndex} className="border border-[#F8DFBE] rounded-lg p-4 bg-gradient-to-br from-yellow-50 to-yellow-100">
-                            <div>
-                              <p className="text-xl font-bold text-[#D35D38]">{champion.name || 'Unknown'}</p>
-                              <p className="text-sm text-[#5A5A5A]">{champion.temple || 'Unknown'}</p>
-                              <p className="text-xs text-[#5A5A5A] mt-1">Aadhar: {champion.aadhar_number || 'N/A'}</p>
-                            </div>
-                            
-                            <div className="mt-3">
-                              <p className="text-2xl font-bold text-[#D35D38]">{champion.points || 0}</p>
-                              <p className="text-sm text-[#5A5A5A]">Total Points</p>
-                            </div>
-
-                          {/* Champion's Events */}
-                          {champion.events && Array.isArray(champion.events) && champion.events.length > 0 && (
-                            <div className="mt-4 pt-3 border-t border-yellow-200">
-                              <h4 className="text-sm font-semibold text-[#2A2A2A] mb-2 text-center">Events Participated</h4>
-                              <div className="space-y-2 max-h-24 overflow-y-auto">
-                                {champion.events.map((event, eventIndex) => {
-                                  // Defensive check for event structure
-                                  if (!event || typeof event !== 'object') {
-                                    console.warn('Invalid event data:', event);
-                                    return null;
-                                  }
-                                  
-                                  return (
-                                    <div key={eventIndex} className="flex justify-between items-center text-xs bg-white rounded px-2 py-1">
-                                      <span className="text-[#5A5A5A] truncate">{event.event_name || 'Unknown Event'}</span>
-                                      <div className="flex items-center space-x-2">
-                                        <span className={`px-1 py-0.5 rounded text-xs font-medium ${
-                                          event.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                                          event.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                                          event.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                                          'bg-gray-100 text-gray-600'
-                                        }`}>
-                                          {event.rank === 'FIRST' ? '🥇' : event.rank === 'SECOND' ? '🥈' : event.rank === 'THIRD' ? '🥉' : 'N/A'}
-                                        </span>
-                                        <span className="font-medium text-[#D35D38]">{event.points || 0}</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-
-                      {/* Category Stats */}
-                      <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-[#F8DFBE]">
-                        <div className="text-center">
-                          <p className="text-lg font-semibold text-[#2A2A2A]">{category.total_participants}</p>
-                          <p className="text-xs text-[#5A5A5A]">Participants</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-lg font-semibold text-[#2A2A2A]">{category.total_points_in_category}</p>
-                          <p className="text-xs text-[#5A5A5A]">Total Points</p>
+        {/* Champions Table */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
+            <p className="text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Rank
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Champion
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Temple
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Aadhar Number
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Total Points
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Events Won
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {allChampions.map((champion, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                          index === 0 ? 'bg-yellow-500' : 
+                          index === 1 ? 'bg-gray-400' : 
+                          index === 2 ? 'bg-orange-600' :
+                          'bg-gray-300 text-gray-700'
+                        }`}>
+                          {index + 1}
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-[#5A5A5A]">No participants in this category yet</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                      {champion.category}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-[#2A2A2A]">
+                        {champion.name}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                      {champion.temple}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                      {champion.aadhar_number}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="text-lg font-bold text-[#D35D38]">
+                        {champion.points}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                      {champion.events_count}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        {/* Summary Stats */}
-        {data.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 mt-8">
-            <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">🏆 Overall Statistics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">{data.length}</p>
-                <p className="text-sm text-[#5A5A5A]">Categories</p>
+        {/* Summary */}
+        {allChampions.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">{allChampions.length}</p>
+                <p className="text-xs text-[#5A5A5A]">Total Champions</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {data.reduce((sum, category) => sum + (category.total_participants || 0), 0)}
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">
+                  {allChampions.reduce((sum, champ) => sum + champ.points, 0)}
                 </p>
-                <p className="text-sm text-[#5A5A5A]">Total Participants</p>
+                <p className="text-xs text-[#5A5A5A]">Total Points</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {data.reduce((sum, category) => sum + (category.champions?.length || 0), 0)}
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">
+                  {allChampions.reduce((sum, champ) => sum + champ.events_count, 0)}
                 </p>
-                <p className="text-sm text-[#5A5A5A]">Total Champions</p>
+                <p className="text-xs text-[#5A5A5A]">Events Won</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {data.reduce((sum, category) => sum + (category.total_points_in_category || 0), 0)}
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">
+                  {allChampions.length > 0 ? Math.round(allChampions.reduce((sum, champ) => sum + champ.points, 0) / allChampions.length) : 0}
                 </p>
-                <p className="text-sm text-[#5A5A5A]">Total Points Awarded</p>
+                <p className="text-xs text-[#5A5A5A]">Avg Points</p>
               </div>
             </div>
           </div>
@@ -1294,284 +1270,174 @@ const StaffPanel = () => {
   };
 
   const renderAllResults = () => {
-    console.log('renderAllResults - data:', data); // Debug logging
-    console.log('renderAllResults - loading:', loading);
-    console.log('renderAllResults - error:', error);
-    
     if (loading) {
       return (
         <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+          <span className="ml-2 text-[#2A2A2A]">Loading results...</span>
         </div>
       );
     }
 
     if (error) {
-      console.log('renderAllResults - Showing error:', error);
       return (
-        <div className="space-y-4">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline"> {error}</span>
-          </div>
-          <button 
-            onClick={fetchAllResults}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            Retry Fetch
-          </button>
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <strong>Error:</strong> {error}
         </div>
       );
     }
 
     if (!data || typeof data !== 'object' || (!data.individual && !data.team)) {
-      console.log('renderAllResults - No data or invalid structure:', data); // Debug logging
-      const token = localStorage.getItem('token');
       return (
         <div className="text-center py-8">
           <p className="text-[#5A5A5A]">No results data available yet.</p>
-          <button 
-            onClick={fetchAllResults}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4"
-          >
-            Load Data
-          </button>
-          
-          {/* Debug Information */}
-          <div className="mt-6 p-4 bg-gray-100 rounded-lg text-left">
-            <h4 className="font-bold mb-2">Debug Information:</h4>
-            <p><strong>Token exists:</strong> {token ? 'Yes' : 'No'}</p>
-            <p><strong>Active tab:</strong> {activeTab}</p>
-            <p><strong>Loading:</strong> {loading ? 'Yes' : 'No'}</p>
-            <p><strong>Error:</strong> {error || 'None'}</p>
-            <p><strong>Data type:</strong> {typeof data}</p>
-            <p><strong>Data keys:</strong> {data ? Object.keys(data).join(', ') : 'No data'}</p>
-          </div>
-          
-          {data && (
-            <div className="mt-4 text-sm text-gray-500">
-              <p>Data structure: {JSON.stringify(data, null, 2)}</p>
-            </div>
-          )}
         </div>
       );
     }
 
-    // Helper function to render winners list
-    const renderWinnersList = (winners, isIndividual = true) => {
-      if (!winners || winners.length === 0) {
-        return <p className="text-center text-[#5A5A5A] text-sm">No winner yet</p>;
+    // Helper function to get winner display text
+    const getWinnerText = (winners, isIndividual = true) => {
+      if (!winners || winners.length === 0) return 'No winner';
+      
+      if (isIndividual) {
+        return winners.map(winner => `${winner.name} (${winner.temple})`).join(', ');
+      } else {
+        return winners.map(winner => `${winner.temple} (${winner.points} pts)`).join(', ');
+      }
+    };
+
+    // Collect individual and team results separately
+    const individualResults = [];
+    const teamResults = [];
+
+    // Process individual events
+    if (data.individual) {
+      data.individual.forEach(category => {
+        category.events.forEach(event => {
+          individualResults.push({
+            category: `${category.age_category} - ${category.gender}`,
+            eventName: event.event_name,
+            firstPlace: getWinnerText(event.first, true),
+            secondPlace: getWinnerText(event.second, true),
+            thirdPlace: getWinnerText(event.third, true)
+          });
+        });
+      });
+    }
+
+    // Process team events
+    if (data.team) {
+      data.team.forEach(category => {
+        category.events.forEach(event => {
+          teamResults.push({
+            category: `${category.age_category} - ${category.gender}`,
+            eventName: event.event_name,
+            firstPlace: getWinnerText(event.first, false),
+            secondPlace: getWinnerText(event.second, false),
+            thirdPlace: getWinnerText(event.third, false)
+          });
+        });
+      });
+    }
+
+    // Helper function to render results table
+    const renderResultsTable = (results, title, type) => {
+      if (results.length === 0) {
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-[#2A2A2A] mb-4">{title}</h3>
+            <p className="text-[#5A5A5A] text-center py-4">No {type.toLowerCase()} results available</p>
+          </div>
+        );
       }
 
       return (
-        <div className="space-y-2">
-          {winners.map((winner, index) => (
-            <div key={winner.aadhar || index} className="text-center border-b border-gray-100 pb-2 last:border-b-0">
-              {isIndividual ? (
-                <>
-                  <p className="font-medium text-[#D35D38]">{winner.name}</p>
-                  <p className="text-sm text-[#5A5A5A]">{winner.temple}</p>
-                  {winner.aadhar && (
-                    <p className="text-xs text-[#5A5A5A] mt-1">Aadhar: {winner.aadhar}</p>
-                  )}
-                </>
-              ) : (
-                <>
-                  <p className="font-medium text-[#D35D38]">{winner.temple}</p>
-                  <p className="text-xs text-[#5A5A5A] mt-1">{winner.points} points</p>
-                </>
-              )}
-            </div>
-          ))}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-[#2A2A2A]">{title}</h3>
+            <p className="text-sm text-[#5A5A5A] mt-1">{results.length} events with results</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Event
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    1st Place
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    2nd Place
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    3rd Place
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {results.map((result, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A]">
+                      {result.category}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#2A2A2A]">
+                      {result.eventName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#5A5A5A]">
+                      {result.firstPlace}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#5A5A5A]">
+                      {result.secondPlace}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-[#5A5A5A]">
+                      {result.thirdPlace}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       );
     };
 
     return (
       <div className="space-y-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">🏆 Complete Results</h1>
-          <p className="text-[#5A5A5A]">All winners from individual and team events</p>
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-[#2A2A2A]">All Results</h1>
+          <p className="text-[#5A5A5A] mt-1">Complete list of winners from all events</p>
         </div>
 
         {/* Individual Events Results */}
-        {data.individual && data.individual.length > 0 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-[#2A2A2A] border-b-2 border-[#D35D38] pb-2">
-              🏃 Individual Events
-            </h2>
-            
-            {data.individual.map((category, categoryIndex) => (
-              <div key={categoryIndex} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                {/* Category Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
-                  <h3 className="text-xl font-bold text-white">
-                    {category.age_category} - {category.gender}
-                  </h3>
-                  <p className="text-white/80 text-sm mt-1">
-                    {category.events.length} Events • Individual Results
-                  </p>
-                </div>
-
-                {/* Events List */}
-                <div className="p-6">
-                  <div className="space-y-6">
-                    {category.events.map((event, eventIndex) => (
-                      <div key={eventIndex} className="border border-[#F8DFBE] rounded-xl p-4">
-                        <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4 border-b border-[#F8DFBE] pb-2">
-                          {event.event_name}
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* First Place */}
-                          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
-                            <div className="flex items-center justify-center mb-2">
-                              <span className="text-2xl">🥇</span>
-                            </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
-                              1st Place {Array.isArray(event.first) && event.first.length > 1 && `(${event.first.length} winners)`}
-                            </h5>
-                            {renderWinnersList(event.first, true)}
-                          </div>
-
-                          {/* Second Place */}
-                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
-                            <div className="flex items-center justify-center mb-2">
-                              <span className="text-2xl">🥈</span>
-                            </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
-                              2nd Place {Array.isArray(event.second) && event.second.length > 1 && `(${event.second.length} winners)`}
-                            </h5>
-                            {renderWinnersList(event.second, true)}
-                          </div>
-
-                          {/* Third Place */}
-                          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                            <div className="flex items-center justify-center mb-2">
-                              <span className="text-2xl">🥉</span>
-                            </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
-                              3rd Place {Array.isArray(event.third) && event.third.length > 1 && `(${event.third.length} winners)`}
-                            </h5>
-                            {renderWinnersList(event.third, true)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {renderResultsTable(individualResults, "🏃 Individual Events", "Individual")}
 
         {/* Team Events Results */}
-        {data.team && data.team.length > 0 ? (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-[#2A2A2A] border-b-2 border-[#D35D38] pb-2">
-              🤝 Team Events ({data.team.length} categories)
-            </h2>
-            
-            {data.team.map((category, categoryIndex) => (
-              <div key={categoryIndex} className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                {/* Category Header */}
-                <div className="bg-gradient-to-r from-green-600 to-teal-600 px-6 py-4">
-                  <h3 className="text-xl font-bold text-white">
-                    {category.age_category} - {category.gender}
-                  </h3>
-                  <p className="text-white/80 text-sm mt-1">
-                    {category.events.length} Events • Team Results
-                  </p>
-                </div>
+        {renderResultsTable(teamResults, "🤝 Team Events", "Team")}
 
-                {/* Events List */}
-                <div className="p-6">
-                  <div className="space-y-6">
-                    {category.events.map((event, eventIndex) => (
-                      <div key={eventIndex} className="border border-[#F8DFBE] rounded-xl p-4">
-                        <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4 border-b border-[#F8DFBE] pb-2">
-                          {event.event_name}
-                        </h4>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* First Place */}
-                          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200">
-                            <div className="flex items-center justify-center mb-2">
-                              <span className="text-2xl">🥇</span>
-                            </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
-                              1st Place {Array.isArray(event.first) && event.first.length > 1 && `(${event.first.length} winners)`}
-                            </h5>
-                            {renderWinnersList(event.first, false)}
-                          </div>
-
-                          {/* Second Place */}
-                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
-                            <div className="flex items-center justify-center mb-2">
-                              <span className="text-2xl">🥈</span>
-                            </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
-                              2nd Place {Array.isArray(event.second) && event.second.length > 1 && `(${event.second.length} winners)`}
-                            </h5>
-                            {renderWinnersList(event.second, false)}
-                          </div>
-
-                          {/* Third Place */}
-                          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
-                            <div className="flex items-center justify-center mb-2">
-                              <span className="text-2xl">🥉</span>
-                            </div>
-                            <h5 className="text-center font-semibold text-[#2A2A2A] mb-2">
-                              3rd Place {Array.isArray(event.third) && event.third.length > 1 && `(${event.third.length} winners)`}
-                            </h5>
-                            {renderWinnersList(event.third, false)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {/* Summary */}
+        {(individualResults.length > 0 || teamResults.length > 0) && (
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">{individualResults.length + teamResults.length}</p>
+                <p className="text-xs text-[#5A5A5A]">Total Events</p>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-[#5A5A5A]">No team events with results available yet.</p>
-            {data.team && (
-              <p className="text-sm text-gray-500 mt-2">Team data: {JSON.stringify(data.team)}</p>
-            )}
-          </div>
-        )}
-
-        {/* Summary Stats */}
-        {data.individual && data.team && (
-          <div className="bg-white rounded-2xl shadow-lg p-6 mt-8">
-            <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">📊 Results Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {data.individual.reduce((sum, category) => sum + category.events.length, 0)}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Individual Events</p>
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">{individualResults.length}</p>
+                <p className="text-xs text-[#5A5A5A]">Individual Events</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {data.team.reduce((sum, category) => sum + category.events.length, 0)}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Team Events</p>
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">{teamResults.length}</p>
+                <p className="text-xs text-[#5A5A5A]">Team Events</p>
               </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {data.individual.length + data.team.length}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Categories</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {(data.individual.reduce((sum, category) => sum + category.events.length, 0) + 
-                    data.team.reduce((sum, category) => sum + category.events.length, 0)) * 3}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Total Winners</p>
+              <div>
+                <p className="text-lg font-semibold text-[#D35D38]">{(individualResults.length + teamResults.length) * 3}</p>
+                <p className="text-xs text-[#5A5A5A]">Total Winners</p>
               </div>
             </div>
           </div>
