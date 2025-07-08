@@ -203,7 +203,7 @@ const AvailableEvents = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#D35D38]"></div>
       </div>
     );
   }
@@ -221,7 +221,7 @@ const AvailableEvents = () => {
   return (
     <>
       <div className='flex-1'>
-      <div className='bg-blue-600 rounded-br-md rounded-bl-md'>
+      <div className='bg-[#D35D38] rounded-br-md rounded-bl-md'>
           <div className='flex flex-col  w-[80%] mx-auto text-white items-start  p-6'>
             <div className='flex flex-row'>
               <ul className="text-white space-y-4 list-disc pl-6">
@@ -247,49 +247,54 @@ const AvailableEvents = () => {
         </div>
       </div>
     
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-[#F0F0F0] min-h-screen">
       {userInfo && (
         <div className="mb-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-4">{userInfo.first_name} {userInfo.last_name}</h2>
+          <h2 className="text-2xl font-bold mb-4 text-[#2A2A2A]">{userInfo.first_name} {userInfo.last_name}</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <p className="text-gray-600">Age</p>
-              <p className="font-semibold">{userInfo.age} years</p>
+              <p className="text-[#5A5A5A]">Age</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.age} years</p>
             </div>
             <div>
-              <p className="text-gray-600">Gender</p>
-              <p className="font-semibold">{userInfo.gender === 'M' ? 'Male' : userInfo.gender === 'F' ? 'Female' : userInfo.gender}</p>
+              <p className="text-[#5A5A5A]">Gender</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.gender === 'M' ? 'Male' : userInfo.gender === 'F' ? 'Female' : userInfo.gender}</p>
             </div>
             <div>
-              <p className="text-gray-600">Temple</p>
-              <p className="font-semibold">{userInfo.temple || 'Not specified'}</p>
+              <p className="text-[#5A5A5A]">Temple</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.temple || 'Not specified'}</p>
             </div>
           </div>
         </div>
       )}
 
-      <h2 className="text-2xl font-bold mb-6">Available Events</h2>
+      <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Available Events</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {events.map((event) => {
-          const registeredCount = events.filter(e => e.is_registered && e.registration_status === 'ACCEPTED').length;
-          const isMaxRegistrationsReached = registeredCount >= 3;
+          // Count only ACCEPTED and PENDING registrations toward the limit
+          // DECLINED (rejected) registrations should not count toward the limit
+          const activeRegistrations = events.filter(e => 
+            e.is_registered && 
+            (e.registration_status === 'ACCEPTED' || e.registration_status === 'PENDING')
+          ).length;
+          const isMaxRegistrationsReached = activeRegistrations >= 3;
           const isDisabled = isMaxRegistrationsReached && !event.is_registered;
           const statusDisplay = getStatusDisplay(event.registration_status);
 
           return (
             <div key={event.id} className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
+              <h3 className="text-xl font-semibold mb-2 text-[#2A2A2A]">{event.name}</h3>
               <div className="space-y-2 mb-4">
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Type:</span> {event.type}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Age Category:</span> {event.age_category.name}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Gender:</span> {event.gender}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Participants:</span> {event.participant_count}
                 </p>
               </div>
@@ -299,7 +304,7 @@ const AvailableEvents = () => {
                     {statusDisplay.text}
                   </div>
                   {event.registration_status !== 'DECLINED' && (
-                    <div className="text-sm text-gray-600 italic">
+                    <div className="text-sm text-[#5A5A5A] italic">
                       {/* Contact temple admin to cancel registration */}
                     </div>
                   )}
@@ -311,7 +316,7 @@ const AvailableEvents = () => {
                   className={`w-full px-4 py-2 rounded transition-colors ${
                     isDisabled
                       ? 'bg-gray-300 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                      : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
                   }`}
                   title={isDisabled ? 'Maximum registration limit reached (3 events)' : 'Register'}
                 >
@@ -341,7 +346,7 @@ const AvailableEvents = () => {
               </button>
               <button
                 onClick={handleConfirm}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                className="bg-[#D35D38] text-white px-4 py-2 rounded hover:bg-[#B84A2E] transition"
               >
                 Confirm
               </button>

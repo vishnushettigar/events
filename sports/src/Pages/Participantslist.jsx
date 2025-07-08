@@ -66,16 +66,16 @@ const Participantslist = () => {
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
             33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2025
           </h1>
-          {loading ? (
+            {loading ? (
             <div className="flex justify-center items-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
-            </div>
-          ) : (
+              </div>
+            ) : (
             <p className="text-xl text-[#5A5A5A] font-semibold">{templeName}</p>
-          )}
+            )}
         </div>
-
-        {/* Filters Section */}
+            
+            {/* Filters Section */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
           <h2 className="text-2xl font-bold text-[#2A2A2A] mb-4">Filter Participants</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -126,9 +126,9 @@ const Participantslist = () => {
             <p className="text-white/80 text-sm mt-1">
               {filteredParticipants.length} participant{filteredParticipants.length !== 1 ? 's' : ''} found
             </p>
-          </div>
-          
-          <div className="overflow-x-auto">
+            </div>
+
+              <div className="overflow-x-auto">
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -211,8 +211,8 @@ const Participantslist = () => {
                     </tr>
                   ))
                 )}
-              </tbody>
-            </table>
+                  </tbody>
+                </table>
           </div>
         </div>
 

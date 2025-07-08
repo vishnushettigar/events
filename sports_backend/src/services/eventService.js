@@ -133,16 +133,20 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
   }
 
     // Check if team is already registered for this event
-    const existingRegistration = await prisma.team_event_registration.findFirst({
-      where: {
-        temple_id: temple_id,
-        event_id: event_id,
-        is_deleted: false
-      }
-    });
+    // For mixed gender events (ALL), allow multiple teams per temple
+    // For single gender events (MALE/FEMALE), only allow one team per temple
+    if (event.gender !== 'ALL') {
+      const existingRegistration = await prisma.team_event_registration.findFirst({
+        where: {
+          temple_id: temple_id,
+          event_id: event_id,
+          is_deleted: false
+        }
+      });
 
-    if (existingRegistration) {
-      throw new Error('Team already registered for this event');
+      if (existingRegistration) {
+        throw new Error('Team already registered for this event');
+      }
     }
 
     console.log('Creating team registration...');
@@ -220,7 +224,7 @@ async function updateEventResult(event_id, result_id, staff_user_id) {
 async function updateRegistrationStatus(registration_id, status, temple_admin_id) {
   // Verify the temple admin exists and has the correct role
   const admin = await prisma.profile.findUnique({
-    where: { id: temple_admin_id },
+    where: { user_id: temple_admin_id },
     select: { role_id: true, temple_id: true }
   });
 
@@ -312,7 +316,8 @@ async function getTempleParticipants(temple_id, filters = {}) {
       user: {
       temple_id: temple_id
     },
-    is_deleted: false
+      is_deleted: false,
+      status: 'ACCEPTED' // Only include accepted registrations
   };
 
   // Add optional filters
@@ -323,6 +328,7 @@ async function getTempleParticipants(temple_id, filters = {}) {
     } else if (filters.event_id) {
     where.event_id = filters.event_id;
   }
+    // If filters.status is provided, override the default
   if (filters.status) {
     where.status = filters.status;
   }
@@ -366,10 +372,10 @@ async function getTempleParticipants(temple_id, filters = {}) {
               name: true,
               type: true
             }
-          },
-          age_category: {
-            select: {
-              name: true
+            },
+            age_category: {
+              select: {
+                name: true
             }
           }
         }
@@ -419,12 +425,18 @@ async function getTempleTeams(temple_id, filters = {}) {
 
   const where = {
     temple_id: temple_id,
-    is_deleted: false
+      is_deleted: false,
+      status: 'ACCEPTED' // Only include accepted team registrations
   };
 
   if (filters.event_id) {
     where.event_id = filters.event_id;
   }
+
+    // If filters.status is provided, override the default
+    if (filters.status) {
+      where.status = filters.status;
+    }
 
     console.log('Using where clause:', where);
 
@@ -457,7 +469,7 @@ async function getTempleTeams(temple_id, filters = {}) {
       try {
         const memberIds = team.member_user_ids ? team.member_user_ids.split(',').map(id => parseInt(id)) : [];
         console.log('Member IDs for team', team.id, ':', memberIds);
-        
+
     const members = await prisma.profile.findMany({
       where: { id: { in: memberIds } },
       select: {
@@ -471,11 +483,11 @@ async function getTempleTeams(temple_id, filters = {}) {
             aadhar_number: true
       }
     });
-        
+
         console.log('Found members for team', team.id, ':', members);
-        
-        return { 
-          ...team, 
+
+        return {
+          ...team,
           members,
           event: {
             ...team.event,
@@ -484,8 +496,8 @@ async function getTempleTeams(temple_id, filters = {}) {
         };
       } catch (error) {
         console.error('Error processing team', team.id, ':', error);
-        return { 
-          ...team, 
+        return {
+          ...team,
           members: [],
           event: {
             ...team.event,
@@ -495,7 +507,6 @@ async function getTempleTeams(temple_id, filters = {}) {
       }
   }));
 
-    console.log('Teams with members:', teamsWithMembers);
   return teamsWithMembers;
   } catch (error) {
     console.error('Error in getTempleTeams:', error);
@@ -941,7 +952,7 @@ async function updateTeamRegistration(registrationId, member_user_ids, temple_ad
 
     // Verify the temple admin exists and has the correct role
     const admin = await prisma.profile.findUnique({
-      where: { id: temple_admin_id },
+      where: { user_id: temple_admin_id },
       select: { role_id: true, temple_id: true }
     });
 

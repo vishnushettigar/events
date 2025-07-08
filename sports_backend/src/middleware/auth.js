@@ -10,15 +10,21 @@ function verifyToken(token) {
 
 // Middleware to authenticate the user
 function authenticate(req, res, next) {
+  console.log('authenticate middleware called for path:', req.path);
+  console.log('Authorization header:', req.headers.authorization);
+  
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
+    console.log('No token provided');
     return res.status(401).json({ error: 'No token provided' });
   }
   try {
     const decoded = verifyToken(token);
+    console.log('Token decoded successfully:', decoded);
     req.user = decoded;
     next();
   } catch (error) {
+    console.log('Token verification failed:', error.message);
     return res.status(401).json({ error: 'Invalid token' });
   }
 }
@@ -26,6 +32,9 @@ function authenticate(req, res, next) {
 // Middleware to check if the user has the required role
 function requireRole(role) {
   return (req, res, next) => {
+    console.log('requireRole middleware called with role:', role);
+    console.log('User from request:', req.user);
+    
     // Map role names to role IDs
     const roleMap = {
       'SUPER_USER': 4,
@@ -43,6 +52,7 @@ function requireRole(role) {
       // If role is a string, map it to role ID
       const roleId = roleMap[role];
       if (!roleId) {
+        console.log('Invalid role specified:', role);
         return res.status(403).json({ error: 'Invalid role specified' });
       }
       requiredRoleIds = [roleId];
@@ -51,10 +61,16 @@ function requireRole(role) {
       requiredRoleIds = [role];
     }
 
+    console.log('Required role IDs:', requiredRoleIds);
+    console.log('User role:', req.user.role);
+    console.log('Role check result:', requiredRoleIds.includes(req.user.role));
+
     // Check if user has any of the required roles
     if (!requiredRoleIds.includes(req.user.role)) {
+      console.log('Access denied: User role', req.user.role, 'not in required roles', requiredRoleIds);
       return res.status(403).json({ error: 'Unauthorized' });
     }
+    console.log('Access granted for role check');
     next();
   };
 }

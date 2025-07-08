@@ -7,6 +7,12 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 const router = express.Router();
 
+// Test route to verify middleware is working
+router.get('/test-auth', authenticate, requireRole('TEMPLE_ADMIN'), (req, res) => {
+  console.log('Test route accessed successfully');
+  res.json({ message: 'Authentication and authorization working', user: req.user });
+});
+
 router.post('/register-participant', authenticate, [
   body('user_id').isInt().withMessage('Invalid user ID'),
   body('event_id').isInt().withMessage('Invalid event ID')
@@ -94,8 +100,12 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
   body('registration_id').isInt().withMessage('Invalid registration ID'),
   body('status').isIn(['PENDING', 'APPROVED', 'REJECTED']).withMessage('Invalid status')
 ], async (req, res) => {
+  console.log('update-registration-status route called by user:', req.user);
+  console.log('Request body:', req.body);
+  
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
   const { registration_id, status } = req.body;

@@ -112,33 +112,25 @@ const Templeparticipants = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F0F0F0] py-8 px-4">
-            <div className="max-w-7xl mx-auto">
-                {/* Header Section */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
-                        Temple Participants
-                    </h1>
-                    <p className="text-lg text-[#5A5A5A]">
-                        Manage and view all participants for temple events
-                    </p>
-                </div>
+        <section className="min-h-screen bg-[#F0F0F0]">
+            <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto p-6 m-4">
+                    {/* Header */}
+                    <div className="mb-8">
+                        <h1 className="text-2xl font-bold text-[#2A2A2A] sm:text-3xl">Temple Participants</h1>
+                        <p className="mt-2 text-sm text-[#5A5A5A]">Manage and view all participants for temple events</p>
+                        </div>
 
-                {/* Filters Section */}
-                <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-                    <h2 className="text-2xl font-bold text-[#2A2A2A] mb-4">Filter Events</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                         {/* Age Category Filter */}
-                        <div>
-                            <label htmlFor="ageCategory" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Age Category
-                            </label>
-                            <select 
-                                id="ageCategory"
-                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-                                value={selectedAge}
+                        <div className="flex flex-col">
+                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Age Category</label>
+                        <select 
+                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
+                            value={selectedAge}
                                 onChange={(e) => setSelectedAge(e.target.value)}
-                            >
+                        >
                                 {ageGroups && ageGroups.length > 0 ? (
                                     ageGroups.map((group) => (
                                         <option key={group.id} value={group.value}>
@@ -148,17 +140,14 @@ const Templeparticipants = () => {
                                 ) : (
                                     <option value="" disabled>Loading age groups...</option>
                                 )}
-                            </select>
-                        </div>
+                        </select>
+                    </div>
 
                         {/* Gender Filter */}
-                        <div>
-                            <label htmlFor="gender" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Gender
-                            </label>
+                        <div className="flex flex-col">
+                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Gender</label>
                             <select 
-                                id="gender"
-                                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
                                 value={selectedGender}
                                 onChange={(e) => setSelectedGender(e.target.value)}
                             >
@@ -174,108 +163,54 @@ const Templeparticipants = () => {
                             </select>
                         </div>
                     </div>
-                </div>
 
-                {/* Loading State */}
-                {loading && (
-                    <div className="flex justify-center items-center py-12">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38] mx-auto mb-4"></div>
-                            <p className="text-[#5A5A5A]">Loading events and participants...</p>
+                    {/* Loading State */}
+                    {loading && (
+                        <div className="flex justify-center items-center py-8">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Error State */}
-                {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-6">
-                        <div className="flex items-center">
-                            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
+                    {/* Error State */}
+                    {error && (
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
                             <strong className="font-bold">Error!</strong>
-                            <span className="ml-2">{error}</span>
-                        </div>
-                    </div>
-                )}
+                            <span className="block sm:inline"> {error}</span>
+                </div>
+                    )}
 
-                {/* Events List */}
-                {!loading && !error && (
-                    <div className="space-y-8">
+                    {/* Events List */}
+                    <div className="space-y-6 sm:space-y-8">
                         {Object.entries(groupedEvents).length > 0 ? (
                             Object.entries(groupedEvents).map(([key, groupEvents]) => {
                                 const [ageCategory, gender] = key.split('::');
                                 return (
-                                    <div key={key} className="bg-white rounded-2xl shadow-xl overflow-hidden">
-                                        {/* Category Header */}
-                                        <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
-                                            <h3 className="text-xl font-bold text-white">
-                                                {ageCategory} - {gender}
-                                            </h3>
-                                            <p className="text-white/80 text-sm mt-1">
-                                                {groupEvents.length} event{groupEvents.length !== 1 ? 's' : ''} available
-                                            </p>
-                                        </div>
-                                        
-                                        {/* Events List */}
-                                        <div className="p-6 space-y-4">
+                                    <div key={key} className="space-y-4">
+                                        <h3 className="text-xl font-semibold text-[#D35D38] border-b-2 border-[#D35D38] pb-2">
+                                            {ageCategory} - {gender}
+                                        </h3>
+                                        <div className="space-y-4 sm:pl-4">
                                             {groupEvents.map((event) => (
-                                                <div key={event.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                                                    <CollapsibleList 
-                                                        title={event.name}
-                                                        eventId={event.id}
-                                                        participants={getParticipantsForEvent(event.id)}
-                                                    />
-                                                </div>
+                                                <CollapsibleList 
+                                                    key={event.id} 
+                                                    title={event.name}
+                                                    eventId={event.id}
+                                                    participants={getParticipantsForEvent(event.id)}
+                                                />
                                             ))}
                                         </div>
                                     </div>
                                 );
                             })
                         ) : (
-                            selectedAge && (
-                                <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
-                                    <div className="text-[#5A5A5A]">
-                                        <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        <p className="text-lg font-semibold mb-2">No events found</p>
-                                        <p className="text-sm">No events are available for the selected age category and gender combination.</p>
-                                    </div>
-                                </div>
+                            selectedAge && !loading && (
+                                <p className="text-[#5A5A5A] text-center py-4">No events found for this age category</p>
                             )
                         )}
                     </div>
-                )}
-
-                {/* Summary Stats */}
-                {!loading && !error && Object.entries(groupedEvents).length > 0 && (
-                    <div className="bg-white rounded-2xl shadow-xl p-6 mt-8">
-                        <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">📊 Events Summary</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="text-center">
-                                <p className="text-3xl font-bold text-[#D35D38]">
-                                    {Object.keys(groupedEvents).length}
-                                </p>
-                                <p className="text-sm text-[#5A5A5A]">Age/Gender Categories</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-3xl font-bold text-[#D35D38]">
-                                    {events.length}
-                                </p>
-                                <p className="text-sm text-[#5A5A5A]">Total Events</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="text-3xl font-bold text-[#D35D38]">
-                                    {allParticipants.length}
-                                </p>
-                                <p className="text-sm text-[#5A5A5A]">Total Participants</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                </div>
             </div>
-        </div>
+        </section>
     )
 }
 

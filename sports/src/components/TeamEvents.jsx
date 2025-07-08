@@ -17,25 +17,18 @@ const useDebounce = (callback, delay) => {
     }, [callback, delay]);
 };
 
-const CollapsibleList = ({ title, children, categoryColor }) => {
+const CollapsibleList = ({ title, children }) => {
     const [open, setOpen] = useState(false);
     return (
-        <div className="mb-6 border border-gray-200 rounded-lg shadow-md overflow-hidden">
+        <div className="mb-6 border rounded shadow">
             <button
-                className={`w-full text-left px-6 py-4 ${categoryColor} hover:opacity-90 font-bold text-lg text-white focus:outline-none flex justify-between items-center transition-all duration-200`}
+                className="w-full text-left px-4 py-3 bg-[#F0F0F0] hover:bg-[#E0E0E0] font-semibold text-lg rounded-t focus:outline-none flex justify-between items-center text-[#2A2A2A]"
                 onClick={() => setOpen((prev) => !prev)}
             >
-                <span className="flex items-center">
-                    <span className="mr-3">{open ? '−' : '+'}</span>
-                    {title}
-                </span>
-                <span className="text-sm opacity-80">{open ? 'Collapse' : 'Expand'}</span>
+                {title}
+                <span>{open ? '-' : '+'}</span>
             </button>
-            {open && (
-                <div className="p-6 bg-white border-t border-gray-100">
-                    {children}
-                </div>
-            )}
+            {open && <div className="p-4 bg-white rounded-b">{children}</div>}
         </div>
     );
 };
@@ -186,53 +179,63 @@ const TeamEvents = () => {
         return event?.event_type?.name || 'Unknown Event';
     };
 
-    // Helper function to get registered team for an event
-    const getRegisteredTeam = (eventName, gender) => {
+    // Helper function to get registered teams for an event
+    const getRegisteredTeams = (eventName, gender) => {
         const eventId = getEventId(eventName, gender);
-        return registeredTeams.find(team => team.event_id === eventId);
+        return registeredTeams.filter(team => team.event_id === eventId);
+    };
+
+    // Helper function to get registered team for an event (for backward compatibility)
+    const getRegisteredTeam = (eventName, gender) => {
+        const teams = getRegisteredTeams(eventName, gender);
+        return teams.length > 0 ? teams[0] : null;
     };
 
     const TeamForm = ({ eventName, playerCount, gender, buttonColor }) => {
-        const registeredTeam = getRegisteredTeam(eventName, gender);
-        const isEditing = !!registeredTeam;
+        const registeredTeams = getRegisteredTeams(eventName, gender);
+        const isEditing = registeredTeams.length > 0;
+        const isMixedGender = gender === 'ALL';
         
-        // Initialize players with registered team data if available, otherwise empty
-        const initialPlayers = registeredTeam ? 
-            registeredTeam.members.map(member => ({
-                name: `${member.first_name} ${member.last_name || ''}`.trim(),
-                aadharNumber: member.aadhar_number || '',
-                profileId: member.id
-            })) : 
-            Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' });
+        // Initialize players with empty array
+        const initialPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' });
 
         const [players, setPlayers] = useState(initialPlayers);
         const [loadingPlayers, setLoadingPlayers] = useState(Array(playerCount).fill(false));
         const [errors, setErrors] = useState(Array(playerCount).fill(null));
         const [editMode, setEditMode] = useState(false);
+        const [editingTeamId, setEditingTeamId] = useState(null);
         const [suggestions, setSuggestions] = useState([]);
         const [showSuggestions, setShowSuggestions] = useState(Array(playerCount).fill(false));
         const [loadingSuggestions, setLoadingSuggestions] = useState(false);
         const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
 
-        // Update players when registeredTeam changes
+        // Initialize form state when component mounts, playerCount changes, or registeredTeams changes
         useEffect(() => {
-            if (registeredTeam) {
-                const teamPlayers = registeredTeam.members.map(member => ({
-                    name: `${member.first_name} ${member.last_name || ''}`.trim(),
-                    aadharNumber: member.aadhar_number || '',
-                    profileId: member.id
-                }));
+            if (registeredTeams.length > 0 && !isMixedGender) {
+                // For single gender events, load the first team in edit mode
+                const firstTeam = registeredTeams[0];
+                const teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
+                    const member = firstTeam.members[index];
+                    return member ? {
+                        name: `${member.first_name} ${member.last_name || ''}`.trim(),
+                        aadharNumber: member.aadhar_number || '',
+                        profileId: member.id
+                    } : { name: '', aadharNumber: '', profileId: '' };
+                });
                 setPlayers(teamPlayers);
-                setEditMode(false); // Reset edit mode when team data changes
+                setEditMode(true);
+                setEditingTeamId(firstTeam.id);
             } else {
+                // Reset to empty form for new registration or mixed gender events
                 setPlayers(Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }));
                 setEditMode(false);
+                setEditingTeamId(null);
             }
             // Reset suggestions state
             setShowSuggestions(Array(playerCount).fill(false));
             setSuggestions([]);
             setActiveSuggestionIndex(-1);
-        }, [registeredTeam, playerCount]);
+        }, [playerCount, registeredTeams.length, isMixedGender]);
 
         // Close suggestions when clicking outside
         useEffect(() => {
@@ -464,23 +467,79 @@ const TeamEvents = () => {
                 return;
             }
 
-            handleSubmit(eventName, gender, players, registeredTeam?.id);
+            // Validate mixed gender events (ALL gender) must have one MALE and one FEMALE
+            if (gender === 'ALL') {
+                const validPlayers = players.filter(player => player.aadharNumber && player.profileId);
+                
+                if (validPlayers.length !== 2) {
+                    setError('Mixed gender events must have exactly 2 participants.');
+                    return;
+                }
+
+                // Fetch gender information for the selected players
+                const validateMixedGender = async () => {
+                    try {
+                        const genderPromises = validPlayers.map(player => 
+                            axios.get(`http://localhost:4000/api/users/search-by-aadhar`, {
+                                params: { aadharNumber: player.aadharNumber },
+                                headers: {
+                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                }
+                            })
+                        );
+
+                        const responses = await Promise.all(genderPromises);
+                        const playerGenders = responses.map(response => response.data.gender);
+                        
+                        // Check that first player is MALE and second player is FEMALE
+                        if (playerGenders[0] !== 'MALE') {
+                            setError('First participant must be MALE.');
+                            return;
+                        }
+                        
+                        if (playerGenders[1] !== 'FEMALE') {
+                            setError('Second participant must be FEMALE.');
+                            return;
+                        }
+
+                                    // If validation passes, proceed with submission
+            handleSubmit(eventName, gender, players, editingTeamId);
+                    } catch (error) {
+                        setError('Error validating participant genders. Please try again.');
+                    }
+                };
+
+                validateMixedGender();
+                return;
+            }
+
+            handleSubmit(eventName, gender, players, editingTeamId);
         };
 
-        const handleEditClick = () => {
-            setEditMode(true);
-        };
 
-        const handleCancelEdit = () => {
-            // Reset to original data
-            if (registeredTeam) {
-                const teamPlayers = registeredTeam.members.map(member => ({
+
+        const handleEditTeam = (team) => {
+            // Set the team data for editing
+            const teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
+                const member = team.members[index];
+                return member ? {
                     name: `${member.first_name} ${member.last_name || ''}`.trim(),
                     aadharNumber: member.aadhar_number || '',
                     profileId: member.id
-                }));
-                setPlayers(teamPlayers);
-            }
+                } : { name: '', aadharNumber: '', profileId: '' };
+            });
+            setPlayers(teamPlayers);
+            setEditingTeamId(team.id);
+            setEditMode(true);
+            setErrors(Array(playerCount).fill(null));
+            setSuggestions([]);
+            setShowSuggestions(Array(playerCount).fill(false));
+        };
+
+        const handleCancelEdit = () => {
+            // Reset to empty form for new team registration
+            setPlayers(Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }));
+            setEditingTeamId(null);
             setEditMode(false);
             setErrors(Array(playerCount).fill(null));
             setSuggestions([]);
@@ -488,49 +547,90 @@ const TeamEvents = () => {
         };
 
         return (
-            <div className="space-y-6">
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <div className="space-y-4">
+                {/* Show existing teams for mixed gender events */}
+                {isMixedGender && registeredTeams.length > 0 && (
+                    <div className="mb-6">
+                        <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">Registered Teams ({registeredTeams.length})</h4>
+                        <div className="space-y-3">
+                            {registeredTeams.map((team, teamIndex) => (
+                                <div key={team.id} className="bg-[#F8DFBE] p-4 rounded-lg border border-[#E0E0E0]">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h5 className="font-semibold text-[#2A2A2A]">Team {teamIndex + 1}</h5>
+                                        <button
+                                            className="px-3 py-1 bg-[#D35D38] text-white rounded text-sm hover:opacity-90"
+                                            onClick={() => handleEditTeam(team)}
+                                        >
+                                            Edit
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {team.members.map((member, memberIndex) => (
+                                            <div key={member.id} className="text-sm">
+                                                <span className="font-medium text-[#D35D38]">
+                                                    {memberIndex === 0 ? 'MALE' : 'FEMALE'}:
+                                                </span>
+                                                <span className="ml-2 text-[#2A2A2A]">
+                                                    {member.first_name} {member.last_name || ''} ({member.aadhar_number})
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Team Registration Form */}
+                <div className="border-t pt-4">
+                    <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">
+                        {isMixedGender && registeredTeams.length > 0 ? 'Add New Team' : 'Team Registration'}
+                    </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {players.map((player, i) => (
-                            <div key={i} className="flex gap-3 items-center bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
-                                <span className="w-8 h-8 flex items-center justify-center bg-[#D35D38] text-white rounded-full text-sm font-bold">
-                                    {i + 1}
+                            <div key={i} className="flex gap-2 items-center">
+                                <span className="w-8 text-right">
+                                    {i + 1}.
+                                    {gender === 'ALL' && (
+                                        <span className="block text-xs font-medium text-[#D35D38]">
+                                            {i === 0 ? 'MALE' : 'FEMALE'}
+                                        </span>
+                                    )}
                                 </span>
-                                <div className="flex-1 relative">
+                                <div className="w-1/2 relative">
                                     <input
                                         type="text"
-                                        placeholder="Aadhaar Number"
-                                        className={`w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D35D38] focus:border-[#D35D38] transition-all ${
-                                            !editMode && isEditing ? 'bg-gray-100 text-gray-600' : 'bg-white'
-                                        }`}
+                                        placeholder={`Aadhaar Number ${gender === 'ALL' ? `(${i === 0 ? 'MALE' : 'FEMALE'})` : ''}`}
+                                        className={`w-full p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
                                         value={player.aadharNumber}
                                         onChange={(e) => handlePlayerChange(i, 'aadharNumber', e.target.value)}
                                         maxLength={12}
-                                        readOnly={!editMode && isEditing}
+                                        readOnly={!editMode && registeredTeams.length > 0 && !isMixedGender}
                                     />
                                     {loadingPlayers[i] && editMode && (
-                                        <div className="text-sm text-[#D35D38] mt-1">Loading...</div>
+                                        <div className="text-sm text-gray-500">Loading...</div>
                                     )}
-                                    {errors[i] && editMode && (
-                                        <div className="text-sm text-red-600 mt-1">{errors[i]}</div>
+                                    {errors[i] && (
+                                        <div className="text-sm text-red-500">{errors[i]}</div>
                                     )}
                                     
-                                    {/* Suggestions Dropdown */}
-                                    {showSuggestions[i] && suggestions.length > 0 && !(!editMode && isEditing) && (
-                                        <div className="suggestions-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                                    {/* Suggestions Dropdown */}
+                                {showSuggestions[i] && suggestions.length > 0 && (editMode || registeredTeams.length === 0 || isMixedGender) && (
+                                        <div className="suggestions-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                                             {loadingSuggestions ? (
-                                                <div className="p-3 text-sm text-gray-500">Loading suggestions...</div>
+                                                <div className="p-2 text-sm text-gray-500">Loading suggestions...</div>
                                             ) : (
                                                 suggestions.map((suggestion, idx) => (
                                                     <div
                                                         key={idx}
-                                                        className={`p-3 hover:bg-[#F0F0F0] cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors ${
-                                                            idx === activeSuggestionIndex ? 'bg-[#F0F0F0]' : ''
+                                                        className={`p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                                                            idx === activeSuggestionIndex ? 'bg-blue-50' : ''
                                                         }`}
                                                         onClick={() => handleSuggestionSelect(suggestion, i)}
                                                     >
-                                                        <div className="font-semibold text-sm text-[#2A2A2A]">{suggestion.aadhar_number}</div>
-                                                        <div className="text-xs text-[#5A5A5A]">{suggestion.name}</div>
+                                                        <div className="font-medium text-sm text-gray-900">{suggestion.aadhar_number}</div>
+                                                        <div className="text-xs text-gray-600">{suggestion.name}</div>
                                                     </div>
                                                 ))
                                             )}
@@ -540,69 +640,44 @@ const TeamEvents = () => {
                                 <input
                                     type="text"
                                     placeholder="Name"
-                                    className={`flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D35D38] focus:border-[#D35D38] transition-all ${
-                                        !editMode && isEditing ? 'bg-gray-100 text-gray-600' : 'bg-white'
-                                    }`}
+                                    className={`w-1/2 p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
                                     value={player.name}
                                     onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
-                                    readOnly={(!editMode && isEditing) || loadingPlayers[i]}
+                                    readOnly={(!editMode && registeredTeams.length > 0 && !isMixedGender) || loadingPlayers[i]}
                                 />
                             </div>
                         ))}
                     </div>
-                </div>
-                
-                <div className="flex gap-3">
-                    {!isEditing ? (
-                        // New team registration
-                        <button
-                            className={`px-6 py-3 ${buttonColor} text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-semibold transition-all duration-200 shadow-md`}
-                            onClick={handleSubmitForm}
-                            disabled={loading || errors.some(error => error !== null) || !userProfile}
-                        >
-                            {loading ? (
-                                <span className="flex items-center">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Processing...
-                                </span>
-                            ) : (
-                                `Submit ${eventName} Team`
-                            )}
-                        </button>
-                    ) : editMode ? (
-                        // Edit mode - show Save and Cancel buttons
-                        <>
+                    <div className="flex gap-2 mt-4">
+                        {editMode ? (
+                            // Edit mode - show Save and Cancel buttons
+                            <>
+                                <button
+                                    className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
+                                    onClick={handleSubmitForm}
+                                    disabled={loading || errors.some(error => error !== null) || !userProfile}
+                                >
+                                    {loading ? 'Processing...' : 'Save Changes'}
+                                </button>
+                                <button
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:opacity-90"
+                                    onClick={handleCancelEdit}
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        ) : (
+                            // New team registration
                             <button
-                                className={`px-6 py-3 ${buttonColor} text-white rounded-lg hover:opacity-90 disabled:opacity-50 font-semibold transition-all duration-200 shadow-md`}
+                                className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
                                 onClick={handleSubmitForm}
                                 disabled={loading || errors.some(error => error !== null) || !userProfile}
                             >
-                                {loading ? (
-                                    <span className="flex items-center">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                        Processing...
-                                    </span>
-                                ) : (
-                                    'Save Changes'
-                                )}
+                                {loading ? 'Processing...' : `Submit ${eventName} Team`}
                             </button>
-                            <button
-                                className="px-6 py-3 bg-[#5A5A5A] text-white rounded-lg hover:bg-[#2A2A2A] font-semibold transition-all duration-200 shadow-md"
-                                onClick={handleCancelEdit}
-                                disabled={loading}
-                            >
-                                Cancel
-                            </button>
-                        </>
-                    ) : (
-                        // Read-only mode - show Edit button
-                        <button
-                            className="px-6 py-3 bg-[#D35D38] text-white rounded-lg hover:bg-[#B84A2E] font-semibold transition-all duration-200 shadow-md"
-                            onClick={handleEditClick}
-                        >
-                            Edit Team
-                        </button>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
         );
@@ -610,143 +685,108 @@ const TeamEvents = () => {
 
     if (!userProfile) {
         return (
-            <section className="min-h-screen bg-[#F0F0F0]">
-                <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38] mx-auto"></div>
-                        <p className="mt-4 text-[#5A5A5A] text-lg">Loading...</p>
-                    </div>
+                    <section className="p-6 bg-[#F0F0F0] min-h-screen">
+            <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38] mx-auto"></div>
+                    <p className="mt-2 text-[#2A2A2A]">Loading...</p>
                 </div>
-            </section>
+            </div>
+        </section>
         );
     }
 
     // Check if user has TEMPLE_ADMIN role
     if (userProfile.role !== 'TEMPLE_ADMIN') {
         return (
-            <section className="min-h-screen bg-[#F0F0F0]">
-                <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-                    <h2 className="text-3xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
-                    <div className="text-center p-12">
-                        <div className="text-[#D35D38] text-2xl font-bold mb-4">
-                            Access Denied
-                        </div>
-                        <p className="text-[#5A5A5A] mb-4 text-lg">
-                            Only Temple Administrators can register teams for group events.
-                        </p>
-                        <p className="text-sm text-[#5A5A5A] bg-[#F0F0F0] p-3 rounded-lg inline-block">
-                            Your current role: <span className="font-semibold">{userProfile.role}</span>
-                        </p>
+                    <section className="p-6 bg-[#F0F0F0] min-h-screen">
+            <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
+                <div className="text-center p-8">
+                    <div className="text-[#D35D38] text-xl font-semibold mb-4">
+                        Access Denied
                     </div>
+                    <p className="text-[#5A5A5A] mb-4">
+                        Only Temple Administrators can register teams for group events.
+                    </p>
+                    <p className="text-sm text-[#5A5A5A]">
+                        Your current role: {userProfile.role}
+                    </p>
                 </div>
-            </section>
+            </div>
+        </section>
         );
     }
 
     return (
         <section className="min-h-screen bg-[#F0F0F0]">
-            <div className="px-4 py-8 max-w-6xl mx-auto">
-                <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-8 py-6">
-                        <h2 className="text-3xl font-bold text-white mb-2">Group Events Registration</h2>
-                        <p className="text-white opacity-90">Manage team registrations for temple sports events</p>
+            <div className="px-4 py-6 max-w-6xl mx-auto  m-4">
+                <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
+                <p className='font-extrabold text-[#D35D38] pb-4'>**Participants in team events must register before the temple admin adds their names.**</p>
+
+                {error && (
+                    <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                        {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div className="mb-4 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                        {success}
+                    </div>
+                )}
+
+                {/* Registration Forms */}
+                <div className="mb-10">
+                    <h3 className="text-xl font-semibold mb-4 text-[#2A2A2A]">Team Registration</h3>
+                    
+                    {/* Men's Section */}
+                    <div className="mb-8">
+                        <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Men's Events</h4>
+                        <div className="space-y-6">
+                            <CollapsibleList title="Volleyball (9 Players)">
+                                <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
+                            <CollapsibleList title="Tug of War (9 Players)">
+                                <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
+                            <CollapsibleList title="Relay - 100 X 4 (4 Players)">
+                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
+                        </div>
                     </div>
 
-                    <div className="p-8">
-                        {/* Important Notice */}
-                        <div className="mb-8 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
-                                    <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div className="ml-3">
-                                    <p className="text-sm text-red-700 font-semibold">
-                                        <strong>Important:</strong> Participants in team events must register before the temple admin adds their names.
-                                    </p>
-                                </div>
-                            </div>
+                    {/* Women's Section */}
+                    <div className="mb-8">
+                        <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Women's Events</h4>
+                        <div className="space-y-6">
+                            <CollapsibleList title="Throwball (10 Players)">
+                                <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
+                            <CollapsibleList title="Tug of War (9 Players)">
+                                <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
+                            <CollapsibleList title="Relay - 100 X 4 (4 Players)">
+                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
                         </div>
+                    </div>
 
-                        {/* Status Messages */}
-                        {error && (
-                            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center">
-                                <svg className="h-5 w-5 text-red-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                                {error}
-                            </div>
-                        )}
-
-                        {success && (
-                            <div className="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-lg flex items-center">
-                                <svg className="h-5 w-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                                {success}
-                            </div>
-                        )}
-
-                        {/* Registration Forms */}
-                        <div className="space-y-8">
-                            {/* Men's Section */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6 text-[#2A2A2A] flex items-center">
-                                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3">
-                                        <span className="text-white font-bold text-sm">M</span>
-                                    </div>
-                                    Men's Events
-                                </h3>
-                                <div className="space-y-6">
-                                    <CollapsibleList title="Volleyball (9 Players)" categoryColor="bg-blue-600">
-                                        <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
-                                    </CollapsibleList>
-                                    <CollapsibleList title="Tug of War (9 Players)" categoryColor="bg-blue-600">
-                                        <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
-                                    </CollapsibleList>
-                                    <CollapsibleList title="Relay - 100 X 4 (4 Players)" categoryColor="bg-blue-600">
-                                        <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-blue-600" />
-                                    </CollapsibleList>
-                                </div>
-                            </div>
-
-                            {/* Women's Section */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6 text-[#2A2A2A] flex items-center">
-                                    <div className="w-8 h-8 bg-pink-600 rounded-full flex items-center justify-center mr-3">
-                                        <span className="text-white font-bold text-sm">W</span>
-                                    </div>
-                                    Women's Events
-                                </h3>
-                                <div className="space-y-6">
-                                    <CollapsibleList title="Throwball (10 Players)" categoryColor="bg-pink-600">
-                                        <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-pink-600" />
-                                    </CollapsibleList>
-                                    <CollapsibleList title="Tug of War (9 Players)" categoryColor="bg-pink-600">
-                                        <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-pink-600" />
-                                    </CollapsibleList>
-                                    <CollapsibleList title="Relay - 100 X 4 (4 Players)" categoryColor="bg-pink-600">
-                                        <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-pink-600" />
-                                    </CollapsibleList>
-                                </div>
-                            </div>
-
-                            {/* Mixed Gender Events */}
-                            <div>
-                                <h3 className="text-2xl font-bold mb-6 text-[#2A2A2A] flex items-center">
-                                    <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
-                                        <span className="text-white font-bold text-sm">M</span>
-                                    </div>
-                                    Mixed Gender Events
-                                </h3>
-                                <div className="space-y-6">
-                                    <CollapsibleList title="Couple Relay - 50 x 2 (2 Players)" categoryColor="bg-green-600">
-                                        <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-green-600" />
-                                    </CollapsibleList>
-                                </div>
-                            </div>
+                    {/* Mixed Gender Events */}
+                    <div>
+                        <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Mixed Gender Events</h4>
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800 font-medium">
+                                <span className="font-bold">Note:</span> Mixed gender events require exactly one MALE and one FEMALE participant.
+                            </p>
+                            <p className="text-sm text-blue-700 mt-1">
+                                <span className="font-semibold">Order:</span> First participant must be MALE, second participant must be FEMALE.
+                            </p>
+                        </div>
+                        <div className="space-y-6">
+                            <CollapsibleList title="Couple Relay - 50 x 2 (2 Players)">
+                                <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-[#D35D38]" />
+                            </CollapsibleList>
                         </div>
                     </div>
                 </div>

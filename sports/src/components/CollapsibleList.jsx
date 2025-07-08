@@ -49,12 +49,12 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
       {/* Header button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full text-left px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold focus:outline-none flex justify-between items-center transition-colors duration-200 hover:from-blue-700 hover:to-blue-800"
+        className="w-full text-left px-6 py-4 bg-gradient-to-r from-[#D35D38] to-[#B84A2E] text-white font-semibold focus:outline-none flex justify-between items-center transition-colors duration-200 hover:from-[#B84A2E] hover:to-[#A03D25]"
       >
         <div className="flex flex-col">
           <span className="text-lg">{title}</span>
           {pendingCount > 0 && (
-            <span className="text-sm text-yellow-200 mt-1">
+            <span className="text-sm text-[#F0F0F0] mt-1">
               {pendingCount} pending participant{pendingCount !== 1 ? 's' : ''}
             </span>
           )}
@@ -93,7 +93,7 @@ const CollapsibleList = ({ title, eventId, participants = [] }) => {
             </div>
           ) : (
             <div className="bg-white shadow-sm p-4 border border-gray-200 text-center">
-              <p className="text-amber-700">No participants registered for this event.</p>
+              <p className="text-[#D35D38]">No participants registered for this event.</p>
             </div>
           )}
         </div>

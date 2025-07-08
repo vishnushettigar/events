@@ -472,7 +472,8 @@ router.get('/search-by-aadhar', authenticate, async (req, res) => {
                 first_name: true,
                 last_name: true,
                 aadhar_number: true,
-                temple_id: true
+                temple_id: true,
+                gender: true
             }
         });
 
@@ -487,7 +488,8 @@ router.get('/search-by-aadhar', authenticate, async (req, res) => {
             id: user.id,
             name: name,
             aadhar_number: user.aadhar_number,
-            temple_id: user.temple_id
+            temple_id: user.temple_id,
+            gender: user.gender
         });
     } catch (error) {
         console.error('Error searching user:', error);
