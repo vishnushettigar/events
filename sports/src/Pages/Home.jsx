@@ -28,7 +28,7 @@ const Home = () => {
           <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
             <h1 className="text-5xl md:text-6xl font-extrabold text-[#2A2A2A] drop-shadow mb-4">Padmashali Annual Sports Meet</h1>
             <p className="text-[20px] md:text-[20px] text-[#5A5A5A] mb-6">Hosted by Sri Brahmalinga Veerabhadra Durgaparameshwari temple, Salikeri</p>
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-4">
+            <div className="flex flex-row sm:flex-row gap-4 sm:gap-6 mt-4">
               <a href="/login" className="px-8 py-3 rounded-lg bg-white text-[#D35D38] border-2 border-[#D35D38] font-bold text-lg shadow-lg hover:bg-[#D35D38] hover:text-white transition">Login</a>
               <a href="/register" className="px-8 py-3 rounded-lg bg-[#D35D38] text-white font-bold text-lg shadow-lg hover:bg-[#B84A2E] transition">Register</a>
             </div>

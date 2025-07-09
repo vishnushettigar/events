@@ -7,7 +7,7 @@ const clickCTA = (text) => {
 
 const Counts = () => {
   return (
-    <div className="w-[90%] mx-auto mb-10 px-4">
+    <div className="w-[90%]  mx-auto mb-10  px-0 md:w-[90%] lg:px-4">
       <div className="text-center mb-8">
         <h1 className="text-2xl md:text-4xl font-extrabold text-[#2A2A2A] mb-2 drop-shadow">Event Highlights</h1>
         <p className="text-base md:text-lg text-[#2A2A2A]">Explore the highlights of the event</p>
@@ -29,7 +29,7 @@ const Counts = () => {
           </div>
           
           {/* Image at bottom right */}
-          <div className="absolute top-[50px] right-0 w-24 h-24 sm:w-32 md:top-[56px] sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 p-2 lg:top-[44px]">
+          <div className="absolute top-[50px] left-[78px] right-0 w-24 h-24 sm:w-32 md:top-[56px] sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 p-2 lg:top-[44px] lg:left-[120px]">
             <img 
               src="/src/assets/temples.png" 
               alt="16 temples"
@@ -54,11 +54,11 @@ const Counts = () => {
           </div>
           
           {/* Image at bottom right */}
-          <div className="absolute top-[50px] right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 p-2 lg:top-[44px]">
+          <div className="absolute top-[50px] right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 p-2 lg:top-[50px]  rotate-40deg">
             <img 
               src="/src/assets/events.png" 
               alt="70+ Events"
-              className="w-full h-full object-contain"
+              className="w-full h-full object-contain "
             />
           </div>
         </button>
@@ -79,7 +79,7 @@ const Counts = () => {
           </div>
           
           {/* Image at bottom right */}
-          <div className="absolute bottom-0 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 p-2">
+          <div className="absolute bottom-0 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-68 lg:h-68 p-2 lg:top-[20px] lg:left-[130px]">
             <img 
               src="/src/assets/participants.png" 
               alt="1000+ Participants"
@@ -104,7 +104,7 @@ const Counts = () => {
           </div>
           
           {/* Image at bottom right */}
-          <div className="absolute bottom-0 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-48 lg:h-48 p-2">
+          <div className="absolute bottom-0 right-0 w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40 lg:w-58 lg:h-58 p-2 lg:top-[20px] lg:left-[120px]">
             <img 
               src="/src/assets/winners.png" 
               alt="200+ winners"
