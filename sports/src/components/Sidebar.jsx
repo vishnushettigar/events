@@ -103,7 +103,11 @@ const Sidebar = () => {
                 onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents' ? 'bg-[#F8DFBE]' : ''
-                } ${isCollapsed ? 'justify-center w-full' : ''}`}
+                } ${isCollapsed ? 'justify-center w-full' : ''} ${
+                  location.pathname === '/myevents'
+                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                }`}
               >
                 <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -121,7 +125,11 @@ const Sidebar = () => {
                 onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents/templeparticipants' ? 'bg-[#F8DFBE]' : ''
-                } ${isCollapsed ? 'justify-center w-full' : ''}`}
+                } ${isCollapsed ? 'justify-center w-full' : ''} ${
+                  location.pathname === '/myevents/templeparticipants'
+                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                }`}
               >
                 <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
@@ -157,7 +165,11 @@ const Sidebar = () => {
                 onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents/groupevents' ? 'bg-[#F8DFBE]' : ''
-                } ${isCollapsed ? 'justify-center w-full' : ''}`}
+                } ${isCollapsed ? 'justify-center w-full' : ''} ${
+                  location.pathname === '/myevents/groupevents'
+                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                }`}
               >
                 <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -175,7 +187,11 @@ const Sidebar = () => {
                 onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents/Participantslist' ? 'bg-[#F8DFBE]' : ''
-                } ${isCollapsed ? 'justify-center w-full' : ''}`}
+                } ${isCollapsed ? 'justify-center w-full' : ''} ${
+                  location.pathname === '/myevents/Participantslist'
+                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                }` }
               >
                 <svg className={`w-5 h-5 ${isCollapsed ? '' : 'mr-3'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />

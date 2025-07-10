@@ -17,6 +17,7 @@ import Participantslist from './Pages/Participantslist.jsx';
 import Error from './Pages/Error.jsx';
 import AvailableEvents from './components/AvailableEvents.jsx';
 import StaffPanel from './staff/StaffPanel.jsx';
+import AdminPanel from './admin/AdminPanel.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -39,6 +40,10 @@ import StaffPanel from './staff/StaffPanel.jsx';
       {
         path: "/staffpanel",
         element: <StaffPanel />
+      },
+      {
+        path: "/admin",
+        element: <AdminPanel />
       },
       {
         path: "/myevents",

@@ -10,37 +10,31 @@ const sponsors = [
   {
     name: 'Harsh Foundation',
     location: 'Salikeri',
-    logo: 'https://img.icons8.com/color/96/000000/medal2.png',
     desc: 'Supporting community growth and sports.'
   },
   {
     name: 'Seva Samithi',
     location: 'Salikeri',
-    logo: 'https://img.icons8.com/color/96/000000/handshake.png',
     desc: 'Empowering youth through service.'
   },
   {
     name: 'Sri Brahmalinga Veerabhadra Durgaparameshwari Temple',
     location: 'Salikeri',
-    logo: 'https://img.icons8.com/color/96/000000/temple.png',
     desc: 'Blessings and support for the event.'
   },
   {
     name: 'Harsh Foundation',
     location: 'Salikeri',
-    logo: 'https://img.icons8.com/color/96/000000/medal2.png',
     desc: 'Supporting community growth and sports.'
   },
   {
     name: 'Seva Samithi',
     location: 'Salikeri',
-    logo: 'https://img.icons8.com/color/96/000000/handshake.png',
     desc: 'Empowering youth through service.'
   },
   {
     name: 'Sri Brahmalinga Veerabhadra Durgaparameshwari Temple',
     location: 'Salikeri',
-    logo: 'https://img.icons8.com/color/96/000000/temple.png',
     desc: 'Blessings and support for the event.'
   }
 ];
@@ -66,8 +60,8 @@ const Sponsors = () => {
       >
         {sponsors.map((s, idx) => (
           <SwiperSlide key={idx} className='min-h-[380px] pt-4 pb-4'>
-            <div className="flex flex-col items-center bg-[#F8DFBE] rounded-2xl shadow-lg p-8 mx-2 h-full min-h-[320px] transition-transform hover:scale-105">
-              <img src={s.logo} alt={s.name} className="w-20 h-20 mb-4 rounded-full shadow border-4 border-white bg-white" />
+            <div className="flex flex-col items-center bg-[#F8DFBE] rounded-2xl shadow-lg p-8 mx-2 h-full h-full transition-transform hover:scale-105">
+              {/* <img src={s.logo} alt={s.name} className="w-20 h-20 mb-4 rounded-full shadow border-4 border-white bg-white" /> */}
               <h3 className="text-xl font-bold text-[#2A2A2A] mb-1 text-center break-words min-h-[56px] flex items-center justify-center">{s.name}</h3>
               <h4 className="text-md text-[#2A2A2A] mb-2">{s.location}</h4>
               <p className="text-[#2A2A2A] text-center text-sm min-h-[40px] flex items-center justify-center">{s.desc}</p>

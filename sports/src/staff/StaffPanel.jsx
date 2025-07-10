@@ -573,52 +573,94 @@ const StaffPanel = () => {
 
         {/* Temple Reports Table */}
         {!loadingTemples && !templeError && (
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-[#F8DFBE]">
-                <thead className="bg-[#D35D38]">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Total Points</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View Points</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View All Participants</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-[#F8DFBE]">
-                  {templeReports.length > 0 ? (
-                    templeReports.map((temple_info, idx) => (
-                      <tr key={temple_info.temple_id} className="hover:bg-[#F8DFBE] transition">
-                        <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{idx + 1}</td>
-                        <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{temple_info.temple_name}</td>
-                        <td className="px-6 py-4 text-[#D35D38] font-bold">{temple_info.total_points}</td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => window.open(`/templedetailedreport/?temple_id=${temple_info.temple_id}`, '_blank')}
-                            className="inline-block px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
-                          >
-                            View Points
-                          </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => window.open(`/participantslist/?temple_id=${temple_info.temple_id}`, '_blank')}
-                            className="inline-block px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
-                          >
-                            View All Participants
-                          </button>
+          <div className="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl overflow-hidden">
+            {/* Mobile Cards View */}
+            <div className="block lg:hidden">
+              {templeReports.length > 0 ? (
+                <div className="space-y-4 p-4">
+                  {templeReports.map((temple_info, idx) => (
+                    <div key={temple_info.temple_id} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0]">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <span className="text-sm font-medium text-[#5A5A5A]">#{idx + 1}</span>
+                            <h3 className="font-semibold text-[#2A2A2A] text-lg">{temple_info.temple_name}</h3>
+                          </div>
+                          <p className="text-[#D35D38] font-bold text-xl">{temple_info.total_points} Points</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col space-y-2">
+                        <button
+                          onClick={() => window.open(`/templedetailedreport/?temple_id=${temple_info.temple_id}`, '_blank')}
+                          className="w-full px-3 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
+                        >
+                          View Points
+                        </button>
+                        <button
+                          onClick={() => window.open(`/participantslist/?temple_id=${temple_info.temple_id}`, '_blank')}
+                          className="w-full px-3 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
+                        >
+                          View All Participants
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center text-[#5A5A5A]">
+                  No temple reports available
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-[#F8DFBE]">
+                  <thead className="bg-[#D35D38]">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Total Points</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View Points</th>
+                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View All Participants</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-[#F8DFBE]">
+                    {templeReports.length > 0 ? (
+                      templeReports.map((temple_info, idx) => (
+                        <tr key={temple_info.temple_id} className="hover:bg-[#F8DFBE] transition">
+                          <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{idx + 1}</td>
+                          <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{temple_info.temple_name}</td>
+                          <td className="px-6 py-4 text-[#D35D38] font-bold">{temple_info.total_points}</td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => window.open(`/templedetailedreport/?temple_id=${temple_info.temple_id}`, '_blank')}
+                              className="inline-block px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
+                            >
+                              View Points
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
+                            <button
+                              onClick={() => window.open(`/participantslist/?temple_id=${temple_info.temple_id}`, '_blank')}
+                              className="inline-block px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
+                            >
+                              View All Participants
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-8 text-center text-[#5A5A5A]">
+                          No temple reports available
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan="5" className="px-6 py-8 text-center text-[#5A5A5A]">
-                        No temple reports available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -630,12 +672,12 @@ const StaffPanel = () => {
     return (
       <div className="space-y-6">
         {/* Filters */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {/* Age Category Filter */}
           <div className="flex flex-col">
-            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Age Category</label>
+            <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Age Category</label>
             <select 
-              className="p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
+              className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
               value={selectedAge}
               onChange={(e) => setSelectedAge(e.target.value)}
             >
@@ -653,9 +695,9 @@ const StaffPanel = () => {
 
           {/* Gender Filter */}
           <div className="flex flex-col">
-            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Gender</label>
+            <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Gender</label>
             <select 
-              className="p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
+              className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
               value={selectedGender}
               onChange={(e) => setSelectedGender(e.target.value)}
             >
@@ -1161,33 +1203,33 @@ const StaffPanel = () => {
 
         {/* Champions Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
-            <p className="text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
+          <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
+            <p className="text-xs sm:text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Rank
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Category
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Champion
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Temple
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Aadhar Number
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Total Points
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     Events Won
                   </th>
                 </tr>
@@ -1195,9 +1237,9 @@ const StaffPanel = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {allChampions.map((champion, index) => (
                   <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+                        <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm ${
                           index === 0 ? 'bg-yellow-500' : 
                           index === 1 ? 'bg-gray-400' : 
                           index === 2 ? 'bg-orange-600' :
@@ -1207,26 +1249,26 @@ const StaffPanel = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
                       {champion.category}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="text-sm font-medium text-[#2A2A2A]">
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
+                      <div className="text-xs sm:text-sm font-medium text-[#2A2A2A]">
                         {champion.name}
                       </div>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
                       {champion.temple}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                    <td className="hidden md:table-cell px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
                       {champion.aadhar_number}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className="text-lg font-bold text-[#D35D38]">
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
+                      <span className="text-sm sm:text-lg font-bold text-[#D35D38]">
                         {champion.points}
                       </span>
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A]">
+                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
                       {champion.events_count}
                     </td>
                   </tr>
@@ -1594,21 +1636,39 @@ const StaffPanel = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F0F0F0] p-6">
+    <div className="min-h-screen bg-[#F0F0F0] p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">Sports Event Staff Panel</h1>
-          <p className="text-[#5A5A5A]">Manage your sports event data</p>
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-[#2A2A2A] mb-2">Sports Event Staff Panel</h1>
+          <p className="text-sm sm:text-base text-[#5A5A5A]">Manage your sports event data</p>
         </div>
 
         {/* Tabs */}
         <div className="mb-6">
-          <nav className="flex space-x-8">
+          {/* Mobile Tabs - Dropdown */}
+          <div className="lg:hidden">
+            <div className="relative">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="w-full p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-[#2A2A2A] font-medium"
+              >
+                {tabs.map(tab => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Desktop Tabs - Horizontal */}
+          <nav className="hidden lg:flex space-x-8">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                className={`py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${
                   activeTab === tab.id
                     ? 'border-[#D35D38] text-[#D35D38]'
                     : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-[#D35D38]'
@@ -1618,6 +1678,27 @@ const StaffPanel = () => {
               </button>
             ))}
           </nav>
+
+          {/* Tablet Tabs - Scrollable */}
+          <div className="hidden md:block lg:hidden">
+            <div className="overflow-x-auto">
+              <nav className="flex space-x-6 min-w-max">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`py-2 px-3 border-b-2 font-medium text-sm whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'border-[#D35D38] text-[#D35D38]'
+                        : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-[#D35D38]'
+                    }`}
+                  >
+                    {tab.name}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
         </div>
 
         {/* Render different content based on active tab */}
