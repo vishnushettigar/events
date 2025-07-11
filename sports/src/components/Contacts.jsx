@@ -34,7 +34,7 @@ const Contacts = () => {
             </span>
             <h3 className="text-lg font-bold text-[#2A2A2A] mb-1">{c.name}</h3>
             <div className="flex items-center gap-2">
-              <a href={`tel:${c.phone}`} className="text-[#2A2A2A] text-md font-semibold hover:underline">{c.phone}</a>
+            <a href={`tel:${c.phone}`} className="text-[#2A2A2A] text-md font-semibold hover:underline">{c.phone}</a>
               <button
                 onClick={() => copyPhoneNumber(c.phone, idx)}
                 className="p-1 rounded-full hover:bg-[#F8DFBE] transition-colors"

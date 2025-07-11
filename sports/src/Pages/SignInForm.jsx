@@ -78,12 +78,15 @@ const SignInForm = () => {
             setErrors({});
 
             // Check user role and redirect accordingly
-            if (data.user && data.user.profile && data.user.profile.role_id === 3) {
+            if (data.user && data.user.profile && data.user.profile.role_id === 4) {
+                // Super User - redirect to admin panel
+                navigate('/admin');
+            } else if (data.user && data.user.profile && data.user.profile.role_id === 3) {
                 // Staff user - redirect to staff panel
                 navigate('/staffpanel');
             } else {
                 // Regular user - redirect to myevents page
-                navigate('/myevents');
+            navigate('/myevents');
             }
         } catch (err) {
             console.error('Login error:', err);
@@ -113,57 +116,57 @@ const SignInForm = () => {
                 {/* Sign In Form */}
                 <div className="">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {errors.submit && (
+                    {errors.submit && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                                {errors.submit}
-                            </div>
-                        )}
+                            {errors.submit}
+                        </div>
+                    )}
 
                         {/* Aadhaar Number */}
                         <div>
                             <label htmlFor="aadhaar" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                 Aadhaar Number *
                             </label>
-                            <input
+                        <input
                                 type="text"
-                                id="aadhaar"
-                                name="aadhaar"
-                                value={formData.aadhaar}
-                                onChange={handleChange}
+                            id="aadhaar"
+                            name="aadhaar"
+                            value={formData.aadhaar}
+                            onChange={handleChange}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
                                     errors.aadhaar ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="Enter your 12-digit Aadhaar number"
                             />
                             {errors.aadhaar && <p className="text-red-500 text-sm mt-1">{errors.aadhaar}</p>}
-                        </div>
+                    </div>
 
                         {/* Password */}
                         <div>
                             <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                 Password *
                             </label>
-                            <input
+                        <input
                                 type="password"
-                                id="password"
-                                name="password"
-                                value={formData.password}
-                                onChange={handleChange}
+                            id="password"
+                            name="password"
+                            value={formData.password}
+                            onChange={handleChange}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
                                     errors.password ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="Enter your password"
                             />
                             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-                        </div>
+                    </div>
 
                         {/* Submit Button */}
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
                                 className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
-                                    isSubmitting
+                                isSubmitting
                                         ? 'bg-gray-400 cursor-not-allowed text-white'
                                         : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
                                 }`}
@@ -179,19 +182,19 @@ const SignInForm = () => {
                                 ) : (
                                     'Sign In'
                                 )}
-                            </button>
-                        </div>
+                        </button>
+                    </div>
 
                         {/* Register Link */}
                         <div className="text-center">
                             <p className="text-[#5A5A5A]">
-                                Don't have an account?{' '}
+                        Don't have an account?{' '}
                                 <Link to="/register" className="text-[#D35D38] font-semibold hover:underline">
                                     Create Account
-                                </Link>
-                            </p>
+                        </Link>
+                    </p>
                         </div>
-                    </form>
+                </form>
                 </div>
             </div>
         </div>

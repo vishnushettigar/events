@@ -63,7 +63,7 @@ async function listBackups() {
     const backups = files
       .filter(file => file.endsWith('.sql'))
       .map(file => ({
-        name: file,
+            name: file,
         path: path.join(backupDir, file),
         size: fs.stat(path.join(backupDir, file)).then(stat => stat.size)
       }));
@@ -92,14 +92,14 @@ async function restoreBackup(backupPath) {
     console.error('Restore stderr:', stderr);
   }
 
-  await prisma.audit_log.create({
-    data: {
-      action: 'RESTORE_BACKUP',
+    await prisma.audit_log.create({
+      data: {
+        action: 'RESTORE_BACKUP',
       details: `Restored backup: ${backupPath}`
-    }
-  });
+      }
+    });
 
-  return { message: 'Backup restored successfully' };
+    return { message: 'Backup restored successfully' };
 }
 
 async function deleteBackup(backupPath) {

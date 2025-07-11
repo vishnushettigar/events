@@ -4,6 +4,7 @@ import CollapsibleList from './CollapsibleList'
 const Templeparticipants = () => {
     const [selectedAge, setSelectedAge] = useState('0-5');
     const [selectedGender, setSelectedGender] = useState('MALE');
+    const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -70,7 +71,6 @@ const Templeparticipants = () => {
     };
 
     // Fetch participants for all events in the current view
-    useEffect(() => {
         const fetchParticipants = async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -81,8 +81,15 @@ const Templeparticipants = () => {
                 const eventIds = getAllEventIds();
                 if (eventIds.length === 0) return;
 
+            // Build query parameters
+            const params = new URLSearchParams();
+            params.append('event_ids', eventIds.join(','));
+            if (selectedStatus !== 'ALL') {
+                params.append('status', selectedStatus);
+            }
+
                 const response = await fetch(
-                    `http://localhost:4000/api/events/temple-participants?event_ids=${eventIds.join(',')}`,
+                `http://localhost:4000/api/events/temple-participants?${params.toString()}`,
                     {
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -103,12 +110,18 @@ const Templeparticipants = () => {
             }
         };
 
+    useEffect(() => {
         fetchParticipants();
-    }, [events]);
+    }, [events, selectedStatus]);
 
     // Get participants for a specific event
     const getParticipantsForEvent = (eventId) => {
         return allParticipants.filter(p => p.event_id === eventId);
+    };
+
+    // Handle participant updates
+    const handleParticipantsUpdate = () => {
+        fetchParticipants();
     };
 
     return (
@@ -122,7 +135,7 @@ const Templeparticipants = () => {
                         </div>
 
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
                         {/* Age Category Filter */}
                         <div className="flex flex-col">
                             <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Age Category</label>
@@ -162,6 +175,21 @@ const Templeparticipants = () => {
                                 )}
                             </select>
                         </div>
+
+                        {/* Status Filter */}
+                        <div className="flex flex-col">
+                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Status</label>
+                            <select 
+                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
+                                value={selectedStatus}
+                                onChange={(e) => setSelectedStatus(e.target.value)}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="ACCEPTED">Accepted</option>
+                                <option value="DECLINED">Declined</option>
+                            </select>
+                        </div>
                     </div>
 
                     {/* Loading State */}
@@ -196,6 +224,8 @@ const Templeparticipants = () => {
                                                     title={event.name}
                                                     eventId={event.id}
                                                     participants={getParticipantsForEvent(event.id)}
+                                                    onParticipantsUpdate={handleParticipantsUpdate}
+                                                    isAdmin={false}
                                                 />
                                             ))}
                                         </div>

@@ -19,37 +19,53 @@ async function getOverallChampionshipReport() {
 
 // Event-wise Performance Report
 async function getEventWisePerformanceReport() {
-  const report = await prisma.ind_event_registration.findMany({
+  // Get all events with their registrations and results
+  const events = await prisma.mst_event.findMany({
     where: {
-      is_deleted: false,
-      event_result: {
-        isNot: null
-      }
+      is_deleted: false
     },
     include: {
-      event: {
+      event_type: true,
+      age_category: true,
+      registrations: {
+        where: {
+          is_deleted: false,
+          status: 'ACCEPTED',
+          event_result: {
+            isNot: null
+          }
+        },
         include: {
-          event_type: true,
-          age_category: true
+          user: {
+            include: {
+              temple: true
+            }
+          },
+          event_result: true
         }
       },
-      user: {
+      team_registrations: {
+        where: {
+          is_deleted: false,
+          status: 'ACCEPTED',
+          event_result: {
+            isNot: null
+          }
+        },
         include: {
-          temple: true
-        }
-      },
-      event_result: true
-    },
-    orderBy: {
-      event: {
-        event_type: {
-          name: 'asc'
+          temple: true,
+          event_result: true
         }
       }
-    }
+    },
+    orderBy: [
+      { event_type: { name: 'asc' } },
+      { age_category: { from_age: 'asc' } },
+      { gender: 'asc' }
+    ]
   });
 
-  return report;
+  return events;
 }
 
 // Age Category-wise Report
@@ -66,12 +82,12 @@ async function getAgeCategoryWiseReport() {
         include: {
           age_category: true,
           event_type: true
-        }
-      },
+            }
+          },
       user: {
-        include: {
-          temple: true
-        }
+            include: {
+              temple: true
+            }
       },
       event_result: true
     },

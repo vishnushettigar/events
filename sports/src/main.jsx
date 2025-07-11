@@ -18,6 +18,7 @@ import Error from './Pages/Error.jsx';
 import AvailableEvents from './components/AvailableEvents.jsx';
 import StaffPanel from './staff/StaffPanel.jsx';
 import AdminPanel from './admin/AdminPanel.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -43,7 +44,7 @@ import AdminPanel from './admin/AdminPanel.jsx';
       },
       {
         path: "/admin",
-        element: <AdminPanel />
+        element: <ProtectedRoute requiredRole="SUPER_USER"><AdminPanel /></ProtectedRoute>
       },
       {
         path: "/myevents",

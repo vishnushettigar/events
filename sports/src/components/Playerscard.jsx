@@ -1,42 +1,20 @@
 import React from 'react';
 
-const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount }) => {
+const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount, isAdmin = false, updatingStatus = false }) => {
     if (!participant) return null;
 
-    const handleStatusUpdate = async (newStatus) => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                throw new Error('No authentication token found');
-            }
-
-            const response = await fetch('http://localhost:4000/api/events/update-registration-status', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    registration_id: participant.id,
-                    status: newStatus
-                })
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update status');
-            }
-
+    const handleStatusUpdate = (newStatus) => {
             if (onStatusUpdate) {
                 onStatusUpdate(newStatus);
-            }
-        } catch (error) {
-            console.error('Error updating status:', error);
-            alert(error.message);
         }
     };
 
     const canAcceptMore = acceptedCount < 3;
     const canRejectApproved = participant.status === 'ACCEPTED' && pendingCount > 0;
+
+    // For admin, show all status options regardless of temple limits
+    const showAdminButtons = isAdmin && !updatingStatus;
+    const showTempleAdminButtons = !isAdmin && !updatingStatus;
 
     return (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mb-4">
@@ -56,8 +34,62 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount 
                              participant.status === 'DECLINED' ? 'REJECTED' :
                              participant.status}
                         </div>
+                        {isAdmin && participant.user?.temple?.name && (
+                            <div className="text-xs text-gray-500">
+                                {participant.user.temple.name}
+                            </div>
+                        )}
                 </div>
                     <div className="flex flex-wrap gap-2">
+                        {/* Admin buttons - show all options */}
+                        {showAdminButtons && (
+                            <>
+                                {participant.status === 'PENDING' && (
+                                    <>
+                                        <button
+                                            onClick={() => handleStatusUpdate('ACCEPTED')}
+                                            className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 transition-colors"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusUpdate('DECLINED')}
+                                            className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors"
+                                        >
+                                            Reject
+                                        </button>
+                                    </>
+                                )}
+                                {participant.status === 'ACCEPTED' && (
+                                    <button
+                                        onClick={() => handleStatusUpdate('DECLINED')}
+                                        className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors"
+                                    >
+                                        Reject
+                                    </button>
+                                )}
+                                {participant.status === 'DECLINED' && (
+                                    <>
+                                        <button
+                                            onClick={() => handleStatusUpdate('ACCEPTED')}
+                                            className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 transition-colors"
+                                        >
+                                            Accept
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusUpdate('PENDING')}
+                                            className="text-sm bg-yellow-500 text-white px-3 py-1.5 rounded-md hover:bg-yellow-600 transition-colors"
+                                        >
+                                            Set Pending
+                                        </button>
+                                    </>
+                                )}
+                            </>
+                        )}
+
+                        {/* Temple admin buttons - with temple-specific logic */}
+                        {showTempleAdminButtons && (
+                            <>
                         {participant.status === 'PENDING' && canAcceptMore && (
                             <button
                                 onClick={() => handleStatusUpdate('APPROVED')}
@@ -77,6 +109,15 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount 
                         {participant.status === 'PENDING' && !canAcceptMore && (
                             <div className="text-sm text-gray-500 italic">
                                 Max participants reached
+                                    </div>
+                                )}
+                            </>
+                        )}
+
+                        {/* Loading state */}
+                        {updatingStatus && (
+                            <div className="text-sm text-gray-500 italic">
+                                Updating...
                 </div>
                         )}
                 </div>

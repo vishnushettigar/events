@@ -1,14 +1,70 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom';
 import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [userInfo, setUserInfo] = useState(null);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
     };
+
+    // Check login status and fetch user info
+    useEffect(() => {
+        const checkLoginStatus = () => {
+            const token = localStorage.getItem('token');
+            setIsLoggedIn(!!token);
+            if (token) {
+                fetchUserProfile();
+            } else {
+                setUserInfo(null);
+            }
+        };
+
+        const fetchUserProfile = async () => {
+            try {
+                const response = await fetch('http://localhost:4000/api/users/profile', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setUserInfo(data);
+                } else if (response.status === 401) {
+                    localStorage.removeItem('token');
+                    setIsLoggedIn(false);
+                    setUserInfo(null);
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                localStorage.removeItem('token');
+                setIsLoggedIn(false);
+                setUserInfo(null);
+            }
+        };
+
+        checkLoginStatus();
+        
+        // Add event listener for auth changes
+        const handleAuthChange = () => {
+            checkLoginStatus();
+        };
+
+        window.addEventListener('authChange', handleAuthChange);
+
+        return () => {
+            window.removeEventListener('authChange', handleAuthChange);
+        };
+    }, []);
+
+    // Check if user is Temple Admin (role_id = 2)
+    const isTempleAdmin = userInfo && userInfo.role_id === 2;
 
     return (
         <nav id="header" className="header fixed bg-[#FCFCFC] flex flex-row items-center justify-between sticky top-0 z-46">
@@ -16,18 +72,20 @@ const Navbar = () => {
                 <div className="flex flex-row items-center justify-between w-full">
                     
                     <div className="flex items-center">
-                        {/* Hamburger Menu - Only visible on mobile */}
-                        <button
-                            onClick={toggleMenu}
-                            className="md:hidden p-2 rounded-lg hover:bg-[#F0F0F0] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
-                            aria-label="Toggle menu"
-                        >
-                            <div className="w-6 h-6 flex flex-col justify-center items-center">
-                                <span className={`block w-5 h-0.5 bg-[#2A2A2A] transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
-                                <span className={`block w-5 h-0.5 bg-[#2A2A2A] transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
-                                <span className={`block w-5 h-0.5 bg-[#2A2A2A] transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
-                            </div>
-                        </button>
+                        {/* Hamburger Menu - Only visible on mobile for Temple Admin */}
+                        {isTempleAdmin && (
+                            <button
+                                onClick={toggleMenu}
+                                className="md:hidden p-2 rounded-lg hover:bg-[#F0F0F0] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                aria-label="Toggle menu"
+                            >
+                                <div className="w-6 h-6 flex flex-col justify-center items-center">
+                                    <span className={`block w-5 h-0.5 bg-[#2A2A2A] transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
+                                    <span className={`block w-5 h-0.5 bg-[#2A2A2A] transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+                                    <span className={`block w-5 h-0.5 bg-[#2A2A2A] transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
+                                </div>
+                            </button>
+                        )}
                         {/* Logo */}
                          <div className="pl-4 md:pl-0">
                         <Link to="/">
@@ -38,7 +96,7 @@ const Navbar = () => {
                         />
                         </Link> 
                     </div>
-
+                   
                     </div>
 
                     
@@ -52,8 +110,8 @@ const Navbar = () => {
                 </div>
             </div>
 
-            {/* Mobile Menu Overlay */}
-            {isMenuOpen && (
+            {/* Mobile Menu Overlay - Only show for Temple Admin */}
+            {isTempleAdmin && isMenuOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={toggleMenu}>
                     <div className="fixed top-0 left-0 h-full w-64 bg-white shadow-xl transform transition-transform duration-300 ease-in-out" onClick={(e) => e.stopPropagation()}>
                         <div className="flex flex-col h-full">

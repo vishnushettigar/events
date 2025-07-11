@@ -10,6 +10,7 @@ import eventRoutes from './routes/eventRoutes.js';
 import eventManagementRoutes from './routes/eventManagementRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import systemRoutes from './routes/systemRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/event-management', eventManagementRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Sports Event Backend is running!' });

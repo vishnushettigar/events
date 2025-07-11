@@ -8,6 +8,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    allowedHosts: ['e6253913ba57.ngrok-free.app'],
     watch: {
       usePolling: true
     }

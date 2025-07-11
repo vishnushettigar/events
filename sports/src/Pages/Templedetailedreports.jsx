@@ -110,16 +110,16 @@ const Templedetailedreports = () => {
             <tbody className="bg-white divide-y divide-blue-100">
               {individualEvents.length > 0 ? (
                 individualEvents.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-blue-50 transition">
-                    <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
-                    <td className="px-4 py-2">{row.event}</td>
-                    <td className="px-4 py-2">{row.age}</td>
-                    <td className="px-4 py-2">{row.gender}</td>
-                    <td className="px-4 py-2">{row.first}</td>
-                    <td className="px-4 py-2">{row.second}</td>
-                    <td className="px-4 py-2">{row.third}</td>
-                    <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
-                  </tr>
+                <tr key={idx} className="hover:bg-blue-50 transition">
+                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
+                  <td className="px-4 py-2">{row.event}</td>
+                  <td className="px-4 py-2">{row.age}</td>
+                  <td className="px-4 py-2">{row.gender}</td>
+                  <td className="px-4 py-2">{row.first}</td>
+                  <td className="px-4 py-2">{row.second}</td>
+                  <td className="px-4 py-2">{row.third}</td>
+                  <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+                </tr>
                 ))
               ) : (
                 <tr>
@@ -150,13 +150,13 @@ const Templedetailedreports = () => {
             <tbody className="bg-white divide-y divide-blue-100">
               {teamEvents.length > 0 ? (
                 teamEvents.map((row, idx) => (
-                  <tr key={idx} className="hover:bg-blue-50 transition">
-                    <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
-                    <td className="px-4 py-2">{row.event}</td>
-                    <td className="px-4 py-2">{row.gender}</td>
-                    <td className="px-4 py-2">{row.result}</td>
-                    <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
-                  </tr>
+                <tr key={idx} className="hover:bg-blue-50 transition">
+                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
+                  <td className="px-4 py-2">{row.event}</td>
+                  <td className="px-4 py-2">{row.gender}</td>
+                  <td className="px-4 py-2">{row.result}</td>
+                  <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+                </tr>
                 ))
               ) : (
                 <tr>

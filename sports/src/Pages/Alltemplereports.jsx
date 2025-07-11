@@ -75,43 +75,43 @@ const Alltemplereports = () => {
 
         {/* Temple Reports Table */}
         {!loading && !error && (
-          <div className="overflow-x-auto rounded-2xl shadow-xl bg-white">
-            <table className="min-w-full divide-y divide-blue-200">
-              <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Total Points</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View Points</th>
-                  <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View All Participants</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-blue-100">
+        <div className="overflow-x-auto rounded-2xl shadow-xl bg-white">
+          <table className="min-w-full divide-y divide-blue-200">
+            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Total Points</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View Points</th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View All Participants</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-blue-100">
                 {report.length > 0 ? (
                   report.map((temple_info, idx) => (
-                    <tr key={temple_info.temple_id} className="hover:bg-blue-50 transition">
-                      <td className="px-6 py-4 font-semibold text-blue-900">{idx + 1}</td>
-                      <td className="px-6 py-4 font-semibold text-purple-800">{temple_info.temple_name}</td>
-                      <td className="px-6 py-4 text-blue-700 font-bold">{temple_info.total_points}</td>
-                      <td className="px-6 py-4">
-                        <Link to="/templedetailedreport"><a
-                          href={`/temple_detailed_report/?temple_id=${temple_info.temple_id}`}
-                          className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-red-600 transition font-semibold text-sm"
-                        >
-                          View Points
-                        </a> </Link>
-                        
-                      </td>
-                      <td className="px-6 py-4">
-                        <Link to="/participantslist"><a
-                          href={`/temple_participants/?temple_id=${temple_info.temple_id}`}
-                          className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-red-600 transition font-semibold text-sm"
-                        >
-                          View All Participants
-                        </a> </Link>
-                        
-                      </td>
-                    </tr>
+                <tr key={temple_info.temple_id} className="hover:bg-blue-50 transition">
+                  <td className="px-6 py-4 font-semibold text-blue-900">{idx + 1}</td>
+                  <td className="px-6 py-4 font-semibold text-purple-800">{temple_info.temple_name}</td>
+                  <td className="px-6 py-4 text-blue-700 font-bold">{temple_info.total_points}</td>
+                  <td className="px-6 py-4">
+                    <Link to="/templedetailedreport"><a
+                      href={`/temple_detailed_report/?temple_id=${temple_info.temple_id}`}
+                      className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-red-600 transition font-semibold text-sm"
+                    >
+                      View Points
+                    </a> </Link>
+                    
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link to="/participantslist"><a
+                      href={`/temple_participants/?temple_id=${temple_info.temple_id}`}
+                      className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg shadow hover:bg-red-600 transition font-semibold text-sm"
+                    >
+                      View All Participants
+                    </a> </Link>
+                    
+                  </td>
+                </tr>
                   ))
                 ) : (
                   <tr>
@@ -120,9 +120,9 @@ const Alltemplereports = () => {
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
-          </div>
+            </tbody>
+          </table>
+        </div>
         )}
       </div>
     </section>

@@ -123,16 +123,16 @@ const TeamEvents = () => {
                 setSuccess('Team updated successfully!');
             } else {
                 // Register new team
-                const response = await axios.post('http://localhost:4000/api/events/register-team', {
+            const response = await axios.post('http://localhost:4000/api/events/register-team', {
                     temple_id: userProfile.temple_id,
-                    event_id: eventId,
+                event_id: eventId,
                     member_user_ids: validPlayers.map(player => player.profileId)
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                setSuccess('Team registered successfully!');
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            setSuccess('Team registered successfully!');
             }
             
             // Refresh registered teams
@@ -587,9 +587,9 @@ const TeamEvents = () => {
                     <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">
                         {isMixedGender && registeredTeams.length > 0 ? 'Add New Team' : 'Team Registration'}
                     </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {players.map((player, i) => (
-                            <div key={i} className="flex gap-2 items-center">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {players.map((player, i) => (
+                        <div key={i} className="flex gap-2 items-center">
                                 <span className="w-8 text-right">
                                     {i + 1}.
                                     {gender === 'ALL' && (
@@ -599,21 +599,21 @@ const TeamEvents = () => {
                                     )}
                                 </span>
                                 <div className="w-1/2 relative">
-                                    <input
-                                        type="text"
+                                <input
+                                    type="text"
                                         placeholder={`Aadhaar Number ${gender === 'ALL' ? `(${i === 0 ? 'MALE' : 'FEMALE'})` : ''}`}
                                         className={`w-full p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
-                                        value={player.aadharNumber}
-                                        onChange={(e) => handlePlayerChange(i, 'aadharNumber', e.target.value)}
-                                        maxLength={12}
+                                    value={player.aadharNumber}
+                                    onChange={(e) => handlePlayerChange(i, 'aadharNumber', e.target.value)}
+                                    maxLength={12}
                                         readOnly={!editMode && registeredTeams.length > 0 && !isMixedGender}
-                                    />
+                                />
                                     {loadingPlayers[i] && editMode && (
-                                        <div className="text-sm text-gray-500">Loading...</div>
-                                    )}
-                                    {errors[i] && (
-                                        <div className="text-sm text-red-500">{errors[i]}</div>
-                                    )}
+                                    <div className="text-sm text-gray-500">Loading...</div>
+                                )}
+                                {errors[i] && (
+                                    <div className="text-sm text-red-500">{errors[i]}</div>
+                                )}
                                     
                                                                     {/* Suggestions Dropdown */}
                                 {showSuggestions[i] && suggestions.length > 0 && (editMode || registeredTeams.length === 0 || isMixedGender) && (
@@ -636,18 +636,18 @@ const TeamEvents = () => {
                                             )}
                                         </div>
                                     )}
-                                </div>
-                                <input
-                                    type="text"
-                                    placeholder="Name"
-                                    className={`w-1/2 p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
-                                    value={player.name}
-                                    onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
-                                    readOnly={(!editMode && registeredTeams.length > 0 && !isMixedGender) || loadingPlayers[i]}
-                                />
                             </div>
-                        ))}
-                    </div>
+                            <input
+                                type="text"
+                                placeholder="Name"
+                                    className={`w-1/2 p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
+                                value={player.name}
+                                onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
+                                    readOnly={(!editMode && registeredTeams.length > 0 && !isMixedGender) || loadingPlayers[i]}
+                            />
+                        </div>
+                    ))}
+                </div>
                     <div className="flex gap-2 mt-4">
                         {editMode ? (
                             // Edit mode - show Save and Cancel buttons
@@ -669,13 +669,13 @@ const TeamEvents = () => {
                             </>
                         ) : (
                             // New team registration
-                            <button
+                <button
                                 className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
                                 onClick={handleSubmitForm}
                                 disabled={loading || errors.some(error => error !== null) || !userProfile}
-                            >
+                >
                                 {loading ? 'Processing...' : `Submit ${eventName} Team`}
-                            </button>
+                </button>
                         )}
                     </div>
                 </div>
@@ -698,7 +698,7 @@ const TeamEvents = () => {
 
     // Check if user has TEMPLE_ADMIN role
     if (userProfile.role !== 'TEMPLE_ADMIN') {
-        return (
+    return (
                     <section className="p-6 bg-[#F0F0F0] min-h-screen">
             <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
                 <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
@@ -743,32 +743,32 @@ const TeamEvents = () => {
                     {/* Men's Section */}
                     <div className="mb-8">
                         <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Men's Events</h4>
-                        <div className="space-y-6">
+                    <div className="space-y-6">
                             <CollapsibleList title="Volleyball (9 Players)">
                                 <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
-                            </CollapsibleList>
+                        </CollapsibleList>
                             <CollapsibleList title="Tug of War (9 Players)">
                                 <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
-                            </CollapsibleList>
+                        </CollapsibleList>
                             <CollapsibleList title="Relay - 100 X 4 (4 Players)">
                                 <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-[#D35D38]" />
-                            </CollapsibleList>
-                        </div>
+                        </CollapsibleList>
                     </div>
+                </div>
 
-                    {/* Women's Section */}
+                {/* Women's Section */}
                     <div className="mb-8">
                         <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Women's Events</h4>
-                        <div className="space-y-6">
-                            <CollapsibleList title="Throwball (10 Players)">
+                    <div className="space-y-6">
+                        <CollapsibleList title="Throwball (10 Players)">
                                 <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-[#D35D38]" />
                             </CollapsibleList>
                             <CollapsibleList title="Tug of War (9 Players)">
                                 <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-[#D35D38]" />
-                            </CollapsibleList>
+                        </CollapsibleList>
                             <CollapsibleList title="Relay - 100 X 4 (4 Players)">
                                 <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-[#D35D38]" />
-                            </CollapsibleList>
+                        </CollapsibleList>
                         </div>
                     </div>
 
@@ -786,7 +786,7 @@ const TeamEvents = () => {
                         <div className="space-y-6">
                             <CollapsibleList title="Couple Relay - 50 x 2 (2 Players)">
                                 <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-[#D35D38]" />
-                            </CollapsibleList>
+                        </CollapsibleList>
                         </div>
                     </div>
                 </div>

@@ -316,8 +316,7 @@ async function getTempleParticipants(temple_id, filters = {}) {
       user: {
       temple_id: temple_id
     },
-      is_deleted: false,
-      status: 'ACCEPTED' // Only include accepted registrations
+    is_deleted: false
   };
 
   // Add optional filters
@@ -328,7 +327,7 @@ async function getTempleParticipants(temple_id, filters = {}) {
     } else if (filters.event_id) {
     where.event_id = filters.event_id;
   }
-    // If filters.status is provided, override the default
+    // If filters.status is provided, filter by status, otherwise show all statuses
   if (filters.status) {
     where.status = filters.status;
   }

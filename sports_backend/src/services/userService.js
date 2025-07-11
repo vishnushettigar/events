@@ -48,8 +48,8 @@ async function register(username, password, email, first_name, last_name, phone,
 
 async function login(username, password) {
   try {
-    const user = await prisma.user.findUnique({
-      where: { username },
+  const user = await prisma.user.findUnique({
+    where: { username },
       include: {
         profile: {
           include: {
@@ -58,17 +58,17 @@ async function login(username, password) {
           }
         }
       }
-    });
+  });
 
     if (!user || user.password !== password) { // In production, use bcrypt to compare hashed passwords
-      throw new Error('Invalid credentials');
-    }
+    throw new Error('Invalid credentials');
+  }
 
     const token = jwt.sign(
       { 
-        id: user.id, 
-        role: user.profile.role_id,
-        temple_id: user.profile.temple_id
+    id: user.id, 
+    role: user.profile.role_id,
+    temple_id: user.profile.temple_id 
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
@@ -80,7 +80,7 @@ async function login(username, password) {
         id: user.id,
         username: user.username,
         email: user.email,
-        profile: {
+      profile: {
           id: user.profile.id,
           first_name: user.profile.first_name,
           last_name: user.profile.last_name,
@@ -107,18 +107,18 @@ async function updateRole(userId, newRoleId) {
       include: {
         role: true
       }
-    });
+  });
 
-    // Log the role update in audit_log
-    await prisma.audit_log.create({
-      data: {
+  // Log the role update in audit_log
+  await prisma.audit_log.create({
+    data: {
         user_id: userId,
-        action: 'UPDATE_ROLE',
+      action: 'UPDATE_ROLE',
         table_name: 'Profile',
         record_id: updatedProfile.id,
         new_value: JSON.stringify(updatedProfile)
-      }
-    });
+    }
+  });
 
     return updatedProfile;
   } catch (error) {

@@ -89,14 +89,14 @@ const StaffPanel = () => {
     } else if (activeTab === 'results') {
       fetchResults();
     } else {
-      fetchData();
+    fetchData();
     }
   }, [activeTab, selectedAge, selectedGender]);
 
   // Fetch data for Update Results section
   const fetchUpdateResultsData = async () => {
     try {
-      setLoading(true);
+    setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('No authentication token found');
@@ -166,7 +166,7 @@ const StaffPanel = () => {
   // Fetch champions data
   const fetchChampions = async () => {
     try {
-      setLoading(true);
+    setLoading(true);
       setError(null);
       const token = localStorage.getItem('token');
       if (!token) {
@@ -209,7 +209,7 @@ const StaffPanel = () => {
 
       console.log('Making request to all-results endpoint...');
       const response = await fetch('http://localhost:4000/api/users/all-results', {
-        headers: {
+          headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
@@ -247,7 +247,7 @@ const StaffPanel = () => {
       }
 
       const response = await fetch('http://localhost:4000/api/reports/event-performance', {
-        headers: {
+          headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
@@ -278,100 +278,101 @@ const StaffPanel = () => {
     return acc;
   }, {});
 
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const currentTab = tabs.find(tab => tab.id === activeTab);
+//   const fetchData = async () => {
+//     setLoading(true);
+//     setError(null);
+//     try {
+//       const token = localStorage.getItem('token');
+//       const currentTab = tabs.find(tab => tab.id === activeTab);
       
-      if (!currentTab) {
-        throw new Error('Invalid tab selected');
-      }
+//       if (!currentTab) {
+//         throw new Error('Invalid tab selected');
+//       }
 
-      const response = await axios.get(`http://localhost:4000${currentTab.endpoint}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      setData(response.data);
-    } catch (err) {
-      console.error('Error fetching data:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to fetch data');
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+//       const response = await axios.get(`http://localhost:4000${currentTab.endpoint}`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+//       setData(response.data);
+//     } catch (err) {
+//       console.error('Error fetching data:', err);
+//       setError(err.response?.data?.error || err.message || 'Failed to fetch data');
+//       setData([]);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const currentTab = tabs.find(tab => tab.id === activeTab);
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setLoading(true);
+//     try {
+//       const token = localStorage.getItem('token');
+//       const currentTab = tabs.find(tab => tab.id === activeTab);
       
-      if (!currentTab) {
-        throw new Error('Invalid tab selected');
-      }
+//       if (!currentTab) {
+//         throw new Error('Invalid tab selected');
+//       }
       
-      if (isEditing) {
-        await axios.put(`http://localhost:4000${currentTab.endpoint}/${editingId}`, formData, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      } else {
-        await axios.post(`http://localhost:4000${currentTab.endpoint}`, formData, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
+//       if (isEditing) {
+//         await axios.put(`http://localhost:4000${currentTab.endpoint}/${editingId}`, formData, {
+//           headers: {
+//             'Authorization': `Bearer ${token}`
+//           }
+//         });
+//       } else {
+//         await axios.post(`http://localhost:4000${currentTab.endpoint}`, formData, {
+//           headers: {
+//             'Authorization': `Bearer ${token}`
+//           }
+//         });
+//       }
       
-      setFormData({});
-      setIsEditing(false);
-      setEditingId(null);
-      fetchData();
-    } catch (err) {
-      console.error('Error in handleSubmit:', err);
-      setError(err.response?.data?.error || err.message || 'Operation failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+//       setFormData({});
+//       setIsEditing(false);
+//       setEditingId(null);
+//       fetchData();
+//     } catch (err) {
+//       console.error('Error in handleSubmit:', err);
+//       setError(err.response?.data?.error || err.message || 'Operation failed');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
-  const handleEdit = (item) => {
-    setFormData(item);
-    setIsEditing(true);
-    setEditingId(item.id);
-  };
+//   const handleEdit = (item) => {
+//     setFormData(item);
+//     setIsEditing(true);
+//     setEditingId(item.id);
+//   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this item?')) return;
+//   const handleDelete = async (id) => {
+//     if (!window.confirm('Are you sure you want to delete this item?')) return;
     
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const currentTab = tabs.find(tab => tab.id === activeTab);
+//     setLoading(true);
+//     try {
+//       const token = localStorage.getItem('token');
+//       const currentTab = tabs.find(tab => tab.id === activeTab);
       
-      if (!currentTab) {
-        throw new Error('Invalid tab selected');
-      }
+//       if (!currentTab) {
+//         throw new Error('Invalid tab selected');
+//       }
       
-      await axios.delete(`http://localhost:4000${currentTab.endpoint}/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      fetchData();
-    } catch (err) {
-      console.error('Error in handleDelete:', err);
-      setError(err.response?.data?.error || err.message || 'Delete failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+//       await axios.delete(`http://localhost:4000${currentTab.endpoint}/${id}`, {
+//         headers: {
+//           'Authorization': `Bearer ${token}`
+//         }
+//       });
+//       fetchData();
+//     } catch (err) {
+//       console.error('Error in handleDelete:', err);
+//       setError(err.response?.data?.error || err.message || 'Delete failed');
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
 
   // Handle individual result update
   const handleIndividualResultUpdate = async (registrationId, rank) => {
@@ -439,14 +440,14 @@ const StaffPanel = () => {
       try {
         setLoadingParticipants(true);
         setParticipantError(null);
-        const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token');
         
         if (!token) {
           throw new Error('No authentication token found');
         }
 
         const response = await fetch(`http://localhost:4000/api/events/event-participants/${eventId}`, {
-          headers: {
+        headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
@@ -458,10 +459,10 @@ const StaffPanel = () => {
 
         const data = await response.json();
         setEventParticipants(data);
-      } catch (err) {
+    } catch (err) {
         console.error('Error fetching event participants:', err);
         setParticipantError(err.message);
-      } finally {
+    } finally {
         setLoadingParticipants(false);
       }
     };
@@ -1691,12 +1692,12 @@ const StaffPanel = () => {
                       activeTab === tab.id
                         ? 'border-[#D35D38] text-[#D35D38]'
                         : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-[#D35D38]'
-                    }`}
-                  >
-                    {tab.name}
-                  </button>
-                ))}
-              </nav>
+                }`}
+              >
+                {tab.name}
+              </button>
+            ))}
+          </nav>
             </div>
           </div>
         </div>
@@ -1714,11 +1715,11 @@ const StaffPanel = () => {
           renderAllResults()
         ) : activeTab === 'results' ? (
           <>
-            {/* Form */}
-            {renderForm()}
+        {/* Form */}
+        {renderForm()}
 
-            {/* Table */}
-            {renderTable()}
+        {/* Table */}
+        {renderTable()}
           </>
         ) : (
           <>

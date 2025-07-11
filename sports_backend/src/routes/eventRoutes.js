@@ -231,6 +231,8 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
 router.get('/participant-data', authenticate, async (req, res) => {
   try {
     const { ageCategory = 'All', gender = 'MALE' } = req.query;
+    
+    console.log('Participant data request:', { ageCategory, gender });
 
     // Get age categories
     const ageCategories = await eventService.getAgeCategories();
@@ -243,6 +245,12 @@ router.get('/participant-data', authenticate, async (req, res) => {
 
     // Get events based on filters
     const events = await eventService.getEventsByAgeCategory(ageCategory, gender);
+
+    console.log('Participant data response:', {
+      ageCategoriesCount: ageCategories.length,
+      genderOptionsCount: genderOptions.length,
+      eventsCount: events.length
+    });
 
     res.json({
       ageCategories,
