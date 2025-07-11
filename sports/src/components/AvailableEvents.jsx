@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { userAPI, eventAPI } from '../utils/api.js';
 
 const AvailableEvents = () => {
   const [events, setEvents] = useState([]);
@@ -12,23 +13,6 @@ const AvailableEvents = () => {
   const [eventToUnregister, setEventToUnregister] = useState(null);
   const navigate = useNavigate();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('No token found in localStorage');
-      navigate('/login');
-      return {};
-    }
-    console.log('Using token:', token);
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': '*/*',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8'
-    };
-  };
-
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -39,20 +23,7 @@ const AvailableEvents = () => {
         }
 
         // First fetch user profile
-        const profileResponse = await fetch('http://localhost:4000/api/users/profile', {
-          headers: getAuthHeaders()
-        });
-
-        if (!profileResponse.ok) {
-          if (profileResponse.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch user profile');
-        }
-
-        const profileData = await profileResponse.json();
+        const profileData = await userAPI.getProfile();
         console.log('User profile loaded:', profileData);
         
         if (!profileData.temple_id) {
@@ -62,25 +33,17 @@ const AvailableEvents = () => {
         setUserInfo(profileData);
 
         // Then fetch available events
-        const eventsResponse = await fetch('http://localhost:4000/api/users/available-events', {
-          headers: getAuthHeaders()
-        });
-
-        if (!eventsResponse.ok) {
-          if (eventsResponse.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch events');
-        }
-
-        const eventsData = await eventsResponse.json();
+        const eventsData = await eventAPI.getAvailableEvents();
         console.log('Events loaded:', eventsData);
         setEvents(eventsData.events);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
         setError(err.message || 'Failed to fetch data');
         setLoading(false);
       }
@@ -108,41 +71,8 @@ const AvailableEvents = () => {
         };
         console.log('Sending registration request with:', requestBody);
 
-        const response = await fetch('http://localhost:4000/api/events/register-participant', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(requestBody)
-        });
-
-        const responseData = await response.json();
+        const responseData = await eventAPI.registerParticipant(requestBody);
         console.log('Server response:', responseData);
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          
-          // Handle specific error cases
-          if (response.status === 403) {
-            throw new Error('You can only register for events from your own temple');
-          }
-          
-          if (response.status === 404) {
-            throw new Error('Event or user not found. Please try refreshing the page.');
-          }
-          
-          if (responseData.error) {
-            throw new Error(responseData.error);
-          }
-          
-          if (responseData.errors && responseData.errors.length > 0) {
-            throw new Error(responseData.errors[0].msg);
-          }
-          
-          throw new Error('Failed to register for event. Please try again.');
-        }
 
         // Update the event's registration status with the status from the backend
         setEvents(prevEvents => 
@@ -161,7 +91,15 @@ const AvailableEvents = () => {
           userInfo: userInfo,
           selectedEvent: selectedEvent
         });
-        alert(error.message);
+        
+        // Handle specific error cases
+        if (error.message.includes('403')) {
+          alert('You can only register for events from your own temple');
+        } else if (error.message.includes('404')) {
+          alert('Event or user not found. Please try refreshing the page.');
+        } else {
+          alert(error.message || 'Failed to register for event. Please try again.');
+        }
       }
     }
   };

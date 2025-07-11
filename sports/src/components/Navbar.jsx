@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom';
 import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
+import { userAPI } from '../utils/api.js';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -26,26 +27,15 @@ const Navbar = () => {
 
         const fetchUserProfile = async () => {
             try {
-                const response = await fetch('http://localhost:4000/api/users/profile', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    setUserInfo(data);
-                } else if (response.status === 401) {
+                const data = await userAPI.getProfile();
+                setUserInfo(data);
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                if (error.message.includes('401') || error.message.includes('Unauthorized')) {
                     localStorage.removeItem('token');
                     setIsLoggedIn(false);
                     setUserInfo(null);
                 }
-            } catch (error) {
-                console.error('Error fetching user profile:', error);
-                localStorage.removeItem('token');
-                setIsLoggedIn(false);
-                setUserInfo(null);
             }
         };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getTempleNames } from '../utils/templeUtils';
+import { authAPI } from '../utils/api';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -121,37 +122,9 @@ const Register = () => {
                 
                 console.log('Sending registration request:', requestData);
                 
-                const response = await fetch('http://localhost:4000/api/users/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData),
-                });
+                const data = await authAPI.register(requestData);
 
-                console.log('Response status:', response.status);
-                const data = await response.json();
-                console.log('Response data:', data);
-
-                if (!response.ok) {
-                    // Check for duplicate username error
-                    if (data.error?.code === 'P2002' && data.error?.meta?.target?.includes('username')) {
-                        throw new Error('This Aadhaar number is already registered. Please use a different Aadhaar number or try logging in.');
-                    }
-                    
-                    // Handle validation errors
-                    if (data.errors && Array.isArray(data.errors)) {
-                        const validationErrors = data.errors.map(err => err.msg).join(', ');
-                        throw new Error(validationErrors);
-                    }
-                    
-                    // Handle other error types
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    
-                    throw new Error('Registration failed');
-                }
+                console.log('Registration successful:', data);
 
                 // Store the JWT token
                 localStorage.setItem('token', data.token);
@@ -201,11 +174,11 @@ const Register = () => {
                 {/* Registration Form */}
                 <div className="">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                        {errors.submit && (
+                    {errors.submit && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                                {errors.submit}
-                            </div>
-                        )}
+                            {errors.submit}
+                        </div>
+                    )}
 
                         {/* Name Fields */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -244,26 +217,26 @@ const Register = () => {
                                 />
                                 {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
                             </div>
-                        </div>
+                    </div>
 
                         {/* Mobile Number */}
                         <div>
                             <label htmlFor="mobile" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                 Mobile Number *
                             </label>
-                            <input
+                        <input
                                 type="tel"
-                                id="mobile"
-                                name="mobile"
-                                value={formData.mobile}
-                                onChange={handleChange}
+                            id="mobile"
+                            name="mobile"
+                            value={formData.mobile}
+                            onChange={handleChange}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
                                     errors.mobile ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="Enter your 10-digit mobile number"
                             />
                             {errors.mobile && <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>}
-                        </div>
+                    </div>
 
                         {/* Gender Selection */}
                         <div>
@@ -273,65 +246,65 @@ const Register = () => {
                             <div className="flex gap-6">
                                 {['MALE', 'FEMALE'].map((gender) => (
                                     <label key={gender} className="flex items-center">
-                                        <input
-                                            type="radio"
-                                            name="gender"
+                                <input
+                                    type="radio"
+                                    name="gender"
                                             value={gender}
                                             checked={formData.gender === gender}
-                                            onChange={handleChange}
+                                    onChange={handleChange}
                                             className="w-4 h-4 text-[#D35D38] border-gray-300 focus:ring-[#D35D38]"
-                                        />
+                                />
                                         <span className="ml-2 text-[#2A2A2A]">
                                             {gender === 'MALE' ? 'Male' : 'Female'}
                                         </span>
-                                    </label>
-                                ))}
+                            </label>
+                        ))}
                             </div>
                             {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
-                        </div>
+                    </div>
 
                         {/* Temple Selection */}
                         <div>
                             <label htmlFor="temple" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                 Temple *
                             </label>
-                            <select
+                        <select
                                 id="temple"
-                                name="temple"
-                                value={formData.temple}
-                                onChange={handleChange}
+                            name="temple"
+                            value={formData.temple}
+                            onChange={handleChange}
                                 disabled={isLoadingTemples}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
                                     errors.temple ? 'border-red-300' : 'border-gray-300'
                                 } ${isLoadingTemples ? 'opacity-50' : ''}`}
-                            >
+                        >
                                 <option value="">
                                     {isLoadingTemples ? 'Loading temples...' : 'Select your temple'}
                                 </option>
-                                {temples.map((temple, index) => (
-                                    <option key={index} value={temple}>{temple}</option>
-                                ))}
-                            </select>
+                            {temples.map((temple, index) => (
+                                <option key={index} value={temple}>{temple}</option>
+                            ))}
+                        </select>
                             {errors.temple && <p className="text-red-500 text-sm mt-1">{errors.temple}</p>}
-                        </div>
+                    </div>
 
                         {/* Date of Birth */}
                         <div>
                             <label htmlFor="dob" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                 Date of Birth *
                             </label>
-                            <input
+                        <input
                                 type="date"
-                                id="dob"
-                                name="dob"
-                                value={formData.dob}
-                                onChange={handleChange}
+                            id="dob"
+                            name="dob"
+                            value={formData.dob}
+                            onChange={handleChange}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
                                     errors.dob ? 'border-red-300' : 'border-gray-300'
                                 }`}
                             />
                             {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob}</p>}
-                        </div>
+                    </div>
 
                         {/* Aadhaar Fields */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -370,26 +343,26 @@ const Register = () => {
                                 />
                                 {errors.confirmAadhaar && <p className="text-red-500 text-sm mt-1">{errors.confirmAadhaar}</p>}
                             </div>
-                        </div>
+                    </div>
 
-                        {/* Email */}
+                    {/* Email */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                 Email Address *
                             </label>
-                            <input
+                        <input
                                 type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
+                            id="email"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
                                     errors.email ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="Enter your email address"
                             />
                             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-                        </div>
+                    </div>
 
                         {/* Password Fields */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -428,32 +401,32 @@ const Register = () => {
                                 />
                                 {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
                             </div>
-                        </div>
+                    </div>
 
                         {/* Terms and Conditions */}
                         <div>
                             <label className="flex items-start">
-                                <input
-                                    type="checkbox"
-                                    name="terms"
-                                    checked={formData.terms}
-                                    onChange={handleChange}
+                            <input
+                                type="checkbox"
+                                name="terms"
+                                checked={formData.terms}
+                                onChange={handleChange}
                                     className="w-4 h-4 text-[#D35D38] border-gray-300 rounded focus:ring-[#D35D38] mt-1"
-                                />
+                            />
                                 <span className="ml-3 text-sm text-[#2A2A2A]">
                                     I accept the <span className="text-[#D35D38] font-semibold">terms and conditions</span> *
                                 </span>
-                            </label>
+                        </label>
                             {errors.terms && <p className="text-red-500 text-sm mt-1">{errors.terms}</p>}
-                        </div>
+                    </div>
 
                         {/* Submit Button */}
-                        <div>
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
+                    <div>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
                                 className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
-                                    isSubmitting
+                                isSubmitting
                                         ? 'bg-gray-400 cursor-not-allowed text-white'
                                         : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
                                 }`}
@@ -469,19 +442,19 @@ const Register = () => {
                                 ) : (
                                     'Create Account'
                                 )}
-                            </button>
-                        </div>
+                        </button>
+                    </div>
 
                         {/* Login Link */}
                         <div className="text-center">
                             <p className="text-[#5A5A5A]">
-                                Already have an account?{' '}
+                        Already have an account?{' '}
                                 <Link to="/login" className="text-[#D35D38] font-semibold hover:underline">
                                     Sign In
-                                </Link>
-                            </p>
+                        </Link>
+                    </p>
                         </div>
-                    </form>
+                </form>
                 </div>
             </div>
         </div>

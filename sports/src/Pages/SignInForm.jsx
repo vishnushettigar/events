@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../utils/api';
 
 const SignInForm = () => {
     const navigate = useNavigate();
@@ -45,22 +46,10 @@ const SignInForm = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await fetch('http://localhost:4000/api/users/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            const data = await authAPI.login({
                     username: formData.aadhaar,
                     password: formData.password
-                })
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || data.message || 'Login failed');
-            }
 
             // Store the token in localStorage
             localStorage.setItem('token', data.token);

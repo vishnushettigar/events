@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { userAPI, eventAPI, reportAPI } from '../utils/api';
 
 const StaffPanel = () => {
   const [activeTab, setActiveTab] = useState('temples');
@@ -35,23 +35,8 @@ const StaffPanel = () => {
     try {
       setLoadingTemples(true);
       setTempleError(null);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
 
-      const response = await fetch('http://localhost:4000/api/users/temples', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch temple reports');
-      }
-
-      const temples = await response.json();
+      const temples = await userAPI.getAllTemples();
       
       // Transform temple data to include points from backend
       const templeReportsData = temples.map((temple) => ({
@@ -97,26 +82,10 @@ const StaffPanel = () => {
   const fetchUpdateResultsData = async () => {
     try {
     setLoading(true);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(
-        `http://localhost:4000/api/events/participant-data?ageCategory=${selectedAge}&gender=${selectedGender}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch data');
-      }
-
-      const data = await response.json();
+      const data = await eventAPI.getParticipantData({
+        ageCategory: selectedAge,
+        gender: selectedGender
+      });
       
       // Filter out the 'All' option from age groups
       const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
@@ -134,25 +103,9 @@ const StaffPanel = () => {
   // Fetch team events data
   const fetchTeamEvents = async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:4000/api/events/team-events', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch team events');
-      }
-
-      const data = await response.json();
+    setLoading(true);
+    setError(null);
+      const data = await eventAPI.getTeamEvents();
       setData(data);
     } catch (err) {
       console.error('Error fetching team events:', err);
@@ -168,23 +121,7 @@ const StaffPanel = () => {
     try {
     setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:4000/api/users/champions', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch champions');
-      }
-
-      const data = await response.json();
+      const data = await reportAPI.getChampions();
       setData(data);
     } catch (err) {
       console.error('Error fetching champions:', err);
@@ -200,31 +137,8 @@ const StaffPanel = () => {
     try {
       setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
-      console.log('Fetching all results with token:', token ? 'Token exists' : 'No token');
-      
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
       console.log('Making request to all-results endpoint...');
-      const response = await fetch('http://localhost:4000/api/users/all-results', {
-          headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response error text:', errorText);
-        throw new Error(`Failed to fetch all results: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await reportAPI.getAllResults();
       console.log('All Results Data:', data); // Debug logging
       setData(data);
     } catch (err) {
@@ -239,25 +153,9 @@ const StaffPanel = () => {
   // Fetch results data
   const fetchResults = async () => {
     try {
-      setLoading(true);
+    setLoading(true);
       setError(null);
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:4000/api/reports/event-performance', {
-          headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch results');
-      }
-
-      const data = await response.json();
+      const data = await eventAPI.getEventPerformance();
       setData(data);
     } catch (err) {
       console.error('Error fetching results:', err);
@@ -278,119 +176,10 @@ const StaffPanel = () => {
     return acc;
   }, {});
 
-//   const fetchData = async () => {
-//     setLoading(true);
-//     setError(null);
-//     try {
-//       const token = localStorage.getItem('token');
-//       const currentTab = tabs.find(tab => tab.id === activeTab);
-      
-//       if (!currentTab) {
-//         throw new Error('Invalid tab selected');
-//       }
-
-//       const response = await axios.get(`http://localhost:4000${currentTab.endpoint}`, {
-//         headers: {
-//           'Authorization': `Bearer ${token}`
-//         }
-//       });
-//       setData(response.data);
-//     } catch (err) {
-//       console.error('Error fetching data:', err);
-//       setError(err.response?.data?.error || err.message || 'Failed to fetch data');
-//       setData([]);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     setLoading(true);
-//     try {
-//       const token = localStorage.getItem('token');
-//       const currentTab = tabs.find(tab => tab.id === activeTab);
-      
-//       if (!currentTab) {
-//         throw new Error('Invalid tab selected');
-//       }
-      
-//       if (isEditing) {
-//         await axios.put(`http://localhost:4000${currentTab.endpoint}/${editingId}`, formData, {
-//           headers: {
-//             'Authorization': `Bearer ${token}`
-//           }
-//         });
-//       } else {
-//         await axios.post(`http://localhost:4000${currentTab.endpoint}`, formData, {
-//           headers: {
-//             'Authorization': `Bearer ${token}`
-//           }
-//         });
-//       }
-      
-//       setFormData({});
-//       setIsEditing(false);
-//       setEditingId(null);
-//       fetchData();
-//     } catch (err) {
-//       console.error('Error in handleSubmit:', err);
-//       setError(err.response?.data?.error || err.message || 'Operation failed');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const handleEdit = (item) => {
-//     setFormData(item);
-//     setIsEditing(true);
-//     setEditingId(item.id);
-//   };
-
-//   const handleDelete = async (id) => {
-//     if (!window.confirm('Are you sure you want to delete this item?')) return;
-    
-//     setLoading(true);
-//     try {
-//       const token = localStorage.getItem('token');
-//       const currentTab = tabs.find(tab => tab.id === activeTab);
-      
-//       if (!currentTab) {
-//         throw new Error('Invalid tab selected');
-//       }
-      
-//       await axios.delete(`http://localhost:4000${currentTab.endpoint}/${id}`, {
-//         headers: {
-//           'Authorization': `Bearer ${token}`
-//         }
-//       });
-//       fetchData();
-//     } catch (err) {
-//       console.error('Error in handleDelete:', err);
-//       setError(err.response?.data?.error || err.message || 'Delete failed');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-
   // Handle individual result update
   const handleIndividualResultUpdate = async (registrationId, rank) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/events/update-individual-result/${registrationId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ rank })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update result');
-      }
-
+      await eventAPI.updateIndividualResult(registrationId, rank);
       // Refresh the data
       await fetchUpdateResultsData();
       alert('Result updated successfully!');
@@ -403,20 +192,7 @@ const StaffPanel = () => {
   // Handle team result update
   const handleTeamResultUpdate = async (registrationId, rank) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/events/update-team-result/${registrationId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ rank })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update result');
-      }
-
+      await eventAPI.updateTeamResult(registrationId, rank);
       // Refresh the data
       await fetchTeamEvents();
       alert('Result updated successfully!');
@@ -440,24 +216,7 @@ const StaffPanel = () => {
       try {
         setLoadingParticipants(true);
         setParticipantError(null);
-      const token = localStorage.getItem('token');
-        
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch(`http://localhost:4000/api/events/event-participants/${eventId}`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch participants');
-        }
-
-        const data = await response.json();
+        const data = await eventAPI.getEventParticipants(eventId);
         setEventParticipants(data);
     } catch (err) {
         console.error('Error fetching event participants:', err);
@@ -779,7 +538,7 @@ const StaffPanel = () => {
       events.forEach(event => {
         if (grouped[event.gender]) {
           grouped[event.gender].push(event);
-        } else {
+      } else {
           grouped['ALL'].push(event); // Fallback for unknown genders
         }
       });

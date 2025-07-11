@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Playerscard from './Playerscard';
+import { participantAPI } from '../utils/api.js';
 
 const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -30,36 +31,22 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
         throw new Error('No authentication token found');
       }
 
+      let result;
+      
       // Use different API endpoints based on whether it's admin or temple admin
-      const endpoint = isAdmin 
-        ? `http://localhost:4000/api/admin/participants/${participantId}/update-status`
-        : 'http://localhost:4000/api/events/update-registration-status';
-
-      const requestBody = isAdmin 
-        ? { status: newStatus }
-        : { registration_id: participantId, status: newStatus };
-
-      const response = await fetch(endpoint, {
-        method: isAdmin ? 'PUT' : 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update status');
+      if (isAdmin) {
+        result = await participantAPI.updateParticipantStatus(participantId, newStatus);
+      } else {
+        const requestBody = { registration_id: participantId, status: newStatus };
+        result = await participantAPI.updateRegistrationStatus(requestBody);
       }
 
-      const result = await response.json();
       console.log('Status update successful:', result);
 
     // Update the local state immediately
     setLocalParticipants(prevParticipants =>
       prevParticipants.map(p =>
-          p.id === participantId ? { ...p, status: newStatus } : p
+            p.id === participantId ? { ...p, status: newStatus } : p
       )
     );
 

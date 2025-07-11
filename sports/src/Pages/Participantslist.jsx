@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getCurrentUserTemple } from '../utils/templeUtils'
+import { userAPI } from '../utils/api'
 
 const Participantslist = () => {
   const [selectedAgeCategory, setSelectedAgeCategory] = useState('');
@@ -24,23 +25,7 @@ const Participantslist = () => {
 
     const fetchParticipants = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://localhost:4000/api/users/templeusers', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch participants');
-        }
-
-        const data = await response.json();
+        const data = await userAPI.getTempleUsers();
         setParticipants(data);
         setParticipantsLoading(false);
       } catch (error) {

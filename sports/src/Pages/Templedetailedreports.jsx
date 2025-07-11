@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom';
+import { userAPI } from '../utils/api';
 
 const Templedetailedreports = () => {
   const [searchParams] = useSearchParams();
@@ -21,23 +22,7 @@ const Templedetailedreports = () => {
           throw new Error('Temple ID is required');
         }
 
-        const token = localStorage.getItem('token');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
-        const response = await fetch(`http://localhost:4000/api/users/temple-detailed-report/${templeId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch temple detailed report');
-        }
-
-        const data = await response.json();
+        const data = await userAPI.getTempleDetailedReport(templeId);
         
         setIndividualEvents(data.individualEvents || []);
         setTeamEvents(data.teamEvents || []);

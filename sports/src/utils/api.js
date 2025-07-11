@@ -95,10 +95,12 @@ const apiService = new ApiService();
 
 // Specific API methods for the application
 export const authAPI = {
-  login: (credentials) => apiService.post('/auth/login', credentials),
-  register: (userData) => apiService.post('/auth/register', userData),
+  login: (credentials) => apiService.post('/users/login', credentials),
+  register: (userData) => apiService.post('/users/register', userData),
   logout: () => apiService.post('/auth/logout'),
   refreshToken: () => apiService.post('/auth/refresh'),
+  verifyAdminAccess: () => apiService.get('/admin/verify-access'),
+  getDashboardStats: () => apiService.get('/admin/dashboard-stats'),
 };
 
 export const userAPI = {
@@ -109,18 +111,34 @@ export const userAPI = {
   updateUserRole: (id, roleId) => apiService.put(`/admin/users/${id}/update-role`, { role_id: roleId }),
   getUserDetails: (ids) => apiService.get('/admin/users/details', { ids }),
   getProfileDetails: (ids) => apiService.get('/admin/profiles/details', { ids }),
+  getRoles: () => apiService.get('/admin/roles'),
+  getTemples: () => apiService.get('/admin/temples'),
+  getTempleUsers: () => apiService.get('/users/templeusers'),
+  searchByAadhar: (aadharNumber) => apiService.get('/users/search-by-aadhar', { aadharNumber }),
+  getTempleDetailedReport: (templeId) => apiService.get(`/users/temple-detailed-report/${templeId}`),
+  getAllTemples: () => apiService.get('/users/temples'),
 };
 
 export const eventAPI = {
   getAllEvents: () => apiService.get('/admin/events'),
+  getAvailableEvents: () => apiService.get('/users/available-events'),
   getEventPerformance: () => apiService.get('/reports/event-performance'),
+  getParticipantData: (params) => apiService.get('/events/participant-data', params),
+  registerParticipant: (data) => apiService.post('/events/register-participant', data),
+  getTempleParticipants: (params) => apiService.get('/events/temple-participants', params),
   updateIndividualResult: (id, rank) => apiService.put(`/events/update-individual-result/${id}`, { rank }),
   updateTeamResult: (id, rank) => apiService.put(`/events/update-team-result/${id}`, { rank }),
+  getTeamEvents: () => apiService.get('/events/team-events'),
+  getTempleTeams: () => apiService.get('/events/temple-teams'),
+  registerTeam: (data) => apiService.post('/events/register-team', data),
+  updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
+  getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
 };
 
 export const participantAPI = {
   getAllParticipants: (params) => apiService.get('/admin/participants', params),
   updateParticipantStatus: (id, status) => apiService.put(`/admin/participants/${id}/update-status`, { status }),
+  updateRegistrationStatus: (data) => apiService.post('/events/update-registration-status', data),
 };
 
 export const teamAPI = {

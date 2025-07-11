@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom';
+import { userAPI } from '../utils/api';
 
 const Alltemplereports = () => {
     const [report, setReport] = useState([]);
@@ -11,23 +12,8 @@ const Alltemplereports = () => {
             try {
                 setLoading(true);
                 setError(null);
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
 
-                const response = await fetch('http://localhost:4000/api/users/temples', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch temple reports');
-                }
-
-                const temples = await response.json();
+                const temples = await userAPI.getAllTemples();
                 
                 // Transform temple data to include points from backend
                 const templeReportsData = temples.map((temple) => ({

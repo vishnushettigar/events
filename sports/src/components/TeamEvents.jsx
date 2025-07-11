@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import axios from 'axios';
+import { userAPI, eventAPI } from '../utils/api';
 import { getCurrentUserTemple } from '../utils/templeUtils';
 
 // Custom debounce hook
@@ -45,37 +45,17 @@ const TeamEvents = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
-
                 // Fetch user profile
-                const profileResponse = await axios.get('http://localhost:4000/api/users/profile', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setUserProfile(profileResponse.data);
+                const profileResponse = await userAPI.getProfile();
+                setUserProfile(profileResponse);
 
                 // Fetch team events
-                const eventsResponse = await axios.get('http://localhost:4000/api/events/team-events', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setEvents(eventsResponse.data);
+                const eventsResponse = await eventAPI.getTeamEvents();
+                setEvents(eventsResponse);
 
                 // Fetch registered teams
-                const teamsResponse = await axios.get('http://localhost:4000/api/events/temple-teams', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setRegisteredTeams(teamsResponse.data);
+                const teamsResponse = await eventAPI.getTempleTeams();
+                setRegisteredTeams(teamsResponse);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to fetch data');
@@ -113,38 +93,25 @@ const TeamEvents = () => {
 
             if (registrationId) {
                 // Update existing team
-                const response = await axios.put(`http://localhost:4000/api/events/update-team/${registrationId}`, {
+                const response = await eventAPI.updateTeam(registrationId, {
                     member_user_ids: validPlayers.map(player => player.profileId)
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
                 });
                 setSuccess('Team updated successfully!');
             } else {
                 // Register new team
-            const response = await axios.post('http://localhost:4000/api/events/register-team', {
+            const response = await eventAPI.registerTeam({
                     temple_id: userProfile.temple_id,
                 event_id: eventId,
                     member_user_ids: validPlayers.map(player => player.profileId)
-            }, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
             });
             setSuccess('Team registered successfully!');
             }
             
             // Refresh registered teams
-            const teamsResponse = await axios.get('http://localhost:4000/api/events/temple-teams', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            setRegisteredTeams(teamsResponse.data);
+            const teamsResponse = await eventAPI.getTempleTeams();
+            setRegisteredTeams(teamsResponse);
         } catch (err) {
-            setError(err.response?.data?.error || 'Error processing team');
+            setError(err.message || 'Error processing team');
         } finally {
             setLoading(false);
         }
@@ -258,14 +225,10 @@ const TeamEvents = () => {
             try {
                 console.log('Fetching temple users for search term:', searchTerm);
                 setLoadingSuggestions(true);
-                const response = await axios.get('http://localhost:4000/api/users/templeusers', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
+                const response = await userAPI.getTempleUsers();
                 
-                console.log('Temple users response:', response.data);
-                const templeUsers = response.data;
+                console.log('Temple users response:', response);
+                const templeUsers = response;
                 
                 // Filter users whose Aadhaar number starts with the search term
                 const filteredUsers = templeUsers.filter(user => {
@@ -304,14 +267,9 @@ const TeamEvents = () => {
                     return newState;
                 });
 
-                const response = await axios.get(`http://localhost:4000/api/users/search-by-aadhar`, {
-                    params: { aadharNumber },
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
+                const response = await userAPI.searchByAadhar(aadharNumber);
 
-                const user = response.data;
+                const user = response;
 
                 if (!userProfile || user.temple_id !== userProfile.temple_id) {
                     setErrors(prev => {
@@ -341,7 +299,7 @@ const TeamEvents = () => {
             } catch (error) {
                 setErrors(prev => {
                     const newState = [...prev];
-                    newState[index] = error.response?.data?.error || 'Error fetching user details';
+                    newState[index] = error.message || 'Error fetching user details';
                     return newState;
                 });
             } finally {
@@ -480,16 +438,11 @@ const TeamEvents = () => {
                 const validateMixedGender = async () => {
                     try {
                         const genderPromises = validPlayers.map(player => 
-                            axios.get(`http://localhost:4000/api/users/search-by-aadhar`, {
-                                params: { aadharNumber: player.aadharNumber },
-                                headers: {
-                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                                }
-                            })
+                            userAPI.searchByAadhar(player.aadharNumber)
                         );
 
                         const responses = await Promise.all(genderPromises);
-                        const playerGenders = responses.map(response => response.data.gender);
+                        const playerGenders = responses.map(response => response.gender);
                         
                         // Check that first player is MALE and second player is FEMALE
                         if (playerGenders[0] !== 'MALE') {
@@ -635,7 +588,7 @@ const TeamEvents = () => {
                                                 ))
                                             )}
                                         </div>
-                                    )}
+                                )}
                             </div>
                             <input
                                 type="text"

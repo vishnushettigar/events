@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import { eventAPI } from '../utils/api.js';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -20,16 +20,8 @@ const Sidebar = () => {
           throw new Error('No authentication token found');
         }
 
-        const response = await axios.get('http://localhost:4000/api/events/temple-participants', {
-          params: {
-            status: 'PENDING'
-          },
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        setPendingCount(response.data.length);
+        const data = await eventAPI.getTempleParticipants({ status: 'PENDING' });
+        setPendingCount(data.length);
       } catch (error) {
         console.error('Error fetching pending participants:', error);
         setError('Failed to fetch pending count');

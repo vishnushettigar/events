@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import CollapsibleList from '../components/CollapsibleList';
+import { authAPI, userAPI, eventAPI, participantAPI, teamAPI, templeAPI, reportAPI } from '../utils/api.js';
 // Icons temporarily disabled due to import issues
 // import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
 
@@ -25,34 +26,12 @@ const AdminPanel = () => {
 
       try {
         // Verify admin access with backend
-        const verifyResponse = await fetch('http://localhost:4000/api/admin/verify-access', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!verifyResponse.ok) {
-          console.error('Access denied: User does not have SUPER_USER role');
-          window.location.href = '/login';
-          return;
-        }
-
-        const verifyData = await verifyResponse.json();
+        const verifyData = await authAPI.verifyAdminAccess();
         setUser(verifyData.user);
 
         // Fetch dashboard statistics
-        const statsResponse = await fetch('http://localhost:4000/api/admin/dashboard-stats', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setDashboardStats(statsData);
-        }
+        const statsData = await authAPI.getDashboardStats();
+        setDashboardStats(statsData);
 
         setIsLoading(false);
       } catch (error) {
@@ -337,19 +316,7 @@ const EventManagement = () => {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/admin/events', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch events');
-      }
-
-      const data = await response.json();
+      const data = await eventAPI.getAllEvents();
       setEvents(data.events);
     } catch (err) {
       setError(err.message);
@@ -549,27 +516,15 @@ const UserManagement = () => {
     setError(null);
     
     try {
-      const token = localStorage.getItem('token');
-      const params = new URLSearchParams({
+      const params = {
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
         ...(filters.search && { search: filters.search }),
         ...(filters.role && { role: filters.role }),
         ...(filters.temple && { temple: filters.temple })
-      });
+      };
 
-      const response = await fetch(`http://localhost:4000/api/admin/users?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-
-      const data = await response.json();
+      const data = await userAPI.getAllUsers(params);
       setUsers(data.users);
       setPagination(prev => ({
         ...prev,
@@ -585,18 +540,8 @@ const UserManagement = () => {
 
   const fetchRoles = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/admin/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setRoles(data);
-      }
+      const data = await userAPI.getRoles();
+      setRoles(data);
     } catch (error) {
       console.error('Error fetching roles:', error);
     }
@@ -604,18 +549,8 @@ const UserManagement = () => {
 
   const fetchTemples = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:4000/api/admin/temples', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setTemples(data);
-      }
+      const data = await userAPI.getTemples();
+      setTemples(data);
     } catch (error) {
       console.error('Error fetching temples:', error);
     }
@@ -633,20 +568,8 @@ const UserManagement = () => {
   const handleRoleUpdate = async (userId, newRoleId) => {
     setUpdatingRole(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:4000/api/admin/users/${userId}/update-role`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ role_id: newRoleId })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update user role');
-      }
-
+      await userAPI.updateUserRole(userId, newRoleId);
+      
       // Refresh users list
       fetchUsers();
       setShowRoleModal(false);
@@ -967,21 +890,10 @@ const ParticipantsManagement = () => {
         console.log('Fetching participant data with filters:', { selectedAge, selectedGender });
 
         // Fetch participant data
-        const response = await fetch(
-          `http://localhost:4000/api/events/participant-data?ageCategory=${selectedAge}&gender=${selectedGender}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch data');
-        }
-
-        const data = await response.json();
+        const data = await eventAPI.getParticipantData({
+          ageCategory: selectedAge,
+          gender: selectedGender
+        });
         console.log('Participant data received:', data);
         
         // Filter out the 'All' option from age groups
@@ -1004,18 +916,8 @@ const ParticipantsManagement = () => {
   useEffect(() => {
     const fetchTemples = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await fetch('http://localhost:4000/api/admin/temples', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setTemples(data);
-        }
+        const data = await userAPI.getTemples();
+        setTemples(data);
       } catch (error) {
         console.error('Error fetching temples:', error);
       }
@@ -1064,21 +966,11 @@ const ParticipantsManagement = () => {
 
       console.log('Fetching participants with params:', params.toString());
 
-      const response = await fetch(
-        `http://localhost:4000/api/admin/participants?${params.toString()}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch participants');
-      }
-
-      const data = await response.json();
+      const data = await participantAPI.getAllParticipants({
+        event_ids: eventIds.join(','),
+        ...(selectedStatus !== 'ALL' && { status: selectedStatus }),
+        ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
+      });
       console.log('Participants data received:', data);
       setAllParticipants(data);
     } catch (err) {
@@ -1265,47 +1157,29 @@ const TeamsManagement = () => {
       if (!token) return [];
 
       // First try to fetch as user IDs
-      let response = await fetch(`http://localhost:4000/api/admin/users/details?ids=${userIds.join(',')}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.users && data.users.length > 0) {
-          console.log('Found users by user IDs:', data.users.length);
-          return data.users;
-        }
+      let data = await userAPI.getUserDetails(userIds.join(','));
+      if (data.users && data.users.length > 0) {
+        console.log('Found users by user IDs:', data.users.length);
+        return data.users;
       }
 
       // If no users found, try as profile IDs
       console.log('No users found, trying as profile IDs...');
-      response = await fetch(`http://localhost:4000/api/admin/profiles/details?ids=${userIds.join(',')}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.profiles && data.profiles.length > 0) {
-          console.log('Found profiles by profile IDs:', data.profiles.length);
-          // Convert profiles to user-like format for consistency
-          return data.profiles.map(profile => ({
-            id: profile.id,
-            profile: {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              aadhar_number: profile.aadhar_number,
-              gender: profile.gender,
-              temple: profile.temple,
-              role: profile.role
-            }
-          }));
-        }
+      data = await userAPI.getProfileDetails(userIds.join(','));
+      if (data.profiles && data.profiles.length > 0) {
+        console.log('Found profiles by profile IDs:', data.profiles.length);
+        // Convert profiles to user-like format for consistency
+        return data.profiles.map(profile => ({
+          id: profile.id,
+          profile: {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            aadhar_number: profile.aadhar_number,
+            gender: profile.gender,
+            temple: profile.temple,
+            role: profile.role
+          }
+        }));
       }
 
       console.log('No users or profiles found for IDs:', userIds);
@@ -1340,19 +1214,7 @@ const TeamsManagement = () => {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      const response = await fetch('http://localhost:4000/api/admin/teams', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await teamAPI.getAllTeams();
       if (!data.teams) {
         throw new Error('Invalid response format: teams data not found');
       }
@@ -1974,19 +1836,7 @@ const TempleManagement = () => {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      const response = await fetch('http://localhost:4000/api/admin/temple-management', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await templeAPI.getTempleManagement();
       if (!data.temples) {
         throw new Error('Invalid response format: temples data not found');
       }
@@ -2216,18 +2066,7 @@ const ResultsManagement = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://localhost:4000/api/reports/event-performance', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch results');
-      }
-
-      const data = await response.json();
+      const data = await eventAPI.getEventPerformance();
       setResults(data);
     } catch (err) {
       console.error('Error fetching results:', err);
@@ -2618,18 +2457,7 @@ const ChampionsManagement = () => {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('http://localhost:4000/api/users/champions', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch champions');
-      }
-
-      const data = await response.json();
+      const data = await reportAPI.getChampions();
       setChampions(data);
     } catch (err) {
       console.error('Error fetching champions:', err);

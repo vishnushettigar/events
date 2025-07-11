@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import CollapsibleList from './CollapsibleList'
+import { eventAPI } from '../utils/api'
 
 const Templeparticipants = () => {
     const [selectedAge, setSelectedAge] = useState('0-5');
@@ -18,26 +19,11 @@ const Templeparticipants = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
 
-                const response = await fetch(
-                    `http://localhost:4000/api/events/participant-data?ageCategory=${selectedAge}&gender=${selectedGender}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-
-                const data = await response.json();
+                const data = await eventAPI.getParticipantData({
+                    ageCategory: selectedAge,
+                    gender: selectedGender
+                });
                 
                 // Filter out the 'All' option from age groups
                 const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
@@ -71,44 +57,26 @@ const Templeparticipants = () => {
     };
 
     // Fetch participants for all events in the current view
-        const fetchParticipants = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
-
-                const eventIds = getAllEventIds();
-                if (eventIds.length === 0) return;
+    const fetchParticipants = async () => {
+        try {
+            const eventIds = getAllEventIds();
+            if (eventIds.length === 0) return;
 
             // Build query parameters
-            const params = new URLSearchParams();
-            params.append('event_ids', eventIds.join(','));
+            const params = {
+                event_ids: eventIds.join(',')
+            };
             if (selectedStatus !== 'ALL') {
-                params.append('status', selectedStatus);
+                params.status = selectedStatus;
             }
 
-                const response = await fetch(
-                `http://localhost:4000/api/events/temple-participants?${params.toString()}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch participants');
-                }
-
-                const data = await response.json();
-                setAllParticipants(data);
-            } catch (err) {
-                console.error('Error fetching participants:', err);
-                setError(err.message);
-            }
-        };
+            const data = await eventAPI.getTempleParticipants(params);
+            setAllParticipants(data);
+        } catch (err) {
+            console.error('Error fetching participants:', err);
+            setError(err.message);
+        }
+    };
 
     useEffect(() => {
         fetchParticipants();

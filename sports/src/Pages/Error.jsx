@@ -72,7 +72,7 @@ const Error = () => {
             </Link>
             <Link to="/myevents" className="text-[#D35D38] hover:text-[#B84A2E] transition-colors">
               My Events
-            </Link>
+      </Link>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import { userAPI } from '../utils/api.js';
 
 const Myevents = () => {
   const [userInfo, setUserInfo] = useState(null);
@@ -9,43 +10,27 @@ const Myevents = () => {
   const [userRole, setUserRole] = useState(null);
   const navigate = useNavigate();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('No token found in localStorage');
-      navigate('/login');
-      return {};
-    }
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': '*/*'
-    };
-  };
-
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const response = await fetch('http://localhost:4000/api/users/profile', {
-          headers: getAuthHeaders()
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch user profile');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          navigate('/login');
+          return;
         }
 
-        const data = await response.json();
+        const data = await userAPI.getProfile();
         setUserInfo(data);
         setUserRole(data.role_id);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching user info:', err);
-        setError(err.message);
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
+        setError(err.message || 'Failed to fetch user profile');
         setLoading(false);
       }
     };
