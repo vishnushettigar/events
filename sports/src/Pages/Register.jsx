@@ -16,7 +16,6 @@ const Register = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        terms: false,
     });
 
     const [errors, setErrors] = useState({});
@@ -60,7 +59,6 @@ const Register = () => {
         console.log('Validating form data:', formData);
 
         if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-        if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
         if (!formData.mobile.trim()) {
             newErrors.mobile = 'Mobile number is required';
         } else if (!/^[0-9]{10}$/.test(formData.mobile)) {
@@ -89,9 +87,6 @@ const Register = () => {
         }
         if (formData.password !== formData.confirmPassword) {
             newErrors.confirmPassword = 'Passwords do not match';
-        }
-        if (!formData.terms) {
-            newErrors.terms = 'You must accept the terms and conditions';
         }
 
         console.log('Validation errors:', newErrors);
@@ -202,7 +197,7 @@ const Register = () => {
 
                             <div>
                                 <label htmlFor="lastName" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                    Last Name *
+                                    Last Name
                                 </label>
                                 <input
                                     type="text"
@@ -403,22 +398,7 @@ const Register = () => {
                             </div>
                     </div>
 
-                        {/* Terms and Conditions */}
-                        <div>
-                            <label className="flex items-start">
-                            <input
-                                type="checkbox"
-                                name="terms"
-                                checked={formData.terms}
-                                onChange={handleChange}
-                                    className="w-4 h-4 text-[#D35D38] border-gray-300 rounded focus:ring-[#D35D38] mt-1"
-                            />
-                                <span className="ml-3 text-sm text-[#2A2A2A]">
-                                    I accept the <span className="text-[#D35D38] font-semibold">terms and conditions</span> *
-                                </span>
-                        </label>
-                            {errors.terms && <p className="text-red-500 text-sm mt-1">{errors.terms}</p>}
-                    </div>
+
 
                         {/* Submit Button */}
                     <div>

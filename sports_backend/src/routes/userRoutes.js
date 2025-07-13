@@ -79,7 +79,6 @@ router.post('/register', [
   body('password').notEmpty().withMessage('Password is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('first_name').notEmpty().withMessage('First name is required'),
-  body('last_name').notEmpty().withMessage('Last name is required'),
   body('dob').isDate().withMessage('Valid date of birth is required'),
   body('gender').isIn(['MALE', 'FEMALE']).withMessage('Valid gender is required'),
   body('temple_name')
@@ -288,6 +287,17 @@ router.get('/profile', authenticate, async (req, res) => {
             age--;
         }
 
+        // Get all age categories and find matching one
+        const ageCategories = await prisma.mst_age_category.findMany({
+            where: {
+                is_deleted: false
+            }
+        });
+
+        const matchingAgeCategory = ageCategories.find(category => 
+            age >= category.from_age && age <= category.to_age
+        );
+
         // Get temple admin information
         const templeAdmin = await prisma.profile.findFirst({
             where: {
@@ -306,6 +316,7 @@ router.get('/profile', authenticate, async (req, res) => {
         const profileData = {
             ...user.profile,
             age,
+            age_category: matchingAgeCategory ? matchingAgeCategory.name : null,
             temple: user.profile.temple.name,
             role: user.profile.role.name,
             temple_admin_name: templeAdmin ? `${templeAdmin.first_name} ${templeAdmin.last_name}` : null,

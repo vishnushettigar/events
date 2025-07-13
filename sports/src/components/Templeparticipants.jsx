@@ -57,10 +57,10 @@ const Templeparticipants = () => {
     };
 
     // Fetch participants for all events in the current view
-    const fetchParticipants = async () => {
-        try {
-            const eventIds = getAllEventIds();
-            if (eventIds.length === 0) return;
+        const fetchParticipants = async () => {
+            try {
+                const eventIds = getAllEventIds();
+                if (eventIds.length === 0) return;
 
             // Build query parameters
             const params = {
@@ -68,15 +68,15 @@ const Templeparticipants = () => {
             };
             if (selectedStatus !== 'ALL') {
                 params.status = selectedStatus;
-            }
+                }
 
             const data = await eventAPI.getTempleParticipants(params);
-            setAllParticipants(data);
-        } catch (err) {
-            console.error('Error fetching participants:', err);
-            setError(err.message);
-        }
-    };
+                setAllParticipants(data);
+            } catch (err) {
+                console.error('Error fetching participants:', err);
+                setError(err.message);
+            }
+        };
 
     useEffect(() => {
         fetchParticipants();
@@ -103,7 +103,7 @@ const Templeparticipants = () => {
                         </div>
 
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
                         {/* Age Category Filter */}
                         <div className="flex flex-col">
                             <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Age Category</label>
@@ -144,7 +144,7 @@ const Templeparticipants = () => {
                             </select>
                         </div>
 
-                        {/* Status Filter */}
+                        {/* Status Filter
                         <div className="flex flex-col">
                             <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Status</label>
                             <select 
@@ -157,7 +157,7 @@ const Templeparticipants = () => {
                                 <option value="ACCEPTED">Accepted</option>
                                 <option value="DECLINED">Declined</option>
                             </select>
-                        </div>
+                        </div> */}
                     </div>
 
                     {/* Loading State */}

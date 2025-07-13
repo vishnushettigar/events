@@ -49,7 +49,7 @@ const Participantslist = () => {
         {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
-            33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ , 2025
+            33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025
           </h1>
             {loading ? (
             <div className="flex justify-center items-center py-4">
@@ -59,8 +59,39 @@ const Participantslist = () => {
             <p className="text-xl text-[#5A5A5A] font-semibold">{templeName}</p>
             )}
         </div>
+
+        {/* Summary Stats */}
+        {!participantsLoading && filteredParticipants.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+            <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">📊 Summary Statistics</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">{filteredParticipants.length}</p>
+                <p className="text-sm text-[#5A5A5A]">Total Participants</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">
+                  {filteredParticipants.filter(p => p.gender === 'MALE').length}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Male Participants</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">
+                  {filteredParticipants.filter(p => p.gender === 'FEMALE').length}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Female Participants</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-[#D35D38]">
+                  {new Set(filteredParticipants.map(p => p.age_category)).size}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Age Categories</p>
+              </div>
+            </div>
+          </div>
+        )}
             
-            {/* Filters Section */}
+        {/* Filters Section */}
         <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
           <h2 className="text-2xl font-bold text-[#2A2A2A] mb-4">Filter Participants</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -200,37 +231,6 @@ const Participantslist = () => {
                 </table>
           </div>
         </div>
-
-        {/* Summary Stats */}
-        {!participantsLoading && filteredParticipants.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mt-8">
-            <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">📊 Summary Statistics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">{filteredParticipants.length}</p>
-                <p className="text-sm text-[#5A5A5A]">Total Participants</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {filteredParticipants.filter(p => p.gender === 'MALE').length}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Male Participants</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {filteredParticipants.filter(p => p.gender === 'FEMALE').length}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Female Participants</p>
-              </div>
-              <div className="text-center">
-                <p className="text-3xl font-bold text-[#D35D38]">
-                  {new Set(filteredParticipants.map(p => p.age_category)).size}
-                </p>
-                <p className="text-sm text-[#5A5A5A]">Age Categories</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

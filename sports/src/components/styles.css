@@ -1,5 +1,31 @@
 /* navbar section css*/
 
+/* home section css start */
+
+.card {
+  position: relative;
+}
+
+.card::after {
+  content: "Event Details";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.15rem 0.75rem;
+  background-color: #e0e0e0;
+  border: 1px solid #D35D38;
+  border-radius: 2rem;
+  font-weight: 500;
+  color: #2a2a2a;
+}
+/* Underline */
+
+.underline-accent {
+  text-decoration-color: #D35D38 !important;
+}
+/* home section css end */
+
 /* menu icon css start */
 .burger {
   width: 40px;

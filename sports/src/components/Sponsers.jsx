@@ -42,7 +42,7 @@ const sponsors = [
 const Sponsors = () => {
   return (
     <section id="testimonials" className="w-[90%] mx-auto my-12 min-h-[400px]">
-      <div className="text-center mb-8">
+      <div className="text-left md:text-center mb-8">
         <h2 className="text-4xl font-extrabold text-[#2A2A2A] mb-2 drop-shadow">Sponsors</h2>
         <p className="text-lg text-[#2A2A2A]">We thank our sponsors for their generous support!</p>
       </div>

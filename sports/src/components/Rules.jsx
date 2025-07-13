@@ -13,7 +13,7 @@ const rules = [
 const Rules = () => {
     return (
         <section className="w-[90%] mx-auto my-10">
-            <div className="text-center mb-8">
+            <div className="text-left md:text-center mb-8">
                 <h2 className="text-4xl font-extrabold text-[#2A2A2A] mb-2 drop-shadow">ನಿಯಮಗಳು</h2>
                 <p className="text-lg text-[#2A2A2A]">ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು</p>
             </div>

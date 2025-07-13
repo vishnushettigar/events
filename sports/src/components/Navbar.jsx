@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
 import { userAPI } from '../utils/api.js';
+import logo2 from '../assets/logo2.png';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -77,15 +78,15 @@ const Navbar = () => {
                             </button>
                         )}
                         {/* Logo */}
-                         <div className="pl-4 md:pl-0">
-                        <Link to="/">
-                        <img 
-                            src="/src/assets/charaka.png" 
-                            className=' drop-shadow-[0px_0px_20px_white] filter w-24 md:w-26  md:h-24' 
-                            alt="logo" 
-                        />
-                        </Link> 
-                    </div>
+                        <div className="pl-2 md:pl-0 lg:p-2">
+                            <Link to="/">
+                                <img
+                                    src={logo2}
+                                    className='drop-shadow-[0px_0px_20px_white] filter h-12 w-auto md:h-16 lg:h-16 max-h-full object-contain'
+                                    alt="logo"
+                                />
+                            </Link>
+                        </div>
                    
                     </div>
 
@@ -173,12 +174,12 @@ const Navbar = () => {
                             </nav>
 
                             {/* Menu Footer */}
-                            <div className="p-4 border-t border-[#F8DFBE]">
+                            {/* <div className="p-4 border-t border-[#F8DFBE]">
                                 <div className="text-center">
                                     <p className="text-sm text-[#5A5A5A]">Padmashali Annual Sports Meet</p>
                                     <p className="text-xs text-[#5A5A5A] mt-1">© 2024 All rights reserved</p>
                                 </div>
-                            </div>
+                            </div> */}
                         </div>
                     </div>
                 </div>

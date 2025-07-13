@@ -67,15 +67,21 @@ const SignInForm = () => {
             setErrors({});
 
             // Check user role and redirect accordingly
-            if (data.user && data.user.profile && data.user.profile.role_id === 4) {
+            console.log('Login response:', data);
+            console.log('User profile:', data.user?.profile);
+            
+            if (data.user && data.user.profile && data.user.profile.role && data.user.profile.role.id === 4) {
                 // Super User - redirect to admin panel
+                console.log('Redirecting to admin panel');
                 navigate('/admin');
-            } else if (data.user && data.user.profile && data.user.profile.role_id === 3) {
+            } else if (data.user && data.user.profile && data.user.profile.role && data.user.profile.role.id === 3) {
                 // Staff user - redirect to staff panel
+                console.log('Redirecting to staff panel');
                 navigate('/staffpanel');
             } else {
                 // Regular user - redirect to myevents page
-            navigate('/myevents');
+                console.log('Redirecting to myevents');
+                navigate('/myevents');
             }
         } catch (err) {
             console.error('Login error:', err);

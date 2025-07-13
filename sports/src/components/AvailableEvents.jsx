@@ -117,7 +117,7 @@ const AvailableEvents = () => {
     switch (status) {
       case 'ACCEPTED':
         return {
-          text: 'Approved',
+          text: 'REGISTERED',
           className: 'bg-green-100 text-green-700'
         };
       case 'PENDING':
@@ -175,10 +175,14 @@ const AvailableEvents = () => {
               </ul>
             </div>
             {userInfo && (
-              <div className='flex flex-row gap-4 pt-6'>
-                <h2>Point of contact for {userInfo.temple}:</h2>
-                <h2>{userInfo.temple_admin_name || 'Not available'}</h2>
-                <h2>{userInfo.temple_admin_phone || 'Not available'}</h2>
+              <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 pt-6'>
+                <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center'>
+                  <h2 className='text-sm sm:text-base font-semibold'>Point of contact for {userInfo.temple}:</h2>
+                  <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
+                    <span className='font-medium'>{userInfo.temple_admin_name || 'Not available'}</span>
+                    <span className='font-medium'>{userInfo.temple_admin_phone || 'Not available'}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -189,10 +193,14 @@ const AvailableEvents = () => {
       {userInfo && (
         <div className="mb-8 bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold mb-4 text-[#2A2A2A]">{userInfo.first_name} {userInfo.last_name}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <p className="text-[#5A5A5A]">Age</p>
               <p className="font-semibold text-[#2A2A2A]">{userInfo.age} years</p>
+            </div>
+            <div>
+              <p className="text-[#5A5A5A]">Age Category</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.age_category || 'Not specified'}</p>
             </div>
             <div>
               <p className="text-[#5A5A5A]">Gender</p>
@@ -222,7 +230,7 @@ const AvailableEvents = () => {
           return (
             <div key={event.id} className="bg-white rounded-lg shadow p-6">
               <h3 className="text-xl font-semibold mb-2 text-[#2A2A2A]">{event.name}</h3>
-              <div className="space-y-2 mb-4">
+              {/* <div className="space-y-2 mb-4">
                 <p className="text-[#5A5A5A]">
                   <span className="font-medium">Type:</span> {event.type}
                 </p>
@@ -235,7 +243,7 @@ const AvailableEvents = () => {
                 <p className="text-[#5A5A5A]">
                   <span className="font-medium">Participants:</span> {event.participant_count}
                 </p>
-              </div>
+              </div> */}
               {event.is_registered ? (
                 <div className="flex flex-col gap-2">
                   <div className={`px-4 py-2 rounded ${statusDisplay.className}`}>

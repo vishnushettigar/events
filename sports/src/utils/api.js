@@ -10,7 +10,12 @@ class ApiService {
   // Generic request method
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
-    const headers = getAuthHeaders();
+    
+    // Don't include Authorization header for login and register endpoints
+    const isAuthEndpoint = endpoint === '/users/login' || endpoint === '/users/register';
+    const headers = isAuthEndpoint 
+      ? { 'Content-Type': 'application/json' }
+      : getAuthHeaders();
     
     const defaultOptions = {
       headers,
