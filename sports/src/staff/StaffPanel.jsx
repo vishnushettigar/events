@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { userAPI, eventAPI, reportAPI } from '../utils/api';
 
 const StaffPanel = () => {
-  const [activeTab, setActiveTab] = useState('temples');
+  const [activeTab, setActiveTab] = useState('update-results');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -277,30 +277,47 @@ const StaffPanel = () => {
     }
   };
 
-  // Handle team result update
-  const handleTeamResultUpdate = async (registrationId, rank) => {
+  // Handle team result update confirmation
+  const handleTeamResultUpdate = (registrationId, rank, templeName, eventName) => {
+    showConfirmModal(
+      'Confirm Team Result Update',
+      'Are you sure you want to update this team\'s result?',
+      {
+        team: `${templeName} Team`,
+        temple: templeName,
+        event: eventName,
+        rank: rank
+      },
+      {
+        registrationId,
+        rank,
+        templeName,
+        eventName
+      }
+    );
+  };
+
+  // Execute the actual team update after confirmation
+  const executeTeamResultUpdate = async () => {
+    if (!pendingUpdate) return;
+
     try {
-      await eventAPI.updateTeamResult(registrationId, rank);
+      await eventAPI.updateTeamResult(pendingUpdate.registrationId, pendingUpdate.rank);
       // Refresh the data
       await fetchTeamEvents();
-      showSuccessModal(
-        'Team Result Updated Successfully',
-        'The team result has been updated successfully.',
-        {
-          registrationId,
-          rank,
-          timestamp: new Date().toLocaleString()
-        }
-      );
+      // Don't show success modal - just close the confirmation modal
+      console.log('Team result updated successfully');
     } catch (error) {
       console.error('Error updating team result:', error);
       showErrorModal(
         'Update Failed',
         'Failed to update the team result.',
         {
+          team: `${pendingUpdate.templeName} Team`,
+          temple: pendingUpdate.templeName,
+          event: pendingUpdate.eventName,
+          rank: pendingUpdate.rank,
           error: error.message,
-          registrationId,
-          rank,
           timestamp: new Date().toLocaleString()
         }
       );
@@ -308,11 +325,92 @@ const StaffPanel = () => {
   };
 
   // Collapsible component for events
-  const CollapsibleEvent = ({ title, eventId }) => {
+  const CollapsibleEvent = ({ title, eventId, ageCategory, gender }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [eventParticipants, setEventParticipants] = useState([]);
     const [loadingParticipants, setLoadingParticipants] = useState(false);
     const [participantError, setParticipantError] = useState(null);
+
+    // Print function for event participants
+    const handlePrint = () => {
+      const printWindow = window.open('', '_blank');
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Event Participants - ${title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+            .event-details { font-size: 16px; margin-bottom: 20px; }
+            .event-details span { margin-right: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .result-badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+            .first { background-color: #fff3cd; color: #856404; }
+            .second { background-color: #f8f9fa; color: #6c757d; }
+            .third { background-color: #ffeaa7; color: #d63031; }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+            <div class="event-details">
+              <span><strong>Age Category:</strong> ${ageCategory}</span>
+              <span><strong>Gender:</strong> ${gender}</span>
+              <span><strong>Event:</strong> ${title}</span>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>SL.NO</th>
+                <th>NAME</th>
+                <th>TEMPLE</th>
+                <th>AADHAR NO</th>
+                <th>RESULTS</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${eventParticipants.map((participant, index) => {
+                const participantName = participant.registration_type === 'INDIVIDUAL' 
+                  ? participant.participant_name 
+                  : participant.team_name;
+                const resultDisplay = participant.result?.rank 
+                  ? `<span class="result-badge ${participant.result.rank.toLowerCase()}">${
+                      participant.result.rank === 'FIRST' ? '🥇 1st' :
+                      participant.result.rank === 'SECOND' ? '🥈 2nd' :
+                      participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank
+                    }</span>`
+                  : '';
+                return `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${participantName}</td>
+                    <td>${participant.temple_name}</td>
+                    <td>${participant.aadhar_number || 'N/A'}</td>
+                    <td>${resultDisplay}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    };
 
     // Fetch participants when event is opened
     const fetchEventParticipants = async () => {
@@ -346,13 +444,26 @@ const StaffPanel = () => {
 
     return (
       <div className="border border-gray-200 rounded-lg mb-4">
-        <button
-          className="w-full px-4 py-3 text-left bg-[#F8DFBE] hover:bg-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#D35D38] rounded-lg flex justify-between items-center"
-          onClick={handleToggle}
-        >
-          <span className="font-medium text-[#2A2A2A]">{title}</span>
-          <span className="text-[#5A5A5A]">{isOpen ? '−' : '+'}</span>
-        </button>
+        <div className="flex justify-between items-center">
+          <button
+            className="flex-1 px-4 py-3 text-left bg-[#F8DFBE] hover:bg-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#D35D38] rounded-lg flex justify-between items-center"
+            onClick={handleToggle}
+          >
+            <span className="font-medium text-[#2A2A2A]">{title}</span>
+            <span className="text-[#5A5A5A]">{isOpen ? '−' : '+'}</span>
+          </button>
+          {isOpen && eventParticipants.length > 0 && (
+            <button
+              onClick={handlePrint}
+              className="ml-2 px-3 py-3 bg-[#D35D38] text-white rounded-lg hover:bg-[#B84A2E] focus:outline-none focus:ring-2 focus:ring-[#D35D38] transition"
+              title="Print participants list"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
+            </button>
+          )}
+        </div>
         {isOpen && (
           <div className="p-4 mt-[2px] bg-white">
             {loadingParticipants ? (
@@ -365,64 +476,91 @@ const StaffPanel = () => {
                 Error: {participantError}
               </div>
             ) : eventParticipants.length > 0 ? (
-              <div className="space-y-2">
-                {eventParticipants.map((participant, index) => (
-                  <div key={participant.id || index} className="flex justify-between items-center p-3 bg-[#F8DFBE] rounded">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-[#2A2A2A]">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-[#F8DFBE] border border-[#F8DFBE]">
+                  <thead className="bg-white border-b border-[#F8DFBE]">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">SL.NO</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">NAME</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TEMPLE</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">AADHAR NO</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">RESULTS</th>
+                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">ACTIONS</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-[#F8DFBE]">
+                    {eventParticipants.map((participant, index) => (
+                      <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
+                          {index + 1}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
                           {participant.registration_type === 'INDIVIDUAL' 
                             ? participant.participant_name 
                             : participant.team_name}
-                        </span>
-                        <span className="text-sm text-[#5A5A5A]">({participant.temple_name})</span>
-                        {participant.registration_type === 'TEAM' && (
-                          <span className="text-sm text-[#5A5A5A]">({participant.member_count} members)</span>
-                        )}
-                      </div>
-                      {participant.registration_type === 'INDIVIDUAL' && (
-                        <div className="text-xs text-[#5A5A5A] mt-1">
-                          <span>Phone: {participant.phone || 'N/A'}</span>
-                          <span className="ml-3">Aadhaar: {participant.aadhar_number || 'N/A'}</span>
-                        </div>
-                      )}
-                    </div>
-                                            <div className="flex gap-2">
-                          <select 
-                            className="px-2 py-1 border border-[#F8DFBE] rounded text-sm"
-                            defaultValue={participant.result?.rank || ""}
-                            id={`rank-${participant.id}`}
-                          >
-                            <option value="">Select Rank</option>
-                            <option value="FIRST">🥇 1st Place</option>
-                            <option value="SECOND">🥈 2nd Place</option>
-                            <option value="THIRD">🥉 3rd Place</option>
-                            <option value="CLEAR">Clear Result</option>
-                          </select>
-                          <button 
-                            className="px-3 py-1 bg-[#D35D38] text-white rounded text-sm hover:bg-[#B84A2E]"
-                            onClick={() => {
-                              const select = document.getElementById(`rank-${participant.id}`);
-                              if (select.value) {
-                                const participantName = participant.registration_type === 'INDIVIDUAL' 
-                                  ? participant.participant_name 
-                                  : participant.team_name;
-                                handleIndividualResultUpdate(
-                                  participant.id, 
-                                  select.value, 
-                                  participantName, 
-                                  participant.temple_name,
-                                  title, // event name
-                                  participant.aadhar_number || 'N/A'
-                                );
-                              }
-                            }}
-                          >
-                            Update
-                          </button>
-                        </div>
-                  </div>
-                ))}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
+                          {participant.temple_name}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
+                          {participant.aadhar_number || 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                          {participant.result?.rank ? (
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                              participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                              participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {participant.result.rank === 'FIRST' ? '🥇 1st' :
+                               participant.result.rank === 'SECOND' ? '🥈 2nd' :
+                               participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs"></span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">
+                          <div className="flex gap-2">
+                            <select 
+                              className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
+                              defaultValue={participant.result?.rank || ""}
+                              id={`rank-${participant.id}`}
+                            >
+                              <option value="">Select Rank</option>
+                              <option value="FIRST">🥇 1st Place</option>
+                              <option value="SECOND">🥈 2nd Place</option>
+                              <option value="THIRD">🥉 3rd Place</option>
+                              <option value="CLEAR">Clear Result</option>
+                            </select>
+                            <button 
+                              className="px-3 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
+                              onClick={() => {
+                                const select = document.getElementById(`rank-${participant.id}`);
+                                if (select.value) {
+                                  const participantName = participant.registration_type === 'INDIVIDUAL' 
+                                    ? participant.participant_name 
+                                    : participant.team_name;
+                                  handleIndividualResultUpdate(
+                                    participant.id, 
+                                    select.value, 
+                                    participantName, 
+                                    participant.temple_name,
+                                    title, // event name
+                                    participant.aadhar_number || 'N/A'
+                                  );
+                                }
+                              }}
+                            >
+                              Update
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             ) : (
               <p className="text-gray-500 text-center py-4">No participants registered for this event</p>
@@ -626,6 +764,8 @@ const StaffPanel = () => {
                         key={event.id} 
                         title={event.name}
                         eventId={event.id}
+                        ageCategory={ageCategory}
+                        gender={gender}
                       />
                     ))}
                   </div>
@@ -746,7 +886,12 @@ const StaffPanel = () => {
                                           onClick={() => {
                                             const select = document.getElementById(`team-rank-male-${temple.registration_ids?.[0] || templeIndex}`);
                                             if (select.value && temple.registration_ids && temple.registration_ids.length > 0) {
-                                              handleTeamResultUpdate(temple.registration_ids[0], select.value);
+                                              handleTeamResultUpdate(
+                                                temple.registration_ids[0], 
+                                                select.value, 
+                                                temple.temple_name,
+                                                teamEvent.event_type?.name || teamEvent.name || 'Team Event'
+                                              );
                                             }
                                           }}
                                         >
@@ -854,7 +999,12 @@ const StaffPanel = () => {
                                           onClick={() => {
                                             const select = document.getElementById(`team-rank-female-${temple.registration_ids?.[0] || templeIndex}`);
                                             if (select.value && temple.registration_ids && temple.registration_ids.length > 0) {
-                                              handleTeamResultUpdate(temple.registration_ids[0], select.value);
+                                              handleTeamResultUpdate(
+                                                temple.registration_ids[0], 
+                                                select.value, 
+                                                temple.temple_name,
+                                                teamEvent.event_type?.name || teamEvent.name || 'Team Event'
+                                              );
                                             }
                                           }}
                                         >
@@ -962,7 +1112,12 @@ const StaffPanel = () => {
                                           onClick={() => {
                                             const select = document.getElementById(`team-rank-mixed-${temple.registration_ids?.[0] || templeIndex}`);
                                             if (select.value && temple.registration_ids && temple.registration_ids.length > 0) {
-                                              handleTeamResultUpdate(temple.registration_ids[0], select.value);
+                                              handleTeamResultUpdate(
+                                                temple.registration_ids[0], 
+                                                select.value, 
+                                                temple.temple_name,
+                                                teamEvent.event_type?.name || teamEvent.name || 'Team Event'
+                                              );
                                             }
                                           }}
                                         >
@@ -1621,7 +1776,13 @@ const StaffPanel = () => {
             <button
               onClick={() => {
                 if (modalType === 'confirm') {
-                  executeIndividualResultUpdate();
+                  if (pendingUpdate && pendingUpdate.participantName) {
+                    // Individual result update
+                    executeIndividualResultUpdate();
+                  } else if (pendingUpdate && pendingUpdate.templeName) {
+                    // Team result update
+                    executeTeamResultUpdate();
+                  }
                 }
                 closeModal();
               }}
