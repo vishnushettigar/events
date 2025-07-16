@@ -1,58 +1,75 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: ./sports_backend
-      dockerfile: Dockerfile
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./sports_backend:/app
-      # - /app/node_modules
-    environment:
-      - DATABASE_URL=mysql://root:root@db:3306/sportsdb
-      - JWT_SECRET=your-secret-key
-    networks:
-      - sports-network
-    depends_on:
-      - db
-
+  # Frontend - React with Vite
   frontend:
     build:
       context: ./sports
       dockerfile: Dockerfile
-    ports:
-      - "5173:5173"
+    container_name: shettigarevents-frontend
     volumes:
       - ./sports:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:4000
+      - VITE_API_URL=http://localhost/api
     networks:
-      - sports-network
-    depends_on:
-      - backend
+      - shettigarevents-network
 
-  db:
-    image: mysql:8.0
-    restart: always
+  # Backend - Express API
+  backend:
+    build:
+      context: ./sports_backend
+      dockerfile: Dockerfile
+    container_name: shettigarevents-backend
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./sports_backend:/app
+      - /app/node_modules
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: sportsdb
-      MYSQL_USER: sportsuser
-      MYSQL_PASSWORD: sportspass
+      - NODE_ENV=development
+      - DATABASE_URL=mysql://root:root@mysql:3306/sportsdb
+      - PORT=4000
+    depends_on:
+      - mysql
+    networks:
+      - shettigarevents-network
+
+  # Database - MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: shettigarevents-db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=sportsdb
+      - MYSQL_USER=events_user
+      - MYSQL_PASSWORD=root
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./sports_backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - sports-network
-    command: --default-authentication-plugin=mysql_native_password
+      - shettigarevents-network
+
+  # Nginx - Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: shettigarevents-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - shettigarevents-network
 
 volumes:
   mysql_data:
+  frontend_dist:
 
 networks:
-  sports-network:
+  shettigarevents-network:
     driver: bridge 

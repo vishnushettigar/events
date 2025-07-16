@@ -26,11 +26,15 @@ const corsOptions = {
     if (!origin) return callback(null, true);
     
     const allowedOrigins = [
+      'http://localhost',
+      'http://localhost:80',
       'http://localhost:3000',
       'http://localhost:5173',
       'http://localhost:5174',
       'http://localhost:5175',
       'http://localhost:5176',
+      'http://127.0.0.1',
+      'http://127.0.0.1:80',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
