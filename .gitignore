@@ -71,3 +71,4 @@ lib-cov
 ngrok.yml
 nginx.conf
 nginx-production.conf
+deploy.sh

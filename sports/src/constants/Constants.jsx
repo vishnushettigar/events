@@ -19,25 +19,25 @@ export const sponsors = [
     name: "Harsh Foundation",
     location: "Salikeri",
   },
+//   {
+//     name: "",
+//     location: "Salikeri",
+//   },
   {
-    name: "Seva Samithi",
-    location: "Salikeri",
-  },
-  {
-    name: "Sri Brahmalinga Veerabhadra Durgaparameshwari Temple",
-    location: "Salikeri",
+    name: "D.K. Jilla Padmashali Mahasabha® Mangaluru",
+    location: "",
   },
   {
     name: "Harsh Foundation",
     location: "Salikeri",
   },
+//   {
+//     name: "Seva Samithi",
+//     location: "Salikeri",
+//   },
   {
-    name: "Seva Samithi",
-    location: "Salikeri",
-  },
-  {
-    name: "Sri Brahmalinga Veerabhadra Durgaparameshwari Temple",
-    location: "Salikeri",
+    name: "D.K. Jilla Padmashali Mahasabha® Mangaluru",
+    location: "",
   },
 ];
 

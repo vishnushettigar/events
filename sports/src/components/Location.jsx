@@ -22,7 +22,7 @@ const Location = () => {
             marginHeight="0"
             marginWidth="0"
             title="Google Map"
-            src="https://maps.google.com/maps?width=400&amp;height=300&amp;hl=en&amp;q=SMS ground Brahmavara&amp;t=&amp;z=14&amp;ie=UTF8&amp;iwloc=B&amp;output=embed"
+            src="https://maps.google.com/maps?width=100%25&amp;height=320&amp;hl=en&amp;q=Government%20Junior%20College%2C%20Karnad%2C%20Mulki%2C%20Karnataka%20574154+(Government%20Junior%20College)&amp;t=&amp;z=14&amp;ie=UTF8&amp;iwloc=B&amp;output=embed"
             allowFullScreen
           ></iframe>
         </div>
@@ -52,12 +52,12 @@ const Location = () => {
               Venue
             </h3>
             <p className="text-base text-start md:text-center text-[#5A5A5A] font-medium">
-              SMS Pre-University College, Brahmavara
-              <br /> CPHR+JH2, Varamballi, Karnataka 576213
+              Government Junior College
+              <br /> 19-31, Karnad, Mulki, Karnataka 574154
             </p>
             <p className="text-[#5A5A5A] text-center"></p>
             <a
-              href="https://www.google.com/maps/search/?api=1&query=SMS+ground+Brahmavara"
+              href="https://www.google.com/maps/search/?api=1&query=Government+Junior+College%2C+Karnad%2C+Mulki%2C+Karnataka+574154"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 inline-block px-6 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition"

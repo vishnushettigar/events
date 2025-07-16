@@ -89,10 +89,7 @@ const Navbar = () => {
                             </Link>
                         </div>
                    
-                    </div>
-
-                    
-                   
+                    </div>                
                     {/* <div className='hidden md:flex flex-row items-center justify-center gap-2'>
                         <h1 className='text-[20px] text-white pr-[60px]'>PADMASHALI KREEDOTHSAVA</h1>
                     </div> */}
