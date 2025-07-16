@@ -68,4 +68,5 @@ lib-cov
 .env.production.local
 
 # Ngrok configuration
-
+ngrok.yml
+deploy.sh

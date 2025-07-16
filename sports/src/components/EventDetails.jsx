@@ -24,7 +24,7 @@ const EventDetails = () => {
             width={24}
           />
           <span className="text-[#2a2a2a]">
-            Sri Brahmalinga Veerabhadra Durgaparameshwari temple, Salikeri{" "}
+          Government Junior College, Karnad, Mulki, Karnataka 574154{" "}
           </span>
         </div>
       </div>
