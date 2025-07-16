@@ -14,8 +14,8 @@ const Rules = () => {
     return (
         <section className="w-[90%] mx-auto my-10">
             <div className="text-left md:text-center mb-8">
-                <h2 className="text-4xl font-extrabold text-[#2A2A2A] mb-2 drop-shadow">ನಿಯಮಗಳು</h2>
-                <p className="text-lg text-[#2A2A2A]">ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು</p>
+                <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">ನಿಯಮಗಳು</h2>
+                <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು</p>
             </div>
             <div className="bg-[#E0E0E0] rounded-2xl shadow-lg p-8">
                 <ol className="space-y-6 list-decimal list-inside">

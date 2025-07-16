@@ -362,11 +362,15 @@ router.get('/users/details', authenticate, requireRole('SUPER_USER'), async (req
  */
 router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) => {
   try {
+    console.log('Admin users request query params:', req.query);
+    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search || '';
     const roleFilter = req.query.role ? parseInt(req.query.role) : null;
     const templeFilter = req.query.temple ? parseInt(req.query.temple) : null;
+
+    console.log('Parsed params:', { page, limit, search, roleFilter, templeFilter });
 
     const skip = (page - 1) * limit;
 
@@ -379,16 +383,17 @@ router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) =
 
     if (search) {
       whereClause.OR = [
-        { username: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search } },
+        { email: { contains: search } },
         { profile: { 
           OR: [
-            { first_name: { contains: search, mode: 'insensitive' } },
-            { last_name: { contains: search, mode: 'insensitive' } },
-            { aadhar_number: { contains: search, mode: 'insensitive' } }
+            { first_name: { contains: search } },
+            { last_name: { contains: search } },
+            { aadhar_number: { contains: search } }
           ]
         }}
       ];
+      console.log('Search where clause:', JSON.stringify(whereClause, null, 2));
     }
 
     if (roleFilter) {
@@ -398,6 +403,8 @@ router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) =
     if (templeFilter) {
       whereClause.profile.temple_id = templeFilter;
     }
+
+    console.log('Final where clause:', JSON.stringify(whereClause, null, 2));
 
     // Get users with pagination
     const [users, total] = await Promise.all([
@@ -418,6 +425,8 @@ router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) =
       prisma.user.count({ where: whereClause })
     ]);
 
+    console.log(`Found ${users.length} users out of ${total} total`);
+
     const totalPages = Math.ceil(total / limit);
 
     res.json({
@@ -431,7 +440,19 @@ router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) =
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    res.status(500).json({ error: 'Failed to fetch users' });
+    
+    // Log more details for debugging
+    if (error.code) {
+      console.error('Prisma error code:', error.code);
+    }
+    if (error.meta) {
+      console.error('Prisma error meta:', error.meta);
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to fetch users',
+      details: error.message 
+    });
   }
 });
 

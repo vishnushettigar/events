@@ -1,9 +1,35 @@
 /* navbar section css*/
 
 /* home section css start */
+/*Event Details css start*/
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
 
 .card {
   position: relative;
+  border-radius: 1rem;
+  background: #e0e0e0;
+  padding: 2px;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 1rem;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    #e0e0e0,
+    #d35d38
+  );
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: spin 3s linear infinite;
 }
 
 .card::after {
@@ -18,12 +44,28 @@
   border-radius: 2rem;
   font-weight: 500;
   color: #2a2a2a;
+  z-index: 10;
 }
+
+@keyframes spin {
+  from {
+    --angle: 0deg;
+  }
+  to {
+    --angle: 360deg;
+  }
+}
+
+
+
+
 /* Underline */
 
 .underline-accent {
   text-decoration-color: #D35D38 !important;
 }
+/*Event Details css end*/
+
 /* home section css end */
 
 /* menu icon css start */
@@ -406,5 +448,330 @@ button[type="submit"]:hover {
 /* events table  end*/
 
 
+/* toggle css start */
+
+.language-toggle-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
+  width: fit-content;
+  min-width: 140px;
+}
+
+.language-toggle {
+  position: relative;
+  width: 140px;
+  height: 40px;
+  background: linear-gradient(145deg, #f8f8f8, #e8e8e8);
+  border: 2px solid #D35D38;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 8px rgba(0, 0, 0, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  overflow: hidden;
+  padding-right: 4px;
+}
+
+.language-toggle:hover {
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.15),
+    0 3px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.language-toggle:active {
+  transform: translateY(0px);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.toggle-slider {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+}
+
+.toggle-text {
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+}
+
+.english-text {
+  color: #222;
+}
+
+.kannada-text {
+  color: #222;
+}
+
+/* Slider background */
+.language-toggle::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(50% - 4px);
+  height: calc(100% - 4px);
+  background: linear-gradient(145deg, #e65a4a, #c94a3a);
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    0 1px 2px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  z-index: 1;
+}
+
+/* English state */
+.language-toggle.english::before {
+  left: 2px;
+}
+
+.language-toggle.english .english-text {
+  color: #F0F0F0;
+}
+
+.language-toggle.english .kannada-text {
+  color: #222;
+}
+
+/* Kannada state */
+.language-toggle.kannada::before {
+  left: calc(50% + 2px);
+}
+
+.language-toggle.kannada .english-text {
+  color: #222;
+}
+
+.language-toggle.kannada .kannada-text {
+  color: #F0F0F0;
+}
+
+/* Responsive design for different screen sizes */
+@media (max-width: 1024px) {
+  .language-toggle-container {
+    min-width: 130px;
+  }
+  
+  .language-toggle {
+    width: 130px;
+    height: 38px;
+    border-radius: 11px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 7px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 17px;
+  }
+  
+  .toggle-slider {
+    padding: 0 10px;
+  }
+}
+
+@media (max-width: 768px) {
+  .language-toggle-container {
+    min-width: 128px;
+  }
+  
+  .language-toggle {
+    width: 120px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 6px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 16px;
+  }
+  
+  .toggle-slider {
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .language-toggle-container {
+    min-width: 118px;
+  }
+  
+  .language-toggle {
+    width: 110px;
+    height: 34px;
+    border-radius: 9px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 6px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 15px;
+  }
+  
+  .toggle-slider {
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .language-toggle-container {
+    min-width: 108px;
+  }
+  
+  .language-toggle {
+    width: 100px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 5px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 14px;
+  }
+  
+  .toggle-slider {
+    padding: 0 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .language-toggle-container {
+    min-width: 95px;
+  }
+  
+  .language-toggle {
+    width: 95px;
+    height: 30px;
+    border-radius: 7px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 5px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 13px;
+  }
+  
+  .toggle-slider {
+    padding: 0 3px;
+  }
+}
+
+@media (max-width: 360px) {
+  .language-toggle-container {
+    min-width: 92px;
+  }
+  
+  .language-toggle {
+    width: 90px;
+    height: 28px;
+    border-radius: 6px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 4px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 12px;
+  }
+  
+  .toggle-slider {
+    padding: 0 2px;
+  }
+}
+
+@media (max-width: 320px) {
+  .language-toggle-container {
+    min-width: 88px;
+  }
+  
+  .language-toggle {
+    width: 85px;
+    height: 26px;
+    border-radius: 5px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 2px);
+    height: calc(100% - 4px);
+    border-radius: 3px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 11px;
+  }
+  
+  .toggle-slider {
+    padding: 0 1px;
+  }
+}
+
+/* toggle css end */
 
 

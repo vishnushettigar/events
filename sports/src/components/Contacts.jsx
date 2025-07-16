@@ -18,7 +18,7 @@ const Contacts = () => {
   return (
     <section className="w-[90%] mx-auto pb-10">
       <div className="text-center mb-6 ">
-        <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">
+        <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2  ">
           Contact Us
         </h2>
         <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">

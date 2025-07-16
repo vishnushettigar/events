@@ -131,7 +131,7 @@ const AdminPanel = () => {
           </div>
 
           {/* User Info */}
-          <div className="p-4 border-b border-gray-200">
+          {/* <div className="p-4 border-b border-gray-200">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-[#D35D38] rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">
@@ -147,7 +147,7 @@ const AdminPanel = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Navigation Menu */}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -168,7 +168,7 @@ const AdminPanel = () => {
           </nav>
 
           {/* Logout */}
-          <div className="p-4 border-t border-gray-200">
+          {/* <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
               className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors duration-200"
@@ -176,7 +176,7 @@ const AdminPanel = () => {
               <span className="text-xl">🚪</span>
               <span className="font-medium">Logout</span>
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -511,6 +511,7 @@ const UserManagement = () => {
     fetchUsers();
   }, [pagination.page, filters]);
 
+  //searching users in  User Management with aadhar number//
   const fetchUsers = async () => {
     setLoading(true);
     setError(null);
@@ -524,7 +525,11 @@ const UserManagement = () => {
         ...(filters.temple && { temple: filters.temple })
       };
 
+      console.log('Fetching users with params:', params);
+
       const data = await userAPI.getAllUsers(params);
+      console.log('Users data received:', data);
+      
       setUsers(data.users);
       setPagination(prev => ({
         ...prev,
@@ -532,6 +537,7 @@ const UserManagement = () => {
         totalPages: data.pagination.totalPages
       }));
     } catch (err) {
+      console.error('Error fetching users:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -558,6 +564,12 @@ const UserManagement = () => {
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
+  };
+
+  // Handle search input change with debouncing
+  const handleSearchChange = (value) => {
+    setFilters(prev => ({ ...prev, search: value }));
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page
   };
 
@@ -598,7 +610,7 @@ const UserManagement = () => {
     const temple = temples.find(t => t.id === templeId);
     return temple ? temple.name : 'Unknown';
   };
-
+   //user management//
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -613,14 +625,24 @@ const UserManagement = () => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Search</label>
+            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Search by Aadhar</label>
+            <div className="relative">
             <input
               type="text"
-              placeholder="Search by name, email, or Aadhar..."
+                placeholder="Enter Aadhar number..."
               value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            />
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    fetchUsers();
+                  }
+                }}
+                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="text-gray-400">🔍</span>
+              </div>
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Role</label>
@@ -648,12 +670,22 @@ const UserManagement = () => {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
+          <div className="flex items-end space-x-2">
             <button
               onClick={fetchUsers}
-              className="w-full bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
+              className="flex-1 bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
             >
               Search
+            </button>
+            <button
+              onClick={() => {
+                setFilters({ search: '', role: '', temple: '' });
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+              title="Clear all filters"
+            >
+              Clear
             </button>
           </div>
         </div>
@@ -678,6 +710,7 @@ const UserManagement = () => {
           </div>
         ) : (
           <>
+            {users.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50">
@@ -740,9 +773,36 @@ const UserManagement = () => {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="text-gray-400 mb-4">
+                  <span className="text-4xl">🔍</span>
+                </div>
+                <h3 className="text-lg font-medium text-[#2A2A2A] mb-2">
+                  {filters.search ? 'No users found' : 'No users available'}
+                </h3>
+                <p className="text-[#5A5A5A] mb-4">
+                  {filters.search 
+                    ? `No users found matching "${filters.search}"`
+                    : 'There are no users in the system yet.'
+                  }
+                </p>
+                {filters.search && (
+                  <button
+                    onClick={() => {
+                      setFilters({ search: '', role: '', temple: '' });
+                      setPagination(prev => ({ ...prev, page: 1 }));
+                    }}
+                    className="text-[#D35D38] hover:text-[#B84A2E] transition-colors font-medium"
+                  >
+                    Clear search and show all users
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Pagination */}
-            {pagination.totalPages > 1 && (
+            {users.length > 0 && pagination.totalPages > 1 && (
               <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                 <div className="flex-1 flex justify-between sm:hidden">
                   <button
@@ -1298,7 +1358,7 @@ const TeamsManagement = () => {
   };
 
   const groupedEvents = groupTeamsByEvent();
-
+ // Teams management//
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1817,6 +1877,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
   );
 };
 
+// Temple management section//
 const TempleManagement = () => {
   const [temples, setTemples] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2047,6 +2108,7 @@ const TempleManagement = () => {
   );
 };
 
+// Results management section//
 const ResultsManagement = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2439,6 +2501,7 @@ const ResultsManagement = () => {
   );
 };
 
+// Champions management section//
 const ChampionsManagement = () => {
   const [champions, setChampions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -2640,16 +2703,251 @@ const ChampionsManagement = () => {
   );
 };
 
-const SystemSettings = () => (
-  <div className="bg-white rounded-lg shadow-sm p-6">
-    <div className="flex items-center justify-between mb-6">
-      <h3 className="text-lg font-semibold text-[#2A2A2A]">System Settings</h3>
-      <button className="bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors">
-        Save Changes
+// System settings section//
+const SystemSettings = () => {
+  const [settings, setSettings] = useState({
+    hostTempleName: 'MULKI',
+    eventDate: '2025-12-28',
+    season: 'season33',
+    cutoffDate: '2025-12-28',
+    contact: {
+      name: '',
+      email: '',
+      phone: '',
+      address: ''
+    }
+  });
+  const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSettingChange = (key, value) => {
+    if (key === 'contact') {
+      setSettings(prev => ({
+        ...prev,
+        contact: { ...prev.contact, ...value }
+      }));
+    } else {
+      setSettings(prev => ({
+        ...prev,
+        [key]: value
+      }));
+    }
+    setSaved(false);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      // Here you would typically save to backend
+      // await settingsAPI.updateSettings(settings);
+      console.log('Saving settings:', settings);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">⚙️ System Settings</h3>
+          <p className="text-[#5A5A5A]">Configure system-wide settings and event details</p>
+        </div>
+        <button 
+          onClick={handleSave}
+          disabled={loading}
+          className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+            loading 
+              ? 'bg-gray-400 text-white cursor-not-allowed' 
+              : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+          }`}
+        >
+          {loading ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
       </button>
     </div>
-    <p className="text-[#5A5A5A]">System settings functionality coming soon...</p>
+
+      {/* Settings Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* 1. Host Temple Name */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-blue-600 text-xl">🏛️</span>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-[#2A2A2A]">Host Temple Name</h4>
+              <p className="text-sm text-[#5A5A5A]">Primary temple hosting the event</p>
+            </div>
+          </div>
+          <input
+            type="text"
+            value={settings.hostTempleName}
+            onChange={(e) => handleSettingChange('hostTempleName', e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+            placeholder="Enter temple name"
+          />
+        </div>
+
+        {/* 2. Event Date */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-green-600 text-xl">📅</span>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-[#2A2A2A]">Event Date</h4>
+              <p className="text-sm text-[#5A5A5A]">Main event date</p>
+            </div>
+          </div>
+          <input
+            type="date"
+            value={settings.eventDate}
+            onChange={(e) => handleSettingChange('eventDate', e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+          />
+        </div>
+
+        {/* 3. Season */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-purple-600 text-xl">🏆</span>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-[#2A2A2A]">Season</h4>
+              <p className="text-sm text-[#5A5A5A]">Current event season</p>
+            </div>
+          </div>
+          <input
+            type="text"
+            value={settings.season}
+            onChange={(e) => handleSettingChange('season', e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+            placeholder="Enter season name"
+          />
+        </div>
+
+        {/* 4. Cut-off Date */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+          <div className="flex items-center mb-4">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+              <span className="text-orange-600 text-xl">🎂</span>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold text-[#2A2A2A]">Age Cut-off Date</h4>
+              <p className="text-sm text-[#5A5A5A]">Date for calculating participant ages</p>
+            </div>
+          </div>
+          <input
+            type="date"
+            value={settings.cutoffDate}
+            onChange={(e) => handleSettingChange('cutoffDate', e.target.value)}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+          />
+        </div>
+      </div>
+
+      {/* 5. Contact Information - Full Width */}
+      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+        <div className="flex items-center mb-6">
+          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+            <span className="text-red-600 text-xl">📞</span>
+          </div>
+          <div>
+            <h4 className="text-lg font-semibold text-[#2A2A2A]">Contact Information</h4>
+            <p className="text-sm text-[#5A5A5A]">Primary contact details for the event</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Contact Name</label>
+            <input
+              type="text"
+              value={settings.contact.name}
+              onChange={(e) => handleSettingChange('contact', { name: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+              placeholder="Enter contact name"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Email Address</label>
+            <input
+              type="email"
+              value={settings.contact.email}
+              onChange={(e) => handleSettingChange('contact', { email: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+              placeholder="Enter email address"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Phone Number</label>
+            <input
+              type="tel"
+              value={settings.contact.phone}
+              onChange={(e) => handleSettingChange('contact', { phone: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+              placeholder="Enter phone number"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Address</label>
+            <input
+              type="text"
+              value={settings.contact.address}
+              onChange={(e) => handleSettingChange('contact', { address: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+              placeholder="Enter address"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Settings Summary */}
+      <div className="bg-gray-50 rounded-lg p-6">
+        <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">📋 Current Settings Summary</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+          <div className="bg-white p-3 rounded border">
+            <span className="font-medium text-[#5A5A5A]">Host Temple:</span>
+            <span className="ml-2 text-[#2A2A2A]">{settings.hostTempleName}</span>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <span className="font-medium text-[#5A5A5A]">Event Date:</span>
+            <span className="ml-2 text-[#2A2A2A]">{new Date(settings.eventDate).toLocaleDateString()}</span>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <span className="font-medium text-[#5A5A5A]">Season:</span>
+            <span className="ml-2 text-[#2A2A2A]">{settings.season}</span>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <span className="font-medium text-[#5A5A5A]">Age Cut-off:</span>
+            <span className="ml-2 text-[#2A2A2A]">{new Date(settings.cutoffDate).toLocaleDateString()}</span>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <span className="font-medium text-[#5A5A5A]">Contact:</span>
+            <span className="ml-2 text-[#2A2A2A]">{settings.contact.name || 'Not set'}</span>
+          </div>
+          <div className="bg-white p-3 rounded border">
+            <span className="font-medium text-[#5A5A5A]">Email:</span>
+            <span className="ml-2 text-[#2A2A2A]">{settings.contact.email || 'Not set'}</span>
+          </div>
+        </div>
+      </div>
   </div>
 );
+};
 
 export default AdminPanel; 

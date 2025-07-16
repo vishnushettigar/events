@@ -4,6 +4,7 @@ import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
 import { userAPI } from '../utils/api.js';
 import logo2 from '../assets/logo2.png';
+import Toggle from './Toggle';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -95,7 +96,8 @@ const Navbar = () => {
                     {/* <div className='hidden md:flex flex-row items-center justify-center gap-2'>
                         <h1 className='text-[20px] text-white pr-[60px]'>PADMASHALI KREEDOTHSAVA</h1>
                     </div> */}
-                    <div className="profile nav-links flex flex-row pr-5 gap-2 items-center">
+                    <div className="profile nav-links flex flex-row pr-5 gap-4 items-center">
+                        <Toggle />
                         <ProfileDropdown />
                     </div>
                 </div>

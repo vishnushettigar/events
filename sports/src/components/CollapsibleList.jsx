@@ -89,16 +89,12 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
         )
       );
 
-      // Show success message
-      alert(`Status updated successfully to ${newStatus}`);
-
       // Notify parent component to refresh data
       if (onParticipantsUpdate) {
         onParticipantsUpdate();
       }
     } catch (error) {
       console.error('Error updating status:', error);
-      alert(`Failed to update status: ${error.message}`);
     } finally {
       setUpdatingStatus(false);
     }

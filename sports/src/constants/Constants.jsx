@@ -2,6 +2,7 @@ import temple from "../assets/temples.png";
 import participants from "../assets/participants.png";
 import torch from "../assets/events.png";
 import winner from "../assets/winners.png";
+// import supporters from "../assets/supporters.png";
 
 export const rules = [
   "ಎಲ್ಲಾ ಸ್ಪರ್ಧೆಗಳಲ್ಲಿ 16 ದೇವಸ್ಥಾನಗಳ (ಪದ್ಮಶಾಲಿ) ಸದಸ್ಯರು ಮಾತ್ರ ಭಾಗವಹಿಸಲು ಅವಕಾಶ",
@@ -17,41 +18,36 @@ export const sponsors = [
   {
     name: "Harsh Foundation",
     location: "Salikeri",
-    desc: "Supporting community growth and sports.",
   },
   {
     name: "Seva Samithi",
     location: "Salikeri",
-    desc: "Empowering youth through service.",
   },
   {
     name: "Sri Brahmalinga Veerabhadra Durgaparameshwari Temple",
     location: "Salikeri",
-    desc: "Blessings and support for the event.",
   },
   {
     name: "Harsh Foundation",
     location: "Salikeri",
-    desc: "Supporting community growth and sports.",
   },
   {
     name: "Seva Samithi",
     location: "Salikeri",
-    desc: "Empowering youth through service.",
   },
   {
     name: "Sri Brahmalinga Veerabhadra Durgaparameshwari Temple",
     location: "Salikeri",
-    desc: "Blessings and support for the event.",
   },
 ];
 
 export const contacts = [
-  { name: "A Shetigar", phone: "7865498521" },
-  { name: "B Shettigar", phone: "8542347894" },
-  { name: "C Shettigar", phone: "7745621542" },
-  { name: "D Shettigar", phone: "3626661745" },
+  { name: "Ravi Shettigar Karkala", phone: "9845249531" },
+  { name: "Sadashiva Golijora", phone: "9449269272" },
+  { name: "Purandar", phone: " 9845525125" },
+  { name: "Rajesh Sanoor", phone: "7301167711" }, 
 ];
+
 
 export const eventHighlights = [
   {

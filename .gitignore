@@ -69,3 +69,5 @@ lib-cov
 
 # Ngrok configuration
 ngrok.yml
+nginx.conf
+nginx-production.conf
