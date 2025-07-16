@@ -1,5 +1,5 @@
 version: "2"
-authtoken: 2zixrKsCe06sqQG2XCFY1ZAqXGh_75geZGhR6RCS9pdMD3XFg
+authtoken: authtoken
 tunnels:
   backend:
     addr: 4000
