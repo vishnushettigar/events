@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
 import { userAPI } from '../utils/api.js';
-import logo2 from '../assets/logo2.png';
+import logo2 from '../assets/pmlogo.jpeg';
 import Toggle from './Toggle';
 
 const Navbar = () => {
@@ -83,7 +83,7 @@ const Navbar = () => {
                             <Link to="/">
                                 <img
                                     src={logo2}
-                                    className='drop-shadow-[0px_0px_20px_white] filter h-12 w-auto md:h-16 lg:h-16 max-h-full object-contain'
+                                    className='drop-shadow-[0px_0px_20px_white] filter h-8 w-auto md:h-12 lg:h-12 max-h-full object-contain'
                                     alt="logo"
                                 />
                             </Link>
