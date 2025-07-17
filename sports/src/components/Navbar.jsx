@@ -80,7 +80,7 @@ const Navbar = () => {
                         )}
                         {/* Logo */}
                         <div className="pl-2 md:pl-0 lg:p-2">
-                            <Link to="/">
+                            <Link to="">
                                 <img
                                     src={logo2}
                                     className='drop-shadow-[0px_0px_20px_white] filter h-8 w-auto md:h-12 lg:h-12 max-h-full object-contain'
