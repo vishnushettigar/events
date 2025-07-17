@@ -58,8 +58,10 @@ services:
     container_name: shettigarevents-nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - 
     depends_on:
       - frontend
       - backend
