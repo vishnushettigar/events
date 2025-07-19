@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import '../index.css';
 import './styles.css';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Toggle = () => {
-  const [isEnglish, setIsEnglish] = useState(true);
+  const { isEnglish, toggleLanguage } = useLanguage();
 
   const handleToggle = () => {
-    setIsEnglish(!isEnglish);
+    toggleLanguage();
   };
 
   return (

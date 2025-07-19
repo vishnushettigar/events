@@ -7,8 +7,14 @@ import 'swiper/css/pagination';
 import 'swiper/css/autoplay';
 import './styles.css'; // Optional for custom styles
 import { sponsors } from '../constants/constants.jsx';
+import { sponsorsKannada } from '../constants/constants.jsx';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Sponsors = () => {
+  const { isEnglish } = useLanguage();
+
+  const sponsorsToDisplay = isEnglish ? sponsors : sponsorsKannada;
+
   const [swiper, setSwiper] = useState(null);
   const [isAutoplayActive, setIsAutoplayActive] = useState(true);
 
@@ -35,10 +41,10 @@ const Sponsors = () => {
   }, [swiper, isAutoplayActive]);
 
   return (
-    <section id="testimonials" className="w-[90%] mx-auto my-12 min-h-[400px]">
+    <section id="testimonials" className="w-[90%] mx-auto my-12 ">
       <div className="text-left md:text-center mb-8">
-        <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">Sponsors</h2>
-        <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">We thank our sponsors for their generous support!</p>
+        <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">{isEnglish ? "Sponsors" : "ಪ್ರಾಯೋಜಕರು"}</h2>
+        <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">{isEnglish ? "We thank our sponsors for their generous support!" : "ನಮ್ಮ ಪ್ರಾಯೋಜಕರಿಗೆ ಧನ್ಯವಾದಗಳು!"}</p>
       </div>
       <Swiper
         modules={[Pagination, A11y, Autoplay]}
@@ -59,7 +65,7 @@ const Sponsors = () => {
         onClick={handleSwiperClick}
         className="testimonials-slider"
       >
-        {sponsors.map((s, idx) => (
+        {sponsorsToDisplay.map((s, idx) => (
           <SwiperSlide key={idx} className='h-[200px] pt-4 pb-12'>
             <div className="flex flex-col items-center justify-center bg-[#ccc] rounded-2xl h-[160px] p-4 mx-2 transition-transform hover:scale-105">
               {/* <img src={s.logo} alt={s.name} className="w-20 h-20 mb-4 rounded-full shadow border-4 border-white bg-white" /> */}

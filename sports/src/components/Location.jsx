@@ -1,14 +1,19 @@
 import React from "react";
+import { useLanguage } from "../contexts/LanguageContext";
 
 const Location = () => {
+  const { isEnglish } = useLanguage();
+
+  
+
   return (
     <section className="w-[90%] mx-auto my-12">
       <div className="text-center mb-6">
         <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2  ">
-          Location
+          {isEnglish ? "Location" : "ಸ್ಥಳ"}
         </h2>
         <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">
-          Join us at our event venue
+          {isEnglish ? "Join us at our event venue" : "ಕಾರ್ಯಕ್ರಮದಲ್ಲಿ ನಮ್ಮೊಂದಿಗೆ ಸೇರಿ"}
         </p>
       </div>
       <div className="flex flex-col md:flex-row gap-8 bg-[#E0E0E0] rounded-2xl  p-4 items-center">
@@ -26,7 +31,7 @@ const Location = () => {
             allowFullScreen
           ></iframe>
         </div>
-        <div className="w-full md:w-1/2 flex flex-col items-center justify-center ">
+        <div className="w-full md:w-1/2 flex flex-col items-start md:items-center justify-center ">
           <div className="flex flex-col  items-start md:items-center gap-1 md:gap-2 ">
             <span className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#d5d5d5] mb-2">
               <svg
@@ -49,11 +54,20 @@ const Location = () => {
               </svg>
             </span>
             <h3 className="text-xl text-start md:text-center font-semibold text-[#2A2A2A] ">
-              Venue
+              {isEnglish ? "Venue" : "ಸ್ಥಳ"}
             </h3>
             <p className="text-base text-start md:text-center text-[#5A5A5A] font-medium">
-              Government Junior College
-              <br /> 19-31, Karnad, Mulki, Karnataka 574154
+              {isEnglish ? (
+                <>
+                  Government Junior College <br />
+                  19-31, Karnad, Mulki, Karnataka 574154
+                </>
+              ) : (
+                <>
+                  ಸರ್ಕಾರಿ ಪದವಿ ಪೂರ್ವ ಕಾಲೇಜು <br />
+                  19-31, ಕರ್ನಾಡ್, ಮುಲ್ಕಿ, ಕರ್ನಾಟಕ 574154
+                </>
+              )}
             </p>
             <p className="text-[#5A5A5A] text-center"></p>
             <a
@@ -62,7 +76,7 @@ const Location = () => {
               rel="noopener noreferrer"
               className="mt-2 inline-block px-6 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition"
             >
-              Open in Google Maps
+              {isEnglish ? "Open in Google Maps" : "ಗೂಗಲ್ ಮ್ಯಾಪ್ಸ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ"}
             </a>
           </div>
         </div>

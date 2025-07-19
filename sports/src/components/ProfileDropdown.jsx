@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import userIcon from '../assets/user-icon.png';
+// import userIcon from '../assets/user-icon.png';
 import { userAPI } from '../utils/api.js';
+import profile from '../assets/profile.svg';
 
 const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -90,18 +91,19 @@ const ProfileDropdown = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
+     
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 focus:outline-none"
+        className="flex items-center space-x-2 pb-[1px] focus:outline-none"
       >
         <img
-          src={userIcon}
+          src={profile}
           alt="Profile"
-          className="w-8 h-8 rounded-full border-2 border-white"
+          className="w-10 h-10 cursor-pointer rounded-full border-2 border-white"
         />
       </button>
 
-      {isOpen && (
+      {/* {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
           {isLoggedIn ? (
             <>
@@ -171,7 +173,7 @@ const ProfileDropdown = () => {
             </>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (

@@ -1,5 +1,6 @@
 import React from "react";
-import { eventHighlights } from "../constants/constants";
+import { eventHighlights, eventHighlightsKannada } from "../constants/constants";
+import { useLanguage } from "../contexts/LanguageContext";
 
 
 const clickCTA = (text) => {
@@ -8,19 +9,23 @@ const clickCTA = (text) => {
 };
 
 const Counts = () => {
+  const { isEnglish } = useLanguage();
+
+  const eventHighlightsToDisplay = isEnglish ? eventHighlights : eventHighlightsKannada;
+
   return (
     <div className="w-[90%]  mx-auto mb-8  px-0 md:w-[90%] lg:px-4">
       <div className="text-center mb-6">
         <h1 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">
-          Event Highlights
+          {isEnglish ? "Event Highlights" : " ಮುಖ್ಯಾಂಶಗಳು"}
         </h1>
         <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">
-          Explore the highlights of the event
+          {isEnglish ? "Explore the highlights of the event" : "ಕಾರ್ಯಕ್ರಮದ ಮುಖ್ಯಾಂಶಗಳು"}
         </p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* With map */}
-        {eventHighlights.map((event, index) => (
+        {eventHighlightsToDisplay.map((event, index) => (
           <button
             key={index}
             className="relative flex flex-col bg-[#EAE2D5] text-[#2A2A2A] rounded-xl md:rounded-2xl  hover:bg-[#ded5c5] overflow-hidden h-32 sm:h-40 md:h-48 lg:h-52"

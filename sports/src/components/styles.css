@@ -1,5 +1,6 @@
 /* navbar section css*/
 
+
 /* home section css start */
 /*Event Details css start*/
 
@@ -33,7 +34,7 @@
 }
 
 .card::after {
-  content: "Event Details";
+  content: var(--card-title, "Event Details");
   position: absolute;
   top: 0;
   left: 50%;
@@ -454,35 +455,36 @@ button[type="submit"]:hover {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 8px;
-  width: fit-content;
-  min-width: 140px;
+  padding: 6px;
+  width: 100px;
+  min-width: 100px;
 }
 
 .language-toggle {
   position: relative;
-  width: 140px;
-  height: 40px;
+  width: 88px;
+  height: 32px;
   background: linear-gradient(145deg, #f8f8f8, #e8e8e8);
   border: 2px solid #D35D38;
-  border-radius: 12px;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-    0 4px 8px rgba(0, 0, 0, 0.1),
-    0 2px 4px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 4px hsla(0,0%,0%,.2),
+                inset 0 0 10px hsla(0,0%,0%,.2),
+                0 0 0 1px hsla(0,0%,0%,.05),
+                0 -1px 2px 2px hsla(0,0%,0%,.1),
+                0 2px 2px 2px hsla(0,0%,100%,.3);
   overflow: hidden;
-  padding-right: 4px;
+  padding-right: 2px;
 }
 
-.language-toggle:hover {
+/* .language-toggle:hover {
   box-shadow: 
     0 6px 12px rgba(0, 0, 0, 0.15),
     0 3px 6px rgba(0, 0, 0, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   transform: translateY(-1px);
-}
+} */
 
 .language-toggle:active {
   transform: translateY(0px);
@@ -499,11 +501,11 @@ button[type="submit"]:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 12px;
+  padding: 0 8px;
 }
 
 .toggle-text {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 2;
@@ -526,13 +528,12 @@ button[type="submit"]:hover {
   width: calc(50% - 4px);
   height: calc(100% - 4px);
   background: linear-gradient(145deg, #e65a4a, #c94a3a);
-  border-radius: 8px;
+  border-radius: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    0 1px 2px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  z-index: 1;
+  box-shadow: -3px -3px 5px rgba(255, 255, 255, .5),
+  3px 3px 5px rgba(0, 0, 0, .25);
+transition: .3s ease-in-out;
+  /* z-index: 1; */
 }
 
 /* English state */
@@ -564,133 +565,15 @@ button[type="submit"]:hover {
 /* Responsive design for different screen sizes */
 @media (max-width: 1024px) {
   .language-toggle-container {
-    min-width: 130px;
+    width: 90px;
+    min-width: 90px;
+    padding: 5px;
   }
   
   .language-toggle {
-    width: 130px;
-    height: 38px;
-    border-radius: 11px;
-  }
-  
-  .language-toggle::before {
-    width: calc(50% - 4px);
-    height: calc(100% - 4px);
-    border-radius: 7px;
-  }
-  
-  .language-toggle.kannada::before {
-    left: calc(50% + 2px);
-  }
-  
-  .toggle-text {
-    font-size: 17px;
-  }
-  
-  .toggle-slider {
-    padding: 0 10px;
-  }
-}
-
-@media (max-width: 768px) {
-  .language-toggle-container {
-    min-width: 128px;
-  }
-  
-  .language-toggle {
-    width: 120px;
-    height: 36px;
-    border-radius: 10px;
-  }
-  
-  .language-toggle::before {
-    width: calc(50% - 4px);
-    height: calc(100% - 4px);
-    border-radius: 6px;
-  }
-  
-  .language-toggle.kannada::before {
-    left: calc(50% + 2px);
-  }
-  
-  .toggle-text {
-    font-size: 16px;
-  }
-  
-  .toggle-slider {
-    padding: 0 8px;
-  }
-}
-
-@media (max-width: 640px) {
-  .language-toggle-container {
-    min-width: 118px;
-  }
-  
-  .language-toggle {
-    width: 110px;
-    height: 34px;
-    border-radius: 9px;
-  }
-  
-  .language-toggle::before {
-    width: calc(50% - 4px);
-    height: calc(100% - 4px);
-    border-radius: 6px;
-  }
-  
-  .language-toggle.kannada::before {
-    left: calc(50% + 2px);
-  }
-  
-  .toggle-text {
-    font-size: 15px;
-  }
-  
-  .toggle-slider {
-    padding: 0 6px;
-  }
-}
-
-@media (max-width: 480px) {
-  .language-toggle-container {
-    min-width: 108px;
-  }
-  
-  .language-toggle {
-    width: 100px;
-    height: 32px;
-    border-radius: 8px;
-  }
-  
-  .language-toggle::before {
-    width: calc(50% - 4px);
-    height: calc(100% - 4px);
-    border-radius: 5px;
-  }
-  
-  .language-toggle.kannada::before {
-    left: calc(50% + 2px);
-  }
-  
-  .toggle-text {
-    font-size: 14px;
-  }
-  
-  .toggle-slider {
-    padding: 0 4px;
-  }
-}
-
-@media (max-width: 400px) {
-  .language-toggle-container {
-    min-width: 95px;
-  }
-  
-  .language-toggle {
-    width: 95px;
+    width: 86px;
     height: 30px;
-    border-radius: 7px;
+    border-radius: 9px;
   }
   
   .language-toggle::before {
@@ -708,19 +591,55 @@ button[type="submit"]:hover {
   }
   
   .toggle-slider {
-    padding: 0 3px;
+    padding: 0 7px;
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 768px) {
   .language-toggle-container {
+    width: 92px;
     min-width: 92px;
+    padding: 5px;
   }
   
   .language-toggle {
-    width: 90px;
-    height: 28px;
-    border-radius: 6px;
+    width: 80px;
+    height: 30px;
+    border-radius: 8px;
+    padding-left: 2px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 3px);
+    height: calc(100% - 4px);
+    border-radius: 5px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 12px;
+  }
+  
+  .toggle-slider {
+    padding: 0 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .language-toggle-container {
+    width: 80px;
+    min-width: 80px;
+    padding: 4px;
+  }
+  
+  .language-toggle {
+    width: 80px;
+    height: 32px;
+    border-radius: 7px;
+    padding-left: 2px;
   }
   
   .language-toggle::before {
@@ -734,27 +653,64 @@ button[type="submit"]:hover {
   }
   
   .toggle-text {
-    font-size: 12px;
+    font-size: 11px;
   }
   
   .toggle-slider {
-    padding: 0 2px;
+    padding: 0 5px;
   }
 }
 
-@media (max-width: 320px) {
+@media (max-width: 480px) {
   .language-toggle-container {
-    min-width: 88px;
+    width: 78px;
+    min-width: 78px;
+    padding: 4px;
   }
   
   .language-toggle {
-    width: 85px;
-    height: 26px;
-    border-radius: 5px;
+    width: 76px;
+    height: 30px;
+    border-radius: 6px;
+    padding-left: 2px;
   }
   
   .language-toggle::before {
-    width: calc(50% - 2px);
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 4px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 10px;
+  }
+  
+  .toggle-slider {
+    padding: 0 4px;
+  }
+}
+
+@media (max-width: 400px) {
+  .language-toggle-container {
+    width: 70px;
+    min-width: 70px;
+    padding: 3px;
+    font-size: 80px;
+  }
+  
+  .language-toggle {
+    width: 74px;
+    height: 28px;
+    border-radius: 6px;
+    padding-left: 2px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 3px;
   }
@@ -764,11 +720,77 @@ button[type="submit"]:hover {
   }
   
   .toggle-text {
-    font-size: 11px;
+    font-size: 9px;
   }
   
   .toggle-slider {
-    padding: 0 1px;
+    padding: 0 3px;
+  }
+}
+
+@media (max-width: 360px) {
+  .language-toggle-container {
+    width: 60px;
+    min-width: 60px;
+    padding: 3px;
+  }
+  
+  .language-toggle {
+    width: 70px;
+    height: 25px;
+    border-radius: 5px;
+    padding-left: 2px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 3px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 8px;
+  }
+  
+  .toggle-slider {
+    padding: 0 3px;
+  }
+}
+
+@media (max-width: 320px) {
+  .language-toggle-container {
+    width: 50px;
+    min-width: 50px;
+    padding: 2px;
+  }
+  
+  .language-toggle {
+    width: 68px;
+    height: 25px;
+    border-radius: 4px;
+    padding-left: 2px;
+  }
+  
+  .language-toggle::before {
+    width: calc(50% - 4px);
+    height: calc(100% - 4px);
+    border-radius: 2px;
+  }
+  
+  .language-toggle.kannada::before {
+    left: calc(50% + 2px);
+  }
+  
+  .toggle-text {
+    font-size: 8px;
+  }
+  
+  .toggle-slider {
+    padding: 2px 2px;
   }
 }
 

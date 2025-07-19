@@ -5,6 +5,7 @@ import ProfileDropdown from './ProfileDropdown';
 import { userAPI } from '../utils/api.js';
 import logo2 from '../assets/pmlogo.jpeg';
 import Toggle from './Toggle';
+import profile from '../assets/profile.svg';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -59,8 +60,8 @@ const Navbar = () => {
     const isTempleAdmin = userInfo && userInfo.role_id === 2;
 
     return (
-        <nav id="header" className="header fixed bg-[#FCFCFC] flex flex-row items-center justify-between sticky top-0 z-46">
-            <div className='header flex flex-row items-center justify-between sticky top-0 z-10 w-[90%] mx-auto'>
+        <nav id="header" className="header fixed bg-[#FCFCFC] h-16 flex flex-row items-center justify-between sticky top-0 z-46">
+            <div className='header flex flex-row items-center justify-between sticky top-0 z-10 w-[95%] md:w-[90%] mx-auto'>
                 <div className="flex flex-row items-center justify-between w-full">
                     
                     <div className="flex items-center">
@@ -79,7 +80,7 @@ const Navbar = () => {
                             </button>
                         )}
                         {/* Logo */}
-                        <div className="pl-2 md:pl-0 lg:p-2">
+                        <div className="pl-0 md:pl-0 lg:p-2">
                             <Link to="">
                                 <img
                                     src={logo2}
@@ -93,7 +94,7 @@ const Navbar = () => {
                     {/* <div className='hidden md:flex flex-row items-center justify-center gap-2'>
                         <h1 className='text-[20px] text-white pr-[60px]'>PADMASHALI KREEDOTHSAVA</h1>
                     </div> */}
-                    <div className="profile nav-links flex flex-row pr-5 gap-4 items-center">
+                    <div className="profile nav-links flex flex-row pr-1 gap-4 items-center">
                         <Toggle />
                         <ProfileDropdown />
                     </div>
