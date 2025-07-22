@@ -55,7 +55,7 @@ const Home = () => {
             </p> */}
             <EventDetails />
             <div className="flex flex-row sm:flex-row gap-2 sm:gap-4 mt-4 w-full">
-              {/* <a
+              <a
                 href="/login"
                 className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center text-[#D35D38] border-[1.5px] border-[#D35D38] font-medium text-md  hover:bg-[#e0e0e0]  transition"
               >
@@ -66,12 +66,12 @@ const Home = () => {
                 className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition"
               >
                 {isEnglish ? "Register" : "ನೋಂದಣಿ"}
-              </a> */}
-              <button
-                className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition"
-              >
+              </a>
+              {/* <button
+                  className="w-full sm:w-80 px-4 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-sm shadow-lg hover:bg-[#B84A2E] transition"
+                >
                 {isEnglish ? "Registration will start soon" : "ನೋಂದಣಿ ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"}
-              </button>
+              </button> */}
              
 
             </div>

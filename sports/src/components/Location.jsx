@@ -74,7 +74,7 @@ const Location = () => {
               href="https://www.google.com/maps/search/?api=1&query=Government+Junior+College%2C+Karnad%2C+Mulki%2C+Karnataka+574154"
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block px-6 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition"
+              className="mt-2 inline-block w-56 px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition text-center text-sm"
             >
               {isEnglish ? "Open in Google Maps" : "ಗೂಗಲ್ ಮ್ಯಾಪ್ಸ್‌ನಲ್ಲಿ ತೆರೆಯಿರಿ"}
             </a>

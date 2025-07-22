@@ -16,26 +16,26 @@ const EventDetails = () => {
     >
       {/* <div className="flex-1 bg-[#e0e0e0] rounded-md"> */}
        <div className="flex flex-col gap-2 p-6">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <img
-            className="flex-shrink-0"
+            className="flex-shrink-0 mt-1"
             src={dateIcon}
             alt="calender"
             width={24}
           />
-          <span className="text-[#2a2a2a]">21-12-2025</span>
+          <span className="text-[#2a2a2a] w-32 flex-shrink-0">21-12-2025</span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-start">
           <img
-            className="flex-shrink-0"
+            className="flex-shrink-0 mt-1"
             src={locationIcon}
             alt="calender"
             width={24}
           />
-          <span className="text-[#2a2a2a]">
+          <span className="text-[#2a2a2a] flex-1 leading-tight min-h-[3rem]">
             {isEnglish 
               ? "Government Junior College, Karnad, Mulki, Karnataka 574154"
-              : "ಸರ್ಕಾರಿ ಪದವಿ ಪೂರ್ವ ಕಾಲೇಜು, ಕರ್ನಾಡ್, ಮುಲ್ಕಿ, ಕರ್ನಾಟಕ 574154"
+              : "ಸರ್ಕಾರಿ ಪದವಿ ಪೂರ್ವ ಕಾಲೇಜು, ಕರ್ನಾಡ್, ಮುಲ್ಕಿ, ಕರ್ನಾಟಕ 574154"
             }
           </span>
         </div>

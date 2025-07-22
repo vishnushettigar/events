@@ -105,7 +105,7 @@ const Contacts = () => {
         {/* Temple Contacts Section */}
         <div className="w-full lg:flex-1 lg:max-w-lg">
           <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-left md:text-center">
-            {isEnglish ? "Temple Contacts" : "ದೇವಸ್ಥಾನ ಸಂಪರ್ಕ"}
+            {isEnglish ? "Temple Contacts" : "ದೇವಸ್ಥಾನದ ಸಂಪರ್ಕ"}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-1 xl:grid-cols-2 gap-0">
             {templeContactsToDisplay.map((c, idx) => (
