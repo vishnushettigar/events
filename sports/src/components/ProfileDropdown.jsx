@@ -120,7 +120,7 @@ const ProfileDropdown = () => {
               >
                 My Profile
               </Link>
-              {userInfo?.role_id === 4 && (
+              {userInfo?.role_id === 5 && (
                 <Link
                   to="/admin"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
@@ -129,6 +129,18 @@ const ProfileDropdown = () => {
                   <span className="flex items-center">
                     <span className="mr-2">👑</span>
                     Admin Panel
+                  </span>
+                </Link>
+              )}
+              {userInfo?.role_id === 4 && (
+                <Link
+                                      to="/viewer"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="flex items-center">
+                    <span className="mr-2">🛡️</span>
+                    Viewer 
                   </span>
                 </Link>
               )}

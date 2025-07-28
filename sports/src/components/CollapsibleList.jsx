@@ -82,12 +82,12 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
         }
       }
 
-      // Update the local state immediately
-      setLocalParticipants(prevParticipants =>
-        prevParticipants.map(p =>
+    // Update the local state immediately
+    setLocalParticipants(prevParticipants =>
+      prevParticipants.map(p =>
           p.id === participantId ? { ...p, status: finalStatus } : p
-        )
-      );
+      )
+    );
 
       // Notify parent component to refresh data
       if (onParticipantsUpdate) {
@@ -120,7 +120,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
           <span className="text-lg font-semibold text-[#2A2A2A]">{title}</span>
           {pendingCount > 0 && (
             <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full mt-1 w-fit">
-              {pendingCount} Pending
+                {pendingCount} Pending
             </span>
           )}
         </div>
@@ -159,17 +159,17 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sortedParticipants.map((participant) => (
-                    <Playerscard
-                      key={participant.id}
-                      participant={participant}
-                      onStatusUpdate={(newStatus) => handleStatusUpdate(participant.id, newStatus)}
-                      acceptedCount={acceptedCount}
-                      pendingCount={pendingCount}
-                      isAdmin={isAdmin}
-                      updatingStatus={updatingStatus}
-                    />
-                  ))}
+              {sortedParticipants.map((participant) => (
+                <Playerscard
+                  key={participant.id}
+                  participant={participant}
+                  onStatusUpdate={(newStatus) => handleStatusUpdate(participant.id, newStatus)}
+                  acceptedCount={acceptedCount}
+                  pendingCount={pendingCount}
+                  isAdmin={isAdmin}
+                  updatingStatus={updatingStatus}
+                />
+              ))}
                 </tbody>
               </table>
             </div>

@@ -22,7 +22,7 @@ const Toggle = () => {
           <span className="toggle-text kannada-text">ಕ</span>
         </div>
       </button>
-    </div>
+	   </div>
   );
 };
 

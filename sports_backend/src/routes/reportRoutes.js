@@ -42,7 +42,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/championship', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/championship', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const report = await reportService.getOverallChampionshipReport();
     res.json(report);

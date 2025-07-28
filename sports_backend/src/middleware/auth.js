@@ -37,10 +37,11 @@ function requireRole(role) {
     
     // Map role names to role IDs
     const roleMap = {
-      'SUPER_USER': 4,
+      'VIEWER': 4,
       'TEMPLE_ADMIN': 2,
       'STAFF': 3,
-      'PARTICIPANT': 1
+      'PARTICIPANT': 1,
+      'ADMIN': 5
     };
 
     // Get the role ID(s) (either from the map or use the number directly)

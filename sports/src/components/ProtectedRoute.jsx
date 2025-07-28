@@ -23,12 +23,13 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
         
         if (requiredRole) {
           // Check if user has the required role
-          // SUPER_USER = 4, TEMPLE_ADMIN = 2, STAFF = 3, PARTICIPANT = 1
+          // VIEWER = 4, TEMPLE_ADMIN = 2, STAFF = 3, PARTICIPANT = 1, ADMIN = 5
           const roleMap = {
-            'SUPER_USER': 4,
+            'VIEWER': 4,
             'TEMPLE_ADMIN': 2,
             'STAFF': 3,
-            'PARTICIPANT': 1
+            'PARTICIPANT': 1,
+            'ADMIN': 5
           };
           
           const requiredRoleId = roleMap[requiredRole];

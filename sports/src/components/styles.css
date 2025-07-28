@@ -469,12 +469,15 @@ button[type="submit"]:hover {
   position: relative;
   width: 88px;
   height: 32px;
-  background: linear-gradient(145deg, #f8f8f8, #e8e8e8);
+  background: linear-gradient(180deg, #f8f8f8, #e8e8e8);
   border: 2px solid #D35D38;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.2), 0 2px 4px 0 rgba(0, 0, 0, 0.2), 0 -1px 0 0 rgba(0, 0, 0, 0.1) inset, 0 -1.31em 1.31em -1.31em rgba(0, 0, 0, 0.3) inset, 0 0 1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 
+  0 -0.5px 0 0 rgba(0, 0, 0, 0.1) inset,
+  0 -0.5em 0.5em -0.5em rgba(0, 0, 0, 0.3) inset,
+  0 0 0 2px #f5eadbf4;   
   overflow: hidden;
   padding-right: 2px;
 }

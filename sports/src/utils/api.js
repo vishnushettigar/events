@@ -106,6 +106,8 @@ export const authAPI = {
   refreshToken: () => apiService.post('/auth/refresh'),
   verifyAdminAccess: () => apiService.get('/admin/verify-access'),
   getDashboardStats: () => apiService.get('/admin/dashboard-stats'),
+  verifyViewerAccess: () => apiService.get('/viewer/verify-access'),
+  getViewerDashboardStats: () => apiService.get('/viewer/dashboard-stats'),
 };
 
 export const userAPI = {
@@ -158,6 +160,24 @@ export const reportAPI = {
   getChampions: () => apiService.get('/users/champions'),
   getAllResults: () => apiService.get('/users/all-results'),
   getChampionshipReport: () => apiService.get('/reports/championship'),
+};
+
+// Viewer-specific API methods (read-only access)
+export const viewerAPI = {
+  getEvents: () => apiService.get('/viewer/events'),
+  getParticipants: (params) => apiService.get('/viewer/participants', params),
+  getParticipantData: (params) => apiService.get('/viewer/participant-data', params),
+  getTeams: (params) => apiService.get('/viewer/teams', params),
+  getTemples: () => apiService.get('/viewer/temples'),
+  getTempleManagement: () => apiService.get('/viewer/temple-management'),
+  getResults: () => apiService.get('/viewer/results'),
+  getEventPerformance: () => apiService.get('/viewer/event-performance'),
+  getChampions: () => apiService.get('/viewer/champions'),
+  getUsers: () => apiService.get('/viewer/users'),
+  getUserDetails: (ids) => apiService.get('/viewer/users/details', { ids }),
+  getProfileDetails: (ids) => apiService.get('/viewer/profiles/details', { ids }),
+  getSystemLogs: (limit = 100) => apiService.get('/viewer/system-logs', { limit }),
+  createSystemBackup: () => apiService.post('/viewer/system-backup'),
 };
 
 export default apiService; 

@@ -17,7 +17,7 @@ const Rules = () => {
                 <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">{isEnglish ? "Rules" : "ನಿಯಮಗಳು"}</h2>
                 <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">{isEnglish ? "Rules for the competitions" : "ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು"}</p>
             </div>
-            <div className="bg-[#E0E0E0] rounded-2xl shadow-lg p-4 md:p-8">
+            <div className="bg-[#E0E0E0] rounded-2xl  p-4 md:p-8">
                 <ol className="space-y-6 list-decimal list-inside">
                     {rulesToDisplay.map((rule, idx) => (
                         <li key={idx} className="flex items-start gap-2 mb-3">

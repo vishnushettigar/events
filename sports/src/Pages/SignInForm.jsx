@@ -69,12 +69,23 @@ const SignInForm = () => {
             // Check user role and redirect accordingly
             console.log('Login response:', data);
             console.log('User profile:', data.user?.profile);
+            console.log('User role ID:', data.user?.profile?.role?.id);
+            console.log('User role_id (direct):', data.user?.profile?.role_id);
+            console.log('Role object:', data.user?.profile?.role);
             
-            if (data.user && data.user.profile && data.user.profile.role && data.user.profile.role.id === 4) {
-                // Super User - redirect to admin panel
+            // Check both role.id and role_id patterns
+            const userRoleId = data.user?.profile?.role?.id || data.user?.profile?.role_id;
+            console.log('Detected role ID:', userRoleId);
+            
+            if (userRoleId === 4) {
+                // Viewer - redirect to viewer panel
+                console.log('Redirecting to viewer panel');
+                navigate('/viewer');
+            } else if (userRoleId === 5) {
+                // Admin panel - redirect to admin panel
                 console.log('Redirecting to admin panel');
                 navigate('/admin');
-            } else if (data.user && data.user.profile && data.user.profile.role && data.user.profile.role.id === 3) {
+            } else if (userRoleId === 3) {
                 // Staff user - redirect to staff panel
                 console.log('Redirecting to staff panel');
                 navigate('/staffpanel');

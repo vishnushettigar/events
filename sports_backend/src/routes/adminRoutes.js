@@ -11,7 +11,7 @@ const router = express.Router();
  *   get:
  *     tags: [Admin]
  *     summary: Verify admin access
- *     description: Verify that the current user has SUPER_USER privileges
+ *     description: Verify that the current user has ADMIN privileges
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -33,7 +33,7 @@ const router = express.Router();
  *       403:
  *         description: Forbidden - Insufficient permissions
  */
-router.get('/verify-access', authenticate, requireRole('SUPER_USER'), (req, res) => {
+router.get('/verify-access', authenticate, requireRole('ADMIN'), (req, res) => {
   res.json({
     message: 'Admin access verified',
     user: {
@@ -80,7 +80,7 @@ router.get('/verify-access', authenticate, requireRole('SUPER_USER'), (req, res)
  *       500:
  *         description: Server error
  */
-router.get('/dashboard-stats', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/dashboard-stats', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     // Get actual statistics from database
     const [totalEvents, totalUsers, totalTemples, activeRegistrations] = await Promise.all([
@@ -130,7 +130,7 @@ router.get('/dashboard-stats', authenticate, requireRole('SUPER_USER'), async (r
  *       500:
  *         description: Server error
  */
-router.get('/profiles/details', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/profiles/details', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { ids } = req.query;
     
@@ -211,7 +211,7 @@ router.get('/profiles/details', authenticate, requireRole('SUPER_USER'), async (
  *       500:
  *         description: Server error
  */
-router.get('/users/details', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/users/details', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { ids } = req.query;
     
@@ -360,7 +360,7 @@ router.get('/users/details', authenticate, requireRole('SUPER_USER'), async (req
  *       500:
  *         description: Server error
  */
-router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/users', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Admin users request query params:', req.query);
     
@@ -484,7 +484,7 @@ router.get('/users', authenticate, requireRole('SUPER_USER'), async (req, res) =
  *       500:
  *         description: Server error
  */
-router.get('/users/:id', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/users/:id', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     
@@ -551,12 +551,12 @@ router.get('/users/:id', authenticate, requireRole('SUPER_USER'), async (req, re
  *       500:
  *         description: Server error
  */
-router.put('/users/:id/update-role', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.put('/users/:id/update-role', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     const { role_id } = req.body;
 
-    if (!role_id || ![1, 2, 3, 4].includes(role_id)) {
+    if (!role_id || ![1, 2, 3, 4, 5].includes(role_id)) {
       return res.status(400).json({ error: 'Invalid role ID' });
     }
 
@@ -635,7 +635,7 @@ router.put('/users/:id/update-role', authenticate, requireRole('SUPER_USER'), as
  *       500:
  *         description: Server error
  */
-router.get('/roles', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/roles', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const roles = await prisma.mst_role.findMany({
       orderBy: { id: 'asc' }
@@ -680,7 +680,7 @@ router.get('/roles', authenticate, requireRole('SUPER_USER'), async (req, res) =
  *       500:
  *         description: Server error
  */
-router.get('/temples', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/temples', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const temples = await prisma.mst_temple.findMany({
       where: { is_deleted: false },
@@ -745,7 +745,7 @@ router.get('/temples', authenticate, requireRole('SUPER_USER'), async (req, res)
  *       500:
  *         description: Server error
  */
-router.get('/temple-management', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Fetching temple management data...');
     
@@ -978,7 +978,7 @@ router.get('/temple-management', authenticate, requireRole('SUPER_USER'), async 
  *       500:
  *         description: Server error
  */
-router.get('/participants', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { event_ids, status, temple_id } = req.query;
     
@@ -1187,7 +1187,7 @@ router.get('/participants', authenticate, requireRole('SUPER_USER'), async (req,
  *       500:
  *         description: Server error
  */
-router.get('/teams', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
     const offset = (page - 1) * limit;
@@ -1312,7 +1312,7 @@ router.get('/teams', authenticate, requireRole('SUPER_USER'), async (req, res) =
  *       500:
  *         description: Server error
  */
-router.get('/events', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },
@@ -1354,7 +1354,7 @@ router.get('/events', authenticate, requireRole('SUPER_USER'), async (req, res) 
  *   put:
  *     tags: [Admin]
  *     summary: Update participant registration status
- *     description: Update the registration status of a participant (SUPER_USER only)
+ *     description: Update the registration status of a participant (ADMIN only)
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -1391,7 +1391,7 @@ router.get('/events', authenticate, requireRole('SUPER_USER'), async (req, res) 
  *       500:
  *         description: Server error
  */
-router.put('/participants/:registrationId/update-status', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.put('/participants/:registrationId/update-status', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const registrationId = parseInt(req.params.registrationId);
     const { status } = req.body;

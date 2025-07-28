@@ -44,7 +44,7 @@ enum RegistrationStatus {
 
 model Mst_age_category {
   id         Int     @id @default(autoincrement())
-  name       String
+  name       String  @unique
   from_age   Int
   to_age     Int
   is_deleted Boolean @default(false)

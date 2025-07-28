@@ -40,7 +40,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/settings', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/settings', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const settings = await systemService.getSystemSettings();
     res.json(settings);
@@ -90,7 +90,7 @@ router.get('/settings', authenticate, requireRole('SUPER_USER'), async (req, res
  *       500:
  *         description: Server error
  */
-router.put('/settings/:name', authenticate, requireRole('SUPER_USER'), [
+router.put('/settings/:name', authenticate, requireRole('ADMIN'), [
   body('value').isInt().withMessage('Value must be an integer')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -143,7 +143,7 @@ router.put('/settings/:name', authenticate, requireRole('SUPER_USER'), [
  *       500:
  *         description: Server error
  */
-router.post('/backup', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.post('/backup', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const backup = await systemService.createBackup();
     res.status(201).json(backup);
@@ -192,7 +192,7 @@ router.post('/backup', authenticate, requireRole('SUPER_USER'), async (req, res)
  *       500:
  *         description: Server error
  */
-router.get('/backups', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/backups', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const backups = await systemService.listBackups();
     res.json(backups);
@@ -235,7 +235,7 @@ router.get('/backups', authenticate, requireRole('SUPER_USER'), async (req, res)
  *       500:
  *         description: Server error
  */
-router.post('/restore', authenticate, requireRole('SUPER_USER'), [
+router.post('/restore', authenticate, requireRole('ADMIN'), [
   body('backupPath').notEmpty().withMessage('Backup path is required')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -278,7 +278,7 @@ router.post('/restore', authenticate, requireRole('SUPER_USER'), [
  *       500:
  *         description: Server error
  */
-router.delete('/backups/:path', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.delete('/backups/:path', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const result = await systemService.deleteBackup(req.params.path);
     res.json(result);

@@ -215,7 +215,7 @@ router.post('/login', [
  *       500:
  *         description: Server error
  */
-router.put('/update-role', authenticate, requireRole('SUPER_USER'), [
+router.put('/update-role', authenticate, requireRole('ADMIN'), [
   body('user_id').isInt().withMessage('Valid user ID is required'),
   body('new_role_id').isInt().withMessage('Valid role ID is required')
 ], async (req, res) => {

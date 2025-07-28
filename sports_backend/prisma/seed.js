@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
@@ -34,8 +34,9 @@ async function main() {
   const roles = [
     { name: 'PARTICIPANT' },
     { name: 'TEMPLE_ADMIN' },
-    { name: 'SUPER_USER' },
-    { name: 'STAFF' }
+    { name: 'STAFF' },
+    { name: 'VIEWER' },
+    { name: 'ADMIN' }
   ];
 
   for (const role of roles) {
@@ -61,11 +62,15 @@ async function main() {
   ];
 
   for (const ageCategory of ageCategories) {
-    await prisma.mst_age_category.upsert({
-      where: { name: ageCategory.name },
-      update: {},
-      create: ageCategory
+    const existing = await prisma.mst_age_category.findFirst({
+      where: { name: ageCategory.name }
     });
+    
+    if (!existing) {
+      await prisma.mst_age_category.create({
+        data: ageCategory
+      });
+    }
   }
 
   // Seed event types
@@ -90,11 +95,15 @@ async function main() {
   ];
 
   for (const eventType of eventTypes) {
-    await prisma.mst_event_type.upsert({
-      where: { name: eventType.name },
-      update: {},
-      create: eventType
+    const existing = await prisma.mst_event_type.findFirst({
+      where: { name: eventType.name }
     });
+    
+    if (!existing) {
+      await prisma.mst_event_type.create({
+        data: eventType
+      });
+    }
   }
 
   // Seed events
