@@ -295,89 +295,102 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
  *         description: Server error
  */
 router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res) => {
-  try {
-    const { event_ids, status, temple_id } = req.query;
-
-    // Build filter conditions
-    const whereConditions = {};
-
-    // Filter by event IDs if provided
-    if (event_ids) {
-      const eventIdArray = event_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
-      if (eventIdArray.length > 0) {
-        whereConditions.event_id = {
-          in: eventIdArray
+    try {
+        const { event_ids, status, temple_id } = req.query;
+        
+        console.log('Admin participants request:', { event_ids, status, temple_id });
+    
+        // Build where clause
+        const where = {
+          is_deleted: false
         };
-      }
-    }
-
-    // Filter by status if provided
-    if (status && status !== 'ALL') {
-      whereConditions.status = status;
-    }
-
-    // Filter by temple if provided
-    if (temple_id && temple_id !== 'ALL') {
-      whereConditions.temple_id = parseInt(temple_id);
-    }
-
-    const participants = await prisma.ind_event_registration.findMany({
-      where: whereConditions,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            age: true,
-            gender: true
-          }
-        },
-        event: {
-          include: {
-            age_category: true,
-            event_type: true
-          }
-        },
-        temple: {
-          select: {
-            id: true,
-            name: true,
-            location: true
-          }
+    
+        // Add event filter
+        if (event_ids) {
+          const eventIdArray = event_ids.split(',').map(id => parseInt(id));
+          where.event_id = {
+            in: eventIdArray
+          };
         }
-      },
-      orderBy: [
-        { created_at: 'desc' }
-      ]
-    });
-
-    // Format participants to match admin endpoint structure
-    const formattedParticipants = participants.map(participant => ({
-      id: participant.id,
-      event_id: participant.event_id,
-      user_id: participant.user_id,
-      temple_id: participant.temple_id,
-      status: participant.status,
-      created_at: participant.created_at,
-      updated_at: participant.updated_at,
-      user: participant.user,
-      event: participant.event,
-      temple: participant.temple,
-      // Add additional fields that might be expected
-      name: participant.user?.name,
-      email: participant.user?.email,
-      phone: participant.user?.phone,
-      age: participant.user?.age,
-      gender: participant.user?.gender
-    }));
-
-    res.json(formattedParticipants);
-  } catch (error) {
-    console.error('Error fetching participants:', error);
-    res.status(500).json({ error: 'Failed to fetch participants' });
-  }
+    
+        // Add status filter
+        if (status && status !== 'ALL') {
+          where.status = status;
+        }
+    
+        // Add temple filter
+        if (temple_id && temple_id !== 'ALL') {
+          where.user = {
+            temple_id: parseInt(temple_id)
+          };
+        }
+    
+        console.log('Query where clause:', JSON.stringify(where, null, 2));
+    
+        const participants = await prisma.ind_event_registration.findMany({
+          where,
+          include: {
+            user: {
+              select: {
+                id: true,
+                first_name: true,
+                last_name: true,
+                email: true,
+                phone: true,
+                gender: true,
+                dob: true,
+                temple: {
+                  select: {
+                    id: true,
+                    name: true
+                  }
+                }
+              }
+            },
+            event: {
+              include: {
+                event_type: {
+                  select: {
+                    name: true,
+                    type: true
+                  }
+                },
+                age_category: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            },
+            event_result: {
+              select: {
+                rank: true,
+                points: true
+              }
+            }
+          },
+          orderBy: [
+            { created_at: 'desc' }
+          ]
+        });
+    
+        console.log('Found participants:', participants.length);
+    
+        // Transform the data to include event name from event_type
+        const transformedParticipants = participants.map(participant => ({
+          ...participant,
+          event: {
+            ...participant.event,
+            name: participant.event.event_type.name
+          }
+        }));
+    
+        console.log('Transformed participants:', transformedParticipants.length);
+        res.json(transformedParticipants);
+      } catch (error) {
+        console.error('Error fetching participants:', error);
+        res.status(500).json({ error: 'Failed to fetch participants' });
+      }
 });
 
 /**
