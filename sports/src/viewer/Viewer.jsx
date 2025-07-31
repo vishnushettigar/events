@@ -50,14 +50,13 @@ const Viewer = () => {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊', color: 'text-blue-600' },
-    { id: 'events', label: 'Event Management', icon: '📅', color: 'text-green-600' },
-    { id: 'users', label: 'User Management', icon: '👥', color: 'text-purple-600' },
+    { id: 'events', label: 'Events', icon: '📅', color: 'text-green-600' },
     { id: 'participants', label: 'Participants', icon: '👤', color: 'text-indigo-600' },
     { id: 'teams', label: 'Teams', icon: '🏃', color: 'text-teal-600' },
     { id: 'temples', label: 'Temple Management', icon: '🏛️', color: 'text-orange-600' },
     { id: 'results', label: 'Results', icon: '🏆', color: 'text-yellow-600' },
     { id: 'champions', label: 'Champions', icon: '👑', color: 'text-pink-600' },
-    { id: 'reports', label: 'Reports', icon: '📋', color: 'text-cyan-600' },
+    // { id: 'reports', label: 'Reports', icon: '📋', color: 'text-cyan-600' },
     { id: 'settings', label: 'System Settings', icon: '⚙️', color: 'text-gray-600' },
   ];
 
@@ -67,8 +66,6 @@ const Viewer = () => {
         return <Dashboard stats={dashboardStats} isLoading={isLoading} />;
       case 'events':
         return <EventManagement />;
-      case 'users':
-        return <UserManagement />;
       case 'participants':
         return <ParticipantsManagement />;
       case 'teams':
@@ -428,240 +425,6 @@ const EventManagement = () => {
   );
 };
 
-// User Management Component
-const UserManagement = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    role: 'all',
-    search: ''
-  });
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const data = await viewerAPI.getUsers();
-      setUsers(data.users || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getRoleDisplayName = (role) => {
-    const roleNames = {
-      1: 'Participant',
-      2: 'Temple Admin',
-      3: 'Staff',
-      4: 'Viewer',
-      5: 'Admin'
-    };
-    return roleNames[role?.id] || role?.name || 'Unknown';
-  };
-
-  const getRoleColor = (role) => {
-    const roleColors = {
-      1: 'bg-blue-100 text-blue-800',
-      2: 'bg-green-100 text-green-800',
-      3: 'bg-yellow-100 text-yellow-800',
-      4: 'bg-purple-100 text-purple-800',
-      5: 'bg-red-100 text-red-800'
-    };
-    return roleColors[role?.id] || 'bg-gray-100 text-gray-800';
-  };
-
-  // Filter users based on search and role filter
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = !filters.search || 
-      user.name?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      user.email?.toLowerCase().includes(filters.search.toLowerCase()) ||
-      user.phone?.includes(filters.search);
-    
-    const matchesRole = filters.role === 'all' || user.role?.id?.toString() === filters.role;
-    
-    return matchesSearch && matchesRole;
-  });
-
-  // Group users by role
-  const usersByRole = filteredUsers.reduce((acc, user) => {
-    const roleKey = user.role?.name || 'Unknown';
-    if (!acc[roleKey]) {
-      acc[roleKey] = [];
-    }
-    acc[roleKey].push(user);
-    return acc;
-  }, {});
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#2A2A2A]">User Management</h3>
-        <button
-          onClick={fetchUsers}
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-        >
-          Refresh
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#2A2A2A] mb-2">Search Users</label>
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              value={filters.search}
-              onChange={(e) => setFilters({...filters, search: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#2A2A2A] mb-2">Filter by Role</label>
-            <select
-              value={filters.role}
-              onChange={(e) => setFilters({...filters, role: e.target.value})}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            >
-              <option value="all">All Roles</option>
-              <option value="1">Participant</option>
-              <option value="2">Temple Admin</option>
-              <option value="3">Staff</option>
-              <option value="4">Viewer</option>
-              <option value="5">Admin</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-          <strong className="font-bold">Error!</strong>
-          <span className="block sm:inline"> {error}</span>
-          <button
-            onClick={fetchUsers}
-            className="mt-2 bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-
-      {/* Users by Role */}
-      {!loading && !error && (
-        <div className="space-y-6">
-          {Object.entries(usersByRole).map(([roleName, roleUsers]) => (
-            <div key={roleName} className="bg-white rounded-lg shadow-sm p-6">
-              <h4 className="text-lg font-semibold text-[#D35D38] border-b-2 border-[#D35D38] pb-2 mb-6">
-                {roleName} ({roleUsers.length})
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {roleUsers.map((user) => (
-                  <div key={user.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h6 className="font-semibold text-[#2A2A2A] text-sm mb-1">
-                          {user.name || 'No Name'}
-                        </h6>
-                        <p className="text-xs text-[#5A5A5A] mb-2">{user.email}</p>
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(user.role)}`}>
-                        {getRoleDisplayName(user.role)}
-                      </span>
-                    </div>
-                    
-                    <div className="space-y-1 text-xs text-[#5A5A5A]">
-                      <div className="flex justify-between">
-                        <span>Phone:</span>
-                        <span className="font-medium">{user.phone || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Age:</span>
-                        <span className="font-medium">{user.age || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Gender:</span>
-                        <span className="font-medium">{user.gender || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Temple:</span>
-                        <span className="font-medium">{user.temple?.name || 'N/A'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Registrations:</span>
-                        <span className="font-medium">{user._count?.ind_event_registration || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* No Users Found */}
-      {!loading && !error && filteredUsers.length === 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="text-center py-8">
-            <div className="text-gray-400 text-4xl mb-4">👥</div>
-            <h4 className="text-xl font-semibold text-[#2A2A2A] mb-2">No Users Found</h4>
-            <p className="text-[#5A5A5A]">No users match your current filters.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Summary Stats */}
-      {!loading && !error && filteredUsers.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">User Statistics</h4>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-            <div className="p-3 bg-blue-50 rounded-lg">
-              <div className="text-lg font-bold text-blue-600">{usersByRole['PARTICIPANT']?.length || 0}</div>
-              <div className="text-xs text-blue-600">Participants</div>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <div className="text-lg font-bold text-green-600">{usersByRole['TEMPLE_ADMIN']?.length || 0}</div>
-              <div className="text-xs text-green-600">Temple Admins</div>
-            </div>
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <div className="text-lg font-bold text-yellow-600">{usersByRole['STAFF']?.length || 0}</div>
-              <div className="text-xs text-yellow-600">Staff</div>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-lg">
-              <div className="text-lg font-bold text-purple-600">{usersByRole['VIEWER']?.length || 0}</div>
-              <div className="text-xs text-purple-600">Viewers</div>
-            </div>
-            <div className="p-3 bg-red-50 rounded-lg">
-              <div className="text-lg font-bold text-red-600">{usersByRole['ADMIN']?.length || 0}</div>
-              <div className="text-xs text-red-600">Admins</div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 // Participants Management Component
 const ParticipantsManagement = () => {
   const [selectedAge, setSelectedAge] = useState('0-5');
@@ -800,7 +563,7 @@ const ParticipantsManagement = () => {
               {ageGroups && ageGroups.length > 0 ? (
                 ageGroups.map((group) => (
                   <option key={group.id} value={group.value}>
-                    {group.name}
+                    {group.value}
                   </option>
                 ))
               ) : (

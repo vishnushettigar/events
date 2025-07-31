@@ -178,6 +178,7 @@ export const viewerAPI = {
   getProfileDetails: (ids) => apiService.get('/viewer/profiles/details', { ids }),
   getSystemLogs: (limit = 100) => apiService.get('/viewer/system-logs', { limit }),
   createSystemBackup: () => apiService.post('/viewer/system-backup'),
+  getRoles: () => apiService.get('/viewer/roles'),
 };
 
 export default apiService; 

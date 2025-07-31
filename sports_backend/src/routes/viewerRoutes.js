@@ -296,15 +296,14 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
  */
 router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res) => {
     try {
-        const { event_ids, status, temple_id } = req.query;
-        
-        console.log('Admin participants request:', { event_ids, status, temple_id });
-    
-        // Build where clause
+        const { event_ids, temple_id } = req.query;
+
+        // Always filter for status = 'ACCEPTED'
         const where = {
-          is_deleted: false
+          is_deleted: false,
+          status: 'ACCEPTED'
         };
-    
+
         // Add event filter
         if (event_ids) {
           const eventIdArray = event_ids.split(',').map(id => parseInt(id));
@@ -312,21 +311,14 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
             in: eventIdArray
           };
         }
-    
-        // Add status filter
-        if (status && status !== 'ALL') {
-          where.status = status;
-        }
-    
+
         // Add temple filter
         if (temple_id && temple_id !== 'ALL') {
           where.user = {
             temple_id: parseInt(temple_id)
           };
         }
-    
-        console.log('Query where clause:', JSON.stringify(where, null, 2));
-    
+
         const participants = await prisma.ind_event_registration.findMany({
           where,
           include: {
@@ -373,9 +365,7 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
             { created_at: 'desc' }
           ]
         });
-    
-        console.log('Found participants:', participants.length);
-    
+
         // Transform the data to include event name from event_type
         const transformedParticipants = participants.map(participant => ({
           ...participant,
@@ -384,8 +374,7 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
             name: participant.event.event_type.name
           }
         }));
-    
-        console.log('Transformed participants:', transformedParticipants.length);
+
         res.json(transformedParticipants);
       } catch (error) {
         console.error('Error fetching participants:', error);
