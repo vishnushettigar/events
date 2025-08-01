@@ -219,7 +219,7 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
     const genderOptions = [
       { id: 1, name: 'Male', value: 'MALE' },
       { id: 2, name: 'Female', value: 'FEMALE' },
-      { id: 3, name: 'Mixed', value: 'ALL' }
+      { id: 3, name: 'ALL', value: 'ALL' }
     ];
 
     // Build event filter conditions

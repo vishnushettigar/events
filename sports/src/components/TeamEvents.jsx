@@ -545,11 +545,11 @@ const TeamEvents = () => {
                         <div key={i} className="flex gap-2 items-center">
                                 <span className="w-8 text-right">
                                     {i + 1}.
-                                    {gender === 'ALL' && (
+                                    {/* {gender === 'ALL' && (
                                         <span className="block text-xs font-medium text-[#D35D38]">
                                             {i === 0 ? 'MALE' : 'FEMALE'}
                                         </span>
-                                    )}
+                                    )} */}
                                 </span>
                                 <div className="w-1/2 relative">
                                 <input

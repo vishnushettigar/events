@@ -593,7 +593,7 @@ const ParticipantsManagement = () => {
           </div>
 
           {/* Status Filter */}
-          <div className="flex flex-col">
+          {/* <div className="flex flex-col">
             <label className="mb-2 text-[#2A2A2A] font-medium">Status</label>
             <select 
               className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
@@ -605,7 +605,7 @@ const ParticipantsManagement = () => {
               <option value="ACCEPTED">Accepted</option>
               <option value="DECLINED">Declined</option>
             </select>
-          </div>
+          </div> */}
 
           {/* Temple Filter */}
           <div className="flex flex-col">

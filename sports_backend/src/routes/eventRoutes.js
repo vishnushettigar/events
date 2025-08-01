@@ -240,7 +240,8 @@ router.get('/participant-data', authenticate, async (req, res) => {
     // Hardcoded gender options
     const genderOptions = [
       { id: 1, name: 'Male', value: 'MALE' },
-      { id: 2, name: 'Female', value: 'FEMALE' }
+      { id: 2, name: 'Female', value: 'FEMALE' },
+      { id: 3, name: 'All', value: 'ALL' }
     ];
 
     // Get events based on filters
