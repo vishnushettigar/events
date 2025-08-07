@@ -265,7 +265,7 @@ router.post('/events', authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Event name is required'),
   body('event_type_id').isInt().withMessage('Invalid event type ID'),
   body('age_category_id').isInt().withMessage('Invalid age category ID'),
-  body('gender').isIn(['MALE', 'FEMALE', 'ALL']).withMessage('Invalid gender'),
+  body('gender').isIn(['MALE', 'FEMALE', 'MIXED']).withMessage('Invalid gender'),
   body('temple_id').isInt().withMessage('Invalid temple ID')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -291,7 +291,7 @@ router.put('/events/:id', authenticate, requireRole('ADMIN'), [
   body('name').optional().notEmpty().withMessage('Event name cannot be empty'),
   body('event_type_id').optional().isInt().withMessage('Invalid event type ID'),
   body('age_category_id').optional().isInt().withMessage('Invalid age category ID'),
-  body('gender').optional().isIn(['MALE', 'FEMALE', 'ALL']).withMessage('Invalid gender'),
+  body('gender').optional().isIn(['MALE', 'FEMALE', 'MIXED']).withMessage('Invalid gender'),
   body('temple_id').optional().isInt().withMessage('Invalid temple ID')
 ], async (req, res) => {
   const errors = validationResult(req);

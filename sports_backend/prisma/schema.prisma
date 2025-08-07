@@ -68,7 +68,7 @@ model Mst_event {
 enum Gender {
   MALE
   FEMALE
-  ALL
+  MIXED
 }
 
 model Mst_event_result {

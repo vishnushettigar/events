@@ -133,9 +133,9 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
   }
 
     // Check if team is already registered for this event
-    // For mixed gender events (ALL), allow multiple teams per temple
+    // For mixed gender events (MIXED), allow multiple teams per temple
     // For single gender events (MALE/FEMALE), only allow one team per temple
-    if (event.gender !== 'ALL') {
+    if (event.gender !== 'MIXED') {
       const existingRegistration = await prisma.team_event_registration.findFirst({
         where: {
           temple_id: temple_id,
@@ -654,7 +654,7 @@ async function getEventsByAgeCategory(ageCategory, gender) {
     }
 
     // Add gender filter if specified
-    if (gender) {
+    if (gender && gender !== 'MIXED') {
       whereClause.gender = gender;
     }
 

@@ -237,7 +237,7 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
     }
 
     // Apply gender filter
-    if (gender && gender !== 'ALL') {
+    if (gender && gender !== 'MIXED') {
       eventFilter.gender = gender;
     }
 

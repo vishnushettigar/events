@@ -230,7 +230,7 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
 // Get combined temple participant data (age categories, gender options, and events)
 router.get('/participant-data', authenticate, async (req, res) => {
   try {
-    const { ageCategory = 'All', gender = 'MALE' } = req.query;
+    const { ageCategory = 'All', gender = 'MIXED' } = req.query;
     
     console.log('Participant data request:', { ageCategory, gender });
 
@@ -241,7 +241,7 @@ router.get('/participant-data', authenticate, async (req, res) => {
     const genderOptions = [
       { id: 1, name: 'Male', value: 'MALE' },
       { id: 2, name: 'Female', value: 'FEMALE' },
-      { id: 3, name: 'All', value: 'ALL' }
+      { id: 3, name: 'ALL', value: 'MIXED' }
     ];
 
     // Get events based on filters

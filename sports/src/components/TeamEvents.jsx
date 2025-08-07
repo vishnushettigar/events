@@ -71,7 +71,15 @@ const TeamEvents = () => {
             setError(null);
             setSuccess(null);
 
-            // Filter out empty player entries
+
+            // Require all player fields to be filled
+            const allFieldsFilled = players.every(player => player.name && player.aadharNumber && player.profileId);
+            if (!allFieldsFilled) {
+                setError('Please fill in all player fields before submitting.');
+                return;
+            }
+
+            // Filter out empty player entries (should not be needed, but keep for safety)
             const validPlayers = players.filter(player => player.name && player.profileId);
 
             if (validPlayers.length === 0) {
@@ -425,12 +433,31 @@ const TeamEvents = () => {
                 return;
             }
 
+
             // Validate mixed gender events (ALL gender) must have one MALE and one FEMALE
             if (gender === 'ALL') {
                 const validPlayers = players.filter(player => player.aadharNumber && player.profileId);
-                
                 if (validPlayers.length !== 2) {
                     setError('Mixed gender events must have exactly 2 participants.');
+                    return;
+                }
+
+                // Prevent duplicate registration of the same team (same two Aadhaar numbers in any order)
+                const thisTeamAadhaars = validPlayers.map(p => p.aadharNumber).sort().join(',');
+                const duplicateTeam = registeredTeams.some(team => {
+                    const teamAadhaars = team.members.map(m => m.aadhar_number).sort().join(',');
+                    return teamAadhaars === thisTeamAadhaars && (!editMode || team.id !== editingTeamId);
+                });
+                if (duplicateTeam) {
+                    setError('This team is already registered for this event.');
+                    return;
+                }
+
+                // Prevent duplicate registration of a player in any team for this event
+                const allRegisteredAadhaars = registeredTeams.flatMap(team => team.members.map(m => m.aadhar_number));
+                const duplicatePlayer = validPlayers.some(p => allRegisteredAadhaars.includes(p.aadharNumber) && (!editMode || !registeredTeams.some(team => team.id === editingTeamId && team.members.some(m => m.aadhar_number === p.aadharNumber))));
+                if (duplicatePlayer) {
+                    setError('One or both participants are already registered in another team for this event.');
                     return;
                 }
 
@@ -440,28 +467,23 @@ const TeamEvents = () => {
                         const genderPromises = validPlayers.map(player => 
                             userAPI.searchByAadhar(player.aadharNumber)
                         );
-
                         const responses = await Promise.all(genderPromises);
                         const playerGenders = responses.map(response => response.gender);
-                        
                         // Check that first player is MALE and second player is FEMALE
                         if (playerGenders[0] !== 'MALE') {
                             setError('First participant must be MALE.');
                             return;
                         }
-                        
                         if (playerGenders[1] !== 'FEMALE') {
                             setError('Second participant must be FEMALE.');
                             return;
                         }
-
-                                    // If validation passes, proceed with submission
-            handleSubmit(eventName, gender, players, editingTeamId);
+                        // If validation passes, proceed with submission
+                        handleSubmit(eventName, gender, players, editingTeamId);
                     } catch (error) {
                         setError('Error validating participant genders. Please try again.');
                     }
                 };
-
                 validateMixedGender();
                 return;
             }

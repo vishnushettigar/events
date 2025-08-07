@@ -217,13 +217,18 @@ const AvailableEvents = () => {
       <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Available Events</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {events.map((event) => {
-          // Count only ACCEPTED and PENDING registrations toward the limit
-          // DECLINED (rejected) registrations should not count toward the limit
+          // Exclude age categories 0-5, 6-10, 61-90 from registration limit
+          const excludedAgeCategories = ['0-5', '6-10', '61-90'];
+          const eventAgeCategory = event.age_category?.name || '';
+          const isExcluded = excludedAgeCategories.includes(eventAgeCategory);
+
+          // Count only ACCEPTED and PENDING registrations toward the limit, excluding the above age categories
           const activeRegistrations = events.filter(e => 
+            !excludedAgeCategories.includes(e.age_category?.name || '') &&
             e.is_registered && 
             (e.registration_status === 'ACCEPTED' || e.registration_status === 'PENDING')
           ).length;
-          const isMaxRegistrationsReached = activeRegistrations >= 3;
+          const isMaxRegistrationsReached = activeRegistrations >= 3 && !isExcluded;
           const isDisabled = isMaxRegistrationsReached && !event.is_registered;
           const statusDisplay = getStatusDisplay(event.registration_status);
 

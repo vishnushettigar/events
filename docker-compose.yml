@@ -37,7 +37,7 @@ services:
 
   # Database - MySQL
   mysql:
-    image: mysql:8.0
+    image: mysql:latest
     container_name: shettigarevents-db
     environment:
       - MYSQL_ROOT_PASSWORD=root
@@ -48,7 +48,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./sports_backend/prisma/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - shettigarevents-network
 

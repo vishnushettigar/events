@@ -14,15 +14,24 @@ const Templeparticipants = () => {
     const [events, setEvents] = useState([]);
     const [allParticipants, setAllParticipants] = useState([]);
 
+    // Age categories that should always show mixed gender
+    const mixedGenderAgeCategories = ['0-5', '6-10', '61-90'];
+
+    // Check if current age category should show mixed gender only
+    const shouldShowMixedGenderOnly = mixedGenderAgeCategories.includes(selectedAge);
+
     // Fetch all data when age category or gender changes
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
 
+                // If age category requires mixed gender, automatically set gender to MIXED
+                const genderToUse = shouldShowMixedGenderOnly ? 'MIXED' : selectedGender;
+
                 const data = await eventAPI.getParticipantData({
                     ageCategory: selectedAge,
-                    gender: selectedGender
+                    gender: genderToUse
                 });
                 
                 // Filter out the 'All' option from age groups
@@ -39,7 +48,14 @@ const Templeparticipants = () => {
         };
 
         fetchData();
-    }, [selectedAge, selectedGender]);
+    }, [selectedAge, selectedGender, shouldShowMixedGenderOnly]);
+
+    // Update gender when age category changes to mixed gender categories
+    useEffect(() => {
+        if (shouldShowMixedGenderOnly) {
+            setSelectedGender('MIXED');
+        }
+    }, [selectedAge, shouldShowMixedGenderOnly]);
 
     // Group events by age category and gender
     const groupedEvents = events.reduce((acc, event) => {
@@ -98,9 +114,9 @@ const Templeparticipants = () => {
                 <div className="max-w-7xl mx-auto p-6 m-4">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-2xl font-bold text-[#2A2A2A] sm:text-3xl">Temple Participants</h1>
-                        <p className="mt-2 text-sm text-[#5A5A5A]">Manage and view all participants for temple events</p>
-                        </div>
+                        <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">Temple Participants</h1>
+                        <p className="text-[#5A5A5A]">View and manage participants for all events</p>
+                    </div>
 
                     {/* Filters */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
@@ -126,11 +142,19 @@ const Templeparticipants = () => {
 
                         {/* Gender Filter */}
                         <div className="flex flex-col">
-                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Gender</label>
+                            <label className="mb-2 text-[#2A2A2A] font-medium">
+                                Filter by Gender
+                                {shouldShowMixedGenderOnly && (
+                                    <span className="text-sm text-gray-500 ml-2">(Mixed only for this age category)</span>
+                                )}
+                            </label>
                             <select 
-                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
+                                className={`p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    shouldShowMixedGenderOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                                }`}
                                 value={selectedGender}
                                 onChange={(e) => setSelectedGender(e.target.value)}
+                                disabled={shouldShowMixedGenderOnly}
                             >
                                 {genders && genders.length > 0 ? (
                                     genders.map((gender) => (

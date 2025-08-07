@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom';
+import { Link,useLocation } from 'react-router-dom';
 import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
 import { userAPI } from '../utils/api.js';
@@ -11,6 +11,12 @@ const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [userInfo, setUserInfo] = useState(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    // Get the current location
+    const location = useLocation();
+
+    // Check if the current path is the home page
+    const isHomePage = location.pathname === '/';
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
@@ -95,7 +101,7 @@ const Navbar = () => {
                         <h1 className='text-[20px] text-white pr-[60px]'>PADMASHALI KREEDOTHSAVA</h1>
                     </div> */}
                     <div className="profile nav-links flex flex-row pr-1 gap-4 items-center">
-                        <Toggle />
+                    {isHomePage && <Toggle />}
                         <ProfileDropdown />
                     </div>
                 </div>

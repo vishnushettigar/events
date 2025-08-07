@@ -172,7 +172,7 @@ async function main() {
     { event_type_id: 12, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 7, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 7, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 13, age_category_id: 8, gender: 'ALL', is_deleted: false, is_closed: false },
+    { event_type_id: 13, age_category_id: 8, gender: 'MIXED', is_deleted: false, is_closed: false },
     { event_type_id: 9, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 8, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 13, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },

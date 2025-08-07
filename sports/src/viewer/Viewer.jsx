@@ -891,7 +891,7 @@ const TeamsManagement = () => {
                   {/* Male Events */}
                   {maleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-3 rounded-lg">
+                      <div className="bg-[#D35D38] px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
                           <span className="mr-2">👨</span>
                           Male Events ({maleEvents.length})
@@ -906,7 +906,7 @@ const TeamsManagement = () => {
                   {/* Female Events */}
                   {femaleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-pink-600 to-pink-800 px-6 py-3 rounded-lg">
+                      <div className="bg-[#D35D38] px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
                           <span className="mr-2">👩</span>
                           Female Events ({femaleEvents.length})
@@ -921,7 +921,7 @@ const TeamsManagement = () => {
                   {/* Mixed/All Gender Events */}
                   {allEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-green-600 to-green-800 px-6 py-3 rounded-lg">
+                      <div className="bg-[#D35D38] px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
                           <span className="mr-2">👥</span>
                           Mixed Gender Events ({allEvents.length})
@@ -2084,7 +2084,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
       {/* Event Header */}
-      <div className={`bg-gradient-to-r ${gender === "female" ? "from-pink-600 to-purple-600" : "from-blue-600 to-purple-600"} px-6 py-4`}>
+      <div className={`bg-[#D35D38]  px-6 py-4`}>
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
@@ -2111,7 +2111,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">SL.NO</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Name</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Code</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Code</th> */}
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Teams</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Members</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status Breakdown</th>
@@ -2124,9 +2124,9 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
               <tr key={temple.temple_id} className={`${hoverColor} transition`}>
                 <td className="px-6 py-4 font-semibold text-blue-900">{templeIndex + 1}</td>
                 <td className="px-6 py-4">
-                  <div className="font-semibold text-purple-800">{temple.temple_name}</div>
+                  <div className="font-semibold text-gray-800">{temple.temple_name}</div>
                 </td>
-                <td className="px-6 py-4 text-gray-600">{temple.temple_code}</td>
+                {/* <td className="px-6 py-4 text-gray-600">{temple.temple_code}</td> */}
                 <td className="px-6 py-4 text-center">
                   <div className="font-bold text-lg text-[#2A2A2A]">{temple.teams.length}</div>
                 </td>
@@ -2152,7 +2152,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 text-blue-700 font-bold text-lg">
+                <td className="px-6 py-4 font-semibold text-gray-800 text-lg">
                   {temple.totalPoints}
                 </td>
                 <td className="px-6 py-4">
@@ -2161,7 +2161,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
                       onClick={() => {
                         console.log('View teams for temple:', temple.temple_name, temple.teams);
                       }}
-                      className={`inline-block px-3 py-1 ${buttonColor} text-white rounded-lg shadow transition font-semibold text-xs`}
+                      className={`inline-block px-3 py-1 bg-[#D35D38]  text-white rounded-lg shadow transition font-semibold text-xs`}
                     >
                       View Teams
                     </button>
@@ -2169,7 +2169,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
                       onClick={() => {
                         console.log('View temple details:', temple);
                       }}
-                      className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
+                      className="inline-block px-3 py-1 bg-[#D35D38]  text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                     >
                       Temple Details
                     </button>
@@ -2188,7 +2188,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
 const ViewerEventTableWithMembers = ({ event, getTeamMemberDetails }) => (
   <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
     {/* Event Header */}
-    <div className="bg-gradient-to-r from-green-600 to-purple-600 px-6 py-4">
+    <div className="bg-[#D35D38] px-6 py-4">
       <div className="flex items-center justify-between">
         <div>
           <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
@@ -2219,7 +2219,7 @@ const ViewerEventTableWithMembers = ({ event, getTeamMemberDetails }) => (
             <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Aadhar Numbers</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
             <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Points</th>
-            <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+            {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th> */}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-100">
@@ -2320,14 +2320,14 @@ const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => 
           {team.event_result?.points || 0}
         </div>
       </td>
-      <td className="px-6 py-4">
+      {/* <td className="px-6 py-4">
         <button
           onClick={() => console.log('View team details:', team)}
-          className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700"
+          className="px-3 py-1 bg-[#D35D38] text-white rounded-lg text-xs hover:bg-green-700"
         >
           View Details
         </button>
-      </td>
+      </td> */}
     </tr>
   );
 };

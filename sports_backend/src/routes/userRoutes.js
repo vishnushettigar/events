@@ -5,6 +5,7 @@ import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { PrismaClient } from '@prisma/client';
+import { Gender } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -392,7 +393,7 @@ router.get('/available-events', authenticate, async (req, res) => {
       where: {
         age_category_id: matchingAgeCategory.id,
         gender: {
-          in: [userProfile.gender, 'ALL']
+          in: [userProfile.gender, Gender.MIXED]
         },
         is_deleted: false,
         is_closed: false

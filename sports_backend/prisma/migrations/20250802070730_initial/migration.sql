@@ -32,16 +32,16 @@ CREATE TABLE `Mst_age_category` (
     `to_age` INTEGER NOT NULL,
     `is_deleted` BOOLEAN NOT NULL DEFAULT false,
 
+    UNIQUE INDEX `Mst_age_category_name_key`(`name`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `Mst_event` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
-    `name` VARCHAR(191) NOT NULL,
     `event_type_id` INTEGER NOT NULL,
     `age_category_id` INTEGER NOT NULL,
-    `gender` ENUM('MALE', 'FEMALE', 'ALL') NOT NULL,
+    `gender` ENUM('MALE', 'FEMALE', 'MIXED') NOT NULL,
     `is_deleted` BOOLEAN NOT NULL DEFAULT false,
     `is_closed` BOOLEAN NOT NULL DEFAULT false,
 
@@ -107,9 +107,9 @@ CREATE TABLE `Profile` (
     `modified_at` DATETIME(3) NOT NULL,
     `is_deleted` BOOLEAN NOT NULL DEFAULT false,
     `is_verified` BOOLEAN NOT NULL DEFAULT false,
-    `temple_id` INTEGER NULL,
+    `temple_id` INTEGER NOT NULL,
     `dob` DATETIME(3) NOT NULL,
-    `gender` ENUM('MALE', 'FEMALE', 'ALL') NOT NULL,
+    `gender` ENUM('MALE', 'FEMALE', 'MIXED') NOT NULL,
     `role_id` INTEGER NOT NULL DEFAULT 1,
 
     UNIQUE INDEX `Profile_user_id_key`(`user_id`),
@@ -174,8 +174,8 @@ CREATE TABLE `Audit_log` (
     `action` VARCHAR(191) NOT NULL,
     `table_name` VARCHAR(191) NOT NULL,
     `record_id` INTEGER NULL,
-    `old_value` VARCHAR(191) NULL,
-    `new_value` VARCHAR(191) NULL,
+    `old_value` TEXT NULL,
+    `new_value` TEXT NULL,
     `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
     PRIMARY KEY (`id`)
@@ -196,52 +196,52 @@ CREATE TABLE `event_schedule` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Champion` ADD CONSTRAINT `Champion_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Champion` ADD CONSTRAINT `Champion_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Champion` ADD CONSTRAINT `Champion_host_temple_id_fkey` FOREIGN KEY (`host_temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Champion` ADD CONSTRAINT `Champion_host_temple_id_fkey` FOREIGN KEY (`host_temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Ind_event_registration` ADD CONSTRAINT `Ind_event_registration_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Ind_event_registration` ADD CONSTRAINT `Ind_event_registration_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Ind_event_registration` ADD CONSTRAINT `Ind_event_registration_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `Profile`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Ind_event_registration` ADD CONSTRAINT `Ind_event_registration_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `Profile`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Ind_event_registration` ADD CONSTRAINT `Ind_event_registration_event_result_id_fkey` FOREIGN KEY (`event_result_id`) REFERENCES `Mst_event_result`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Ind_event_registration` ADD CONSTRAINT `Ind_event_registration_event_result_id_fkey` FOREIGN KEY (`event_result_id`) REFERENCES `Mst_event_result`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Mst_event` ADD CONSTRAINT `Mst_event_event_type_id_fkey` FOREIGN KEY (`event_type_id`) REFERENCES `Mst_event_type`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Mst_event` ADD CONSTRAINT `Mst_event_event_type_id_fkey` FOREIGN KEY (`event_type_id`) REFERENCES `Mst_event_type`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Mst_event` ADD CONSTRAINT `Mst_event_age_category_id_fkey` FOREIGN KEY (`age_category_id`) REFERENCES `Mst_age_category`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Mst_event` ADD CONSTRAINT `Mst_event_age_category_id_fkey` FOREIGN KEY (`age_category_id`) REFERENCES `Mst_age_category`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Mst_event_result` ADD CONSTRAINT `Mst_event_result_event_type_id_fkey` FOREIGN KEY (`event_type_id`) REFERENCES `Mst_event_type`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Mst_event_result` ADD CONSTRAINT `Mst_event_result_event_type_id_fkey` FOREIGN KEY (`event_type_id`) REFERENCES `Mst_event_type`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Profile` ADD CONSTRAINT `Profile_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Profile` ADD CONSTRAINT `Profile_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Profile` ADD CONSTRAINT `Profile_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Profile` ADD CONSTRAINT `Profile_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Profile` ADD CONSTRAINT `Profile_role_id_fkey` FOREIGN KEY (`role_id`) REFERENCES `Mst_role`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Profile` ADD CONSTRAINT `Profile_role_id_fkey` FOREIGN KEY (`role_id`) REFERENCES `Mst_role`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Team_event_registration` ADD CONSTRAINT `Team_event_registration_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Team_event_registration` ADD CONSTRAINT `Team_event_registration_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Team_event_registration` ADD CONSTRAINT `Team_event_registration_event_result_id_fkey` FOREIGN KEY (`event_result_id`) REFERENCES `Mst_event_result`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `Team_event_registration` ADD CONSTRAINT `Team_event_registration_event_result_id_fkey` FOREIGN KEY (`event_result_id`) REFERENCES `Mst_event_result`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `Team_event_registration` ADD CONSTRAINT `Team_event_registration_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `Team_event_registration` ADD CONSTRAINT `Team_event_registration_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `User_role` ADD CONSTRAINT `User_role_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `User_role` ADD CONSTRAINT `User_role_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `User`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `User_role` ADD CONSTRAINT `User_role_role_id_fkey` FOREIGN KEY (`role_id`) REFERENCES `Mst_role`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `User_role` ADD CONSTRAINT `User_role_role_id_fkey` FOREIGN KEY (`role_id`) REFERENCES `Mst_role`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `event_schedule` ADD CONSTRAINT `event_schedule_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `event_schedule` ADD CONSTRAINT `event_schedule_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
