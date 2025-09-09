@@ -124,6 +124,7 @@ export const userAPI = {
   searchByAadhar: (aadharNumber) => apiService.get('/users/search-by-aadhar', { aadharNumber }),
   getTempleDetailedReport: (templeId) => apiService.get(`/users/temple-detailed-report/${templeId}`),
   getAllTemples: () => apiService.get('/users/temples'),
+  getTempleById: (templeId) => apiService.get(`/users/temple/${templeId}`),
 };
 
 export const eventAPI = {

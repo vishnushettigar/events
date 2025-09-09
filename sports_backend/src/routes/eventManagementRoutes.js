@@ -2,7 +2,10 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as eventManagementService from '../services/eventManagementService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { PrismaClient } from '@prisma/client';
+import { dataFetchLimiter } from '../middleware/rateLimiter.js';
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 /**
@@ -48,7 +51,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/event-types', authenticate, requireRole('ADMIN'), [
+router.post('/event-types', dataFetchLimiter, authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Event type name is required'),
   body('type').isIn(['TEAM', 'INDIVIDUAL']).withMessage('Invalid event type'),
   body('participant_count').isInt({ min: 1 }).withMessage('Participant count must be at least 1')

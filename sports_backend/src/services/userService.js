@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -7,10 +8,14 @@ async function register(username, password, email, first_name, last_name, phone,
   try {
     console.log('Received registration data:', { username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id });
     
+    // Hash the password before storing
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
     const user = await prisma.user.create({
       data: {
         username,
-        password, // In production, hash the password
+        password: hashedPassword, // Store the hashed password
         email,
         profile: {
           create: {
@@ -60,9 +65,15 @@ async function login(username, password) {
       }
   });
 
-    if (!user || user.password !== password) { // In production, use bcrypt to compare hashed passwords
-    throw new Error('Invalid credentials');
-  }
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+
+    // Compare the provided password with the hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid credentials');
+    }
 
     const token = jwt.sign(
       { 

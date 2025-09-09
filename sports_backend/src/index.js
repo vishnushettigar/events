@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
 import swaggerSpec from './config/swagger.js';
 import dotenv from 'dotenv';
+import { generalLimiter } from './middleware/rateLimiter.js';
 import userRoutes from './routes/userRoutes.js';
 import eventRoutes from './routes/eventRoutes.js';
 import eventManagementRoutes from './routes/eventManagementRoutes.js';
@@ -76,6 +77,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(helmet());
 app.use(morgan('dev'));
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

@@ -570,7 +570,8 @@ const StaffPanel = () => {
       </div>
     );
   };
-
+ 
+  // Render Temple Reports
   const renderTempleReports = () => {
     return (
       <div className="space-y-6">
@@ -687,6 +688,7 @@ const StaffPanel = () => {
     );
   };
 
+  // Render Update Individual Results
   const renderUpdateResults = () => {
     return (
       <div className="space-y-6">
@@ -1181,6 +1183,7 @@ const StaffPanel = () => {
     );
   };
 
+  // Render Champions
   const renderChampions = () => {
     if (loading) {
       return (
@@ -1347,6 +1350,7 @@ const StaffPanel = () => {
     );
   };
 
+  // Render All Results
   const renderAllResults = () => {
     if (loading) {
       return (

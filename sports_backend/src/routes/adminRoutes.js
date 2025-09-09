@@ -1,6 +1,11 @@
 import express from 'express';
+import { body, validationResult } from 'express-validator';
+import * as userService from '../services/userService.js';
+import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { TEMPLES } from '../constants.js';
 import { PrismaClient } from '@prisma/client';
+import { sensitiveOperationLimiter } from '../middleware/rateLimiter.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -551,7 +556,7 @@ router.get('/users/:id', authenticate, requireRole('ADMIN'), async (req, res) =>
  *       500:
  *         description: Server error
  */
-router.put('/users/:id/update-role', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.put('/users/:id/update-role', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     const { role_id } = req.body;
@@ -1391,7 +1396,7 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.put('/participants/:registrationId/update-status', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.put('/participants/:registrationId/update-status', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const registrationId = parseInt(req.params.registrationId);
     const { status } = req.body;

@@ -6,6 +6,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { PrismaClient } from '@prisma/client';
 import { Gender } from '@prisma/client';
+import { authLimiter, registrationLimiter } from '../middleware/rateLimiter.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -75,7 +76,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/register', [
+router.post('/register', registrationLimiter, [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('email').isEmail().withMessage('Valid email is required'),
@@ -161,7 +162,7 @@ router.post('/register', [
  *       500:
  *         description: Server error
  */
-router.post('/login', [
+router.post('/login', authLimiter, [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
