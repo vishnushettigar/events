@@ -154,3 +154,14 @@ export const eventHighlightsKannada = [
       ifPlus: "+",
     },
   ];
+
+export const events = [
+  { year: 1896, place: "Athens" },
+  { year: 1900, place: "Paris" },
+  { year: 1904, place: "St. Louis" },
+  { year: 1908, place: "London" },
+  { year: 1912, place: "Stockholm" },
+  { year: 1920, place: "Antwerp" },
+  { year: 1924, place: "Paris" },
+  { year: 1928, place: "Amsterdam" },
+];

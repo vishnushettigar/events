@@ -179,7 +179,7 @@ const Register = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label htmlFor="firstName" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                    First Name *
+                                    First Name as in aaadhar *
                                 </label>
                                 <input
                                     type="text"
@@ -197,7 +197,7 @@ const Register = () => {
 
                             <div>
                                 <label htmlFor="lastName" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                    Last Name
+                                    Last Name as in aaadhar
                                 </label>
                                 <input
                                     type="text"

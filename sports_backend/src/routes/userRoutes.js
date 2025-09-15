@@ -76,7 +76,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/register', registrationLimiter, [
+router.post('/register', /* registrationLimiter, */ [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('email').isEmail().withMessage('Valid email is required'),
@@ -162,7 +162,7 @@ router.post('/register', registrationLimiter, [
  *       500:
  *         description: Server error
  */
-router.post('/login', authLimiter, [
+router.post('/login', /* authLimiter, */ [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {

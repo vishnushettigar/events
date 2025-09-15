@@ -12,6 +12,7 @@ import EventDetails from "../components/EventDetails";
 // import background from "../assets/background.png";
 // import Loginbg from "../assets/Login-Img.png"
 import { useLanguage } from "../contexts/LanguageContext";
+import SportsHistoryMarquee from "../components/SportsHistoryMarquee";
 
 const Home = () => {
   const { isEnglish } = useLanguage();
@@ -88,6 +89,9 @@ const Home = () => {
         </div>
         <div>
           <Rules />
+        </div>
+        <div>
+          <SportsHistoryMarquee />
         </div>
         <div>
           <Location />
