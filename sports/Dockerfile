@@ -1,25 +1,23 @@
-FROM node:18-alpine
+# Use Node.js LTS version
+FROM node:20-alpine
 
+# Set working directory
 WORKDIR /app
 
-# Install dependencies
+# Copy package files
 COPY package*.json ./
+
+# Install dependencies
 RUN npm install
 
-# Copy source code
+# Copy the rest of the application
 COPY . .
+
+# Build the application
+RUN npm run build
 
 # Expose port
 EXPOSE 5173
 
-# Set environment variables
-ENV HOST=0.0.0.0
-ENV PORT=5173
-
-# Start the development server using the dev script
-# CMD ["npm", "run", "dev"] 
-# Keep container running for debugging
-# CMD ["tail", "-f", "/dev/null"] 
-
-# Start the development server
+# Start the application with host flag to allow external access
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"] 

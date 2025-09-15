@@ -25,7 +25,22 @@ function authenticate(req, res, next) {
 // Middleware to check if the user has the required role
 function requireRole(role) {
   return (req, res, next) => {
-    if (req.user.role !== role) {
+    // Map role names to role IDs
+    const roleMap = {
+      'SUPER_USER': 1,
+      'TEMPLE_ADMIN': 2,
+      'STAFF': 3,
+      'PARTICIPANT': 4
+    };
+
+    // Get the role ID (either from the map or use the number directly)
+    const requiredRoleId = typeof role === 'string' ? roleMap[role] : role;
+
+    if (!requiredRoleId) {
+      return res.status(403).json({ error: 'Invalid role specified' });
+    }
+
+    if (req.user.role !== requiredRoleId) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
     next();

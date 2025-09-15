@@ -3,6 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
 }
 
 datasource db {
@@ -12,10 +13,10 @@ datasource db {
 
 model Champion {
   id            Int      @id @default(autoincrement())
-  temple        Mst_temple @relation(fields: [temple_id], references: [id])
+  temple        Mst_temple @relation(fields: [temple_id], references: [id], onDelete: Cascade)
   temple_id     Int
   year          Int
-  host_temple   Mst_temple @relation("HostTemple", fields: [host_temple_id], references: [id])
+  host_temple   Mst_temple @relation("HostTemple", fields: [host_temple_id], references: [id], onDelete: Cascade)
   host_temple_id Int
   created_at    DateTime  @default(now())
   modified_at   DateTime  @updatedAt
@@ -23,11 +24,11 @@ model Champion {
 
 model Ind_event_registration {
   id              Int      @id @default(autoincrement())
-  event           Mst_event @relation(fields: [event_id], references: [id])
+  event           Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
   event_id        Int
-  user            Profile  @relation(fields: [user_id], references: [id])
+  user            Profile  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id         Int
-  event_result    Mst_event_result? @relation("IndEventResultRelation", fields: [event_result_id], references: [id])
+  event_result    Mst_event_result? @relation("IndEventResultRelation", fields: [event_result_id], references: [id], onDelete: Cascade)
   event_result_id Int?
   created_at      DateTime  @default(now())
   modified_at     DateTime  @updatedAt
@@ -52,10 +53,9 @@ model Mst_age_category {
 
 model Mst_event {
   id             Int     @id @default(autoincrement())
-  name           String
-  event_type     Mst_event_type @relation(fields: [event_type_id], references: [id])
+  event_type     Mst_event_type @relation(fields: [event_type_id], references: [id], onDelete: Cascade)
   event_type_id  Int
-  age_category   Mst_age_category @relation(fields: [age_category_id], references: [id])
+  age_category   Mst_age_category @relation(fields: [age_category_id], references: [id], onDelete: Cascade)
   age_category_id Int
   gender         Gender
   is_deleted     Boolean @default(false)
@@ -73,7 +73,7 @@ enum Gender {
 
 model Mst_event_result {
   id            Int     @id @default(autoincrement())
-  event_type    Mst_event_type @relation(fields: [event_type_id], references: [id])
+  event_type    Mst_event_type @relation(fields: [event_type_id], references: [id], onDelete: Cascade)
   event_type_id Int
   rank          Rank
   points        Int
@@ -127,7 +127,7 @@ model Mst_temple {
 
 model Profile {
   id            Int     @id @default(autoincrement())
-  user          User?  @relation(fields: [user_id], references: [id])
+  user          User?  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id       Int?   @unique
   first_name    String
   last_name     String?
@@ -138,11 +138,11 @@ model Profile {
   modified_at   DateTime  @updatedAt
   is_deleted    Boolean @default(false)
   is_verified   Boolean @default(false)
-  temple        Mst_temple? @relation(fields: [temple_id], references: [id])
-  temple_id     Int?
+  temple        Mst_temple @relation(fields: [temple_id], references: [id], onDelete: Cascade)
+  temple_id     Int
   dob           DateTime
   gender        Gender
-  role          Mst_role @relation(fields: [role_id], references: [id])
+  role          Mst_role @relation(fields: [role_id], references: [id], onDelete: Cascade)
   role_id       Int @default(1)
   registrations Ind_event_registration[]
 }
@@ -157,15 +157,15 @@ model Settings {
 
 model Team_event_registration {
   id              Int     @id @default(autoincrement())
-  temple          Mst_temple @relation(fields: [temple_id], references: [id])
+  temple          Mst_temple @relation(fields: [temple_id], references: [id], onDelete: Cascade)
   temple_id       Int
-  event_result    Mst_event_result? @relation("TeamEventResultRelation", fields: [event_result_id], references: [id])
+  event_result    Mst_event_result? @relation("TeamEventResultRelation", fields: [event_result_id], references: [id], onDelete: Cascade)
   event_result_id Int?
   member_user_ids String?
   created_at      DateTime  @default(now())
   modified_at     DateTime  @updatedAt
   is_deleted      Boolean @default(false)
-  event           Mst_event @relation(fields: [event_id], references: [id])
+  event           Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
   event_id        Int
   status          RegistrationStatus @default(PENDING)
 }
@@ -183,9 +183,9 @@ model User {
 
 model User_role {
   id      Int     @id @default(autoincrement())
-  user    User    @relation(fields: [user_id], references: [id])
+  user    User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id Int
-  role    Mst_role @relation(fields: [role_id], references: [id])
+  role    Mst_role @relation(fields: [role_id], references: [id], onDelete: Cascade)
   role_id Int
 }
 
@@ -209,7 +209,7 @@ model event_schedule {
   modified_at DateTime @updatedAt
   is_deleted Boolean  @default(false)
 
-  event Mst_event @relation(fields: [event_id], references: [id])
+  event Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
 
   @@index([event_id])
 }
