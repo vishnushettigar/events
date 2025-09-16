@@ -10,7 +10,6 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import TempleParticipants from './components/Templeparticipants.jsx';
 import Myevents from './components/Myevents.jsx';
 import TeamEvents from './components/TeamEvents.jsx';
-
 import Alltemplereports from './Pages/Alltemplereports.jsx';
 import Templedetailedreports from './Pages/Templedetailedreports.jsx';
 import Participantslist from './Pages/Participantslist.jsx';
