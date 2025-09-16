@@ -3,12 +3,13 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { LanguageProvider } from './contexts/LanguageContext';
 
 function App() {
  
 
   return (
-    <>
+    <LanguageProvider>
        <Navbar />
        {/* <Home />    */}
        <div className="min-h-screen flex flex-col">
@@ -31,7 +32,7 @@ function App() {
        {/* <Myevents /> */}
        {/* <Error /> */}
 
-    </>
+    </LanguageProvider>
   )
 }
 

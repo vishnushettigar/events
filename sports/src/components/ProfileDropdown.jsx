@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import userIcon from '../assets/user-icon.png';
+// import userIcon from '../assets/user-icon.png';
+import { userAPI } from '../utils/api.js';
+import profile from '../assets/profile.svg';
 
 const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,28 +65,16 @@ const ProfileDropdown = () => {
 
   const fetchUserProfile = async () => {
     try {
-      const response = await fetch('http://localhost:4000/api/users/profile', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await userAPI.getProfile();
         setUserInfo(data);
-      } else if (response.status === 401) {
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      if (error.message.includes('401') || error.message.includes('Unauthorized')) {
         // Token is invalid or expired
         localStorage.removeItem('token');
         setIsLoggedIn(false);
         setUserInfo(null);
       }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-      // Handle network errors or other issues
-      localStorage.removeItem('token');
-      setIsLoggedIn(false);
-      setUserInfo(null);
     }
   };
 
@@ -101,14 +91,15 @@ const ProfileDropdown = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
+     
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 focus:outline-none"
+        className="flex items-center space-x-2 pb-[1px] focus:outline-none"
       >
         <img
-          src={userIcon}
+          src={profile}
           alt="Profile"
-          className="w-8 h-8 rounded-full border-2 border-white"
+          className="w-10 h-10 cursor-pointer rounded-full border-2 border-white"
         />
       </button>
 
@@ -129,6 +120,42 @@ const ProfileDropdown = () => {
               >
                 My Profile
               </Link>
+              {userInfo?.role_id === 5 && (
+                <Link
+                  to="/admin"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="flex items-center">
+                    <span className="mr-2">👑</span>
+                    Admin Panel
+                  </span>
+                </Link>
+              )}
+              {userInfo?.role_id === 4 && (
+                <Link
+                                      to="/viewer"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="flex items-center">
+                    <span className="mr-2">🛡️</span>
+                    Viewer 
+                  </span>
+                </Link>
+              )}
+              {userInfo?.role_id === 3 && (
+                <Link
+                  to="/staffpanel"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span className="flex items-center">
+                    <span className="mr-2">⚙️</span>
+                    Staff Panel
+                  </span>
+                </Link>
+              )}
               <button
                 onClick={() => {
                   setShowLogoutModal(true);

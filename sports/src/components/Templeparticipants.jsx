@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import CollapsibleList from './CollapsibleList'
+import { eventAPI } from '../utils/api'
 
 const Templeparticipants = () => {
     const [selectedAge, setSelectedAge] = useState('0-5');
     const [selectedGender, setSelectedGender] = useState('MALE');
+    const [selectedStatus, setSelectedStatus] = useState('ALL');
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -12,31 +14,25 @@ const Templeparticipants = () => {
     const [events, setEvents] = useState([]);
     const [allParticipants, setAllParticipants] = useState([]);
 
+    // Age categories that should always show mixed gender
+    const mixedGenderAgeCategories = ['0-5', '6-10', '61-90'];
+
+    // Check if current age category should show mixed gender only
+    const shouldShowMixedGenderOnly = mixedGenderAgeCategories.includes(selectedAge);
+
     // Fetch all data when age category or gender changes
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
 
-                const response = await fetch(
-                    `http://localhost:4000/api/events/temple-participant-data?ageCategory=${selectedAge}&gender=${selectedGender}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
+                // If age category requires mixed gender, automatically set gender to MIXED
+                const genderToUse = shouldShowMixedGenderOnly ? 'MIXED' : selectedGender;
 
-                if (!response.ok) {
-                    throw new Error('Failed to fetch data');
-                }
-
-                const data = await response.json();
+                const data = await eventAPI.getParticipantData({
+                    ageCategory: selectedAge,
+                    gender: genderToUse
+                });
                 
                 // Filter out the 'All' option from age groups
                 const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
@@ -52,7 +48,14 @@ const Templeparticipants = () => {
         };
 
         fetchData();
-    }, [selectedAge, selectedGender]);
+    }, [selectedAge, selectedGender, shouldShowMixedGenderOnly]);
+
+    // Update gender when age category changes to mixed gender categories
+    useEffect(() => {
+        if (shouldShowMixedGenderOnly) {
+            setSelectedGender('MIXED');
+        }
+    }, [selectedAge, shouldShowMixedGenderOnly]);
 
     // Group events by age category and gender
     const groupedEvents = events.reduce((acc, event) => {
@@ -70,32 +73,20 @@ const Templeparticipants = () => {
     };
 
     // Fetch participants for all events in the current view
-    useEffect(() => {
         const fetchParticipants = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
-
                 const eventIds = getAllEventIds();
                 if (eventIds.length === 0) return;
 
-                const response = await fetch(
-                    `http://localhost:4000/api/events/temple-participants?event_ids=${eventIds.join(',')}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch participants');
+            // Build query parameters
+            const params = {
+                event_ids: eventIds.join(',')
+            };
+            if (selectedStatus !== 'ALL') {
+                params.status = selectedStatus;
                 }
 
-                const data = await response.json();
+            const data = await eventAPI.getTempleParticipants(params);
                 setAllParticipants(data);
             } catch (err) {
                 console.error('Error fetching participants:', err);
@@ -103,31 +94,37 @@ const Templeparticipants = () => {
             }
         };
 
+    useEffect(() => {
         fetchParticipants();
-    }, [events]);
+    }, [events, selectedStatus]);
 
     // Get participants for a specific event
     const getParticipantsForEvent = (eventId) => {
         return allParticipants.filter(p => p.event_id === eventId);
     };
 
+    // Handle participant updates
+    const handleParticipantsUpdate = () => {
+        fetchParticipants();
+    };
+
     return (
-        <section className="min-h-screen bg-gray-50">
+        <section className="min-h-screen bg-[#F0F0F0]">
             <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto">
+                <div className="max-w-7xl mx-auto p-6 m-4">
                     {/* Header */}
                     <div className="mb-8">
-                        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Temple Participants</h1>
-                        <p className="mt-2 text-sm text-gray-600">Manage and view all participants for temple events</p>
-                        </div>
+                        <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">Temple Participants</h1>
+                        <p className="text-[#5A5A5A]">View and manage participants for all events</p>
+                    </div>
 
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
                         {/* Age Category Filter */}
                         <div className="flex flex-col">
-                            <label className="mb-2 text-gray-700 font-medium">Filter by Age Category</label>
+                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Age Category</label>
                         <select 
-                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
                             value={selectedAge}
                                 onChange={(e) => setSelectedAge(e.target.value)}
                         >
@@ -145,11 +142,19 @@ const Templeparticipants = () => {
 
                         {/* Gender Filter */}
                         <div className="flex flex-col">
-                            <label className="mb-2 text-gray-700 font-medium">Filter by Gender</label>
+                            <label className="mb-2 text-[#2A2A2A] font-medium">
+                                Filter by Gender
+                                {shouldShowMixedGenderOnly && (
+                                    <span className="text-sm text-gray-500 ml-2">(Mixed only for this age category)</span>
+                                )}
+                            </label>
                             <select 
-                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                                className={`p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    shouldShowMixedGenderOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                                }`}
                                 value={selectedGender}
                                 onChange={(e) => setSelectedGender(e.target.value)}
+                                disabled={shouldShowMixedGenderOnly}
                             >
                                 {genders && genders.length > 0 ? (
                                     genders.map((gender) => (
@@ -162,12 +167,27 @@ const Templeparticipants = () => {
                                 )}
                             </select>
                         </div>
+
+                        {/* Status Filter
+                        <div className="flex flex-col">
+                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Status</label>
+                            <select 
+                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
+                                value={selectedStatus}
+                                onChange={(e) => setSelectedStatus(e.target.value)}
+                            >
+                                <option value="ALL">All Statuses</option>
+                                <option value="PENDING">Pending</option>
+                                <option value="ACCEPTED">Accepted</option>
+                                <option value="DECLINED">Declined</option>
+                            </select>
+                        </div> */}
                     </div>
 
                     {/* Loading State */}
                     {loading && (
                         <div className="flex justify-center items-center py-8">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
                         </div>
                     )}
 
@@ -186,7 +206,7 @@ const Templeparticipants = () => {
                                 const [ageCategory, gender] = key.split('::');
                                 return (
                                     <div key={key} className="space-y-4">
-                                        <h3 className="text-xl font-semibold text-blue-700 border-b-2 border-blue-200 pb-2">
+                                        <h3 className="text-xl font-semibold text-[#D35D38] border-b-2 border-[#D35D38] pb-2">
                                             {ageCategory} - {gender}
                                         </h3>
                                         <div className="space-y-4 sm:pl-4">
@@ -196,6 +216,8 @@ const Templeparticipants = () => {
                                                     title={event.name}
                                                     eventId={event.id}
                                                     participants={getParticipantsForEvent(event.id)}
+                                                    onParticipantsUpdate={handleParticipantsUpdate}
+                                                    isAdmin={false}
                                                 />
                                             ))}
                                         </div>
@@ -204,7 +226,7 @@ const Templeparticipants = () => {
                             })
                         ) : (
                             selectedAge && !loading && (
-                                <p className="text-gray-500 text-center py-4">No events found for this age category</p>
+                                <p className="text-[#5A5A5A] text-center py-4">No events found for this age category</p>
                             )
                         )}
                     </div>

@@ -1,15 +1,21 @@
-const { PrismaClient } = require('@prisma/client');
-const jwt = require('jsonwebtoken');
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
+
 const prisma = new PrismaClient();
 
 async function register(username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id) {
   try {
     console.log('Received registration data:', { username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id });
     
+    // Hash the password before storing
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    
     const user = await prisma.user.create({
       data: {
         username,
-        password, // In production, hash the password
+        password: hashedPassword, // Store the hashed password
         email,
         profile: {
           create: {
@@ -46,63 +52,93 @@ async function register(username, password, email, first_name, last_name, phone,
 }
 
 async function login(username, password) {
+  try {
   const user = await prisma.user.findUnique({
     where: { username },
-    include: { profile: true }
+      include: {
+        profile: {
+          include: {
+            temple: true,
+            role: true
+          }
+        }
+      }
   });
-  if (!user || user.password !== password) {
-    throw new Error('Invalid credentials');
-  }
-  // Log the login in audit_log
-  await prisma.audit_log.create({
-    data: {
-      user_id: user.id,
-      action: 'LOGIN',
-      table_name: 'User',
-      record_id: user.id,
-      new_value: JSON.stringify(user)
+
+    if (!user) {
+      throw new Error('Invalid credentials');
     }
-  });
-  // Generate JWT token with temple_id
-  const token = jwt.sign({ 
+
+    // Compare the provided password with the hashed password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error('Invalid credentials');
+    }
+
+    const token = jwt.sign(
+      { 
     id: user.id, 
     role: user.profile.role_id,
     temple_id: user.profile.temple_id 
-  }, process.env.JWT_SECRET, { expiresIn: '24h' });
-  return { user, token };
-}
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
-async function updateRole(user_id, new_role_id) {
-  // In production, verify the requester is a Super User
-  const isSuperUser = true; // Placeholder check
-  if (!isSuperUser) {
-    throw new Error('Unauthorized');
-  }
-  const updatedUser = await prisma.user.update({
-    where: { id: parseInt(user_id) },
-    data: {
+    return {
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
       profile: {
-        update: {
-          role_id: parseInt(new_role_id)
+          id: user.profile.id,
+          first_name: user.profile.first_name,
+          last_name: user.profile.last_name,
+          phone: user.profile.phone,
+          aadhar_number: user.profile.aadhar_number,
+          dob: user.profile.dob,
+          gender: user.profile.gender,
+          temple: user.profile.temple,
+          role: user.profile.role
         }
       }
-    },
-    include: { profile: true }
+    };
+  } catch (error) {
+    console.error('Error in login function:', error);
+    throw error;
+  }
+}
+
+async function updateRole(userId, newRoleId) {
+  try {
+    const updatedProfile = await prisma.profile.update({
+      where: { user_id: userId },
+      data: { role_id: newRoleId },
+      include: {
+        role: true
+      }
   });
+
   // Log the role update in audit_log
   await prisma.audit_log.create({
     data: {
-      user_id: updatedUser.id,
+        user_id: userId,
       action: 'UPDATE_ROLE',
-      table_name: 'User',
-      record_id: updatedUser.id,
-      new_value: JSON.stringify(updatedUser)
+        table_name: 'Profile',
+        record_id: updatedProfile.id,
+        new_value: JSON.stringify(updatedProfile)
     }
   });
-  return updatedUser;
+
+    return updatedProfile;
+  } catch (error) {
+    console.error('Error in updateRole function:', error);
+    throw error;
+  }
 }
 
-module.exports = {
+export {
   register,
   login,
   updateRole

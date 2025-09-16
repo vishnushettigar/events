@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getTempleNames } from '../utils/templeUtils';
+import { authAPI } from '../utils/api';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -14,11 +16,34 @@ const Register = () => {
         email: '',
         password: '',
         confirmPassword: '',
-        terms: false,
     });
 
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [temples, setTemples] = useState([]);
+    const [isLoadingTemples, setIsLoadingTemples] = useState(true);
+
+    // Fetch temples from backend on component mount
+    useEffect(() => {
+        const fetchTemples = async () => {
+            try {
+                const templeNames = await getTempleNames();
+                setTemples(templeNames);
+            } catch (error) {
+                console.error('Failed to fetch temples:', error);
+                // Fallback to hardcoded list if API fails
+                setTemples([
+                    'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
+                    'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
+                    'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
+                ]);
+            } finally {
+                setIsLoadingTemples(false);
+            }
+        };
+
+        fetchTemples();
+    }, []);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -34,7 +59,6 @@ const Register = () => {
         console.log('Validating form data:', formData);
 
         if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-        if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
         if (!formData.mobile.trim()) {
             newErrors.mobile = 'Mobile number is required';
         } else if (!/^[0-9]{10}$/.test(formData.mobile)) {
@@ -63,9 +87,6 @@ const Register = () => {
         }
         if (formData.password !== formData.confirmPassword) {
             newErrors.confirmPassword = 'Passwords do not match';
-        }
-        if (!formData.terms) {
-            newErrors.terms = 'You must accept the terms and conditions';
         }
 
         console.log('Validation errors:', newErrors);
@@ -96,37 +117,9 @@ const Register = () => {
                 
                 console.log('Sending registration request:', requestData);
                 
-                const response = await fetch('http://localhost:4000/api/users/register', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestData),
-                });
+                const data = await authAPI.register(requestData);
 
-                console.log('Response status:', response.status);
-                const data = await response.json();
-                console.log('Response data:', data);
-
-                if (!response.ok) {
-                    // Check for duplicate username error
-                    if (data.error?.code === 'P2002' && data.error?.meta?.target?.includes('username')) {
-                        throw new Error('This Aadhaar number is already registered. Please use a different Aadhaar number or try logging in.');
-                    }
-                    
-                    // Handle validation errors
-                    if (data.errors && Array.isArray(data.errors)) {
-                        const validationErrors = data.errors.map(err => err.msg).join(', ');
-                        throw new Error(validationErrors);
-                    }
-                    
-                    // Handle other error types
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    
-                    throw new Error('Registration failed');
-                }
+                console.log('Registration successful:', data);
 
                 // Store the JWT token
                 localStorage.setItem('token', data.token);
@@ -160,229 +153,289 @@ const Register = () => {
         }
     };
 
-    const temples = [
-        'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
-        'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
-        'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
-    ];
-
     return (
-        <div className="pt-4 pb-4">
-            <div
-                style={{ animation: 'slideInFromLeft 1s ease-out' }}
-                className="mx-auto max-w-xl w-full bg-gradient-to-r from-blue-800 to-purple-600 rounded-xl shadow-2xl overflow-hidden p-8 space-y-6"
-            >
-                <h2 className="text-center text-4xl font-extrabold text-white">Register</h2>
-                <p className="text-center text-gray-200">Create your account</p>
-                <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="min-h-screen bg-[#F0F0F0] py-12 px-4">
+            <div className="max-w-2xl mx-auto">
+                {/* Header Section */}
+                <div className="text-center mb-8">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
+                        Create Your Account
+                    </h1>
+                    <p className="text-lg text-[#5A5A5A]">
+                        Join the Padmashali Annual Sports Meet
+                    </p>
+                </div>
+
+                {/* Registration Form */}
+                <div className="">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                     {errors.submit && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                             {errors.submit}
                         </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['firstName', 'lastName'].map((field, index) => (
-                            <div className="relative" key={index}>
-                                <input
-                                    placeholder={field === 'firstName' ? 'First Name' : 'Last Name'}
-                                    className="peer h-10 w-full border-b-2 border-gray-300 text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500"
-                                    required
-                                    id={field}
-                                    name={field}
-                                    type="text"
-                                    value={formData[field]}
-                                    onChange={handleChange}
-                                />
-                                <label
-                                    htmlFor={field}
-                                    className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                                >
-                                    {field === 'firstName' ? 'First Name' : 'Last Name'}
+
+                        {/* Name Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="firstName" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                    First Name as in aaadhar *
                                 </label>
-                                {errors[field] && <span className="text-red-500 text-sm">{errors[field]}</span>}
+                                <input
+                                    type="text"
+                                    id="firstName"
+                                    name="firstName"
+                                    value={formData.firstName}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                        errors.firstName ? 'border-red-300' : 'border-gray-300'
+                                    }`}
+                                    placeholder="Enter your first name"
+                                />
+                                {errors.firstName && <p className="text-red-500 text-sm mt-1">{errors.firstName}</p>}
                             </div>
-                        ))}
+
+                            <div>
+                                <label htmlFor="lastName" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                    Last Name as in aaadhar
+                                </label>
+                                <input
+                                    type="text"
+                                    id="lastName"
+                                    name="lastName"
+                                    value={formData.lastName}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                        errors.lastName ? 'border-red-300' : 'border-gray-300'
+                                    }`}
+                                    placeholder="Enter your last name"
+                                />
+                                {errors.lastName && <p className="text-red-500 text-sm mt-1">{errors.lastName}</p>}
+                            </div>
                     </div>
 
-                    <div className="relative">
+                        {/* Mobile Number */}
+                        <div>
+                            <label htmlFor="mobile" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                Mobile Number *
+                            </label>
                         <input
-                            placeholder="Mobile Number"
-                            className="peer h-10 w-full border-b-2 border-gray-300 text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500"
-                            required
+                                type="tel"
                             id="mobile"
                             name="mobile"
-                            type="tel"
                             value={formData.mobile}
                             onChange={handleChange}
-                        />
-                        <label
-                            htmlFor="mobile"
-                            className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                        >
-                            Mobile Number
-                        </label>
-                        {errors.mobile && <span className="text-red-500 text-sm">{errors.mobile}</span>}
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    errors.mobile ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="Enter your 10-digit mobile number"
+                            />
+                            {errors.mobile && <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>}
                     </div>
 
-                    <div className="flex gap-6 items-center text-white">
-                        <span>Gender:</span>
-                        {['MALE', 'FEMALE'].map((g) => (
-                            <label key={g}>
+                        {/* Gender Selection */}
+                        <div>
+                            <label className="block text-sm font-semibold text-[#2A2A2A] mb-3">
+                                Gender *
+                            </label>
+                            <div className="flex gap-6">
+                                {['MALE', 'FEMALE'].map((gender) => (
+                                    <label key={gender} className="flex items-center">
                                 <input
                                     type="radio"
                                     name="gender"
-                                    value={g}
-                                    checked={formData.gender === g}
+                                            value={gender}
+                                            checked={formData.gender === gender}
                                     onChange={handleChange}
-                                    className="mr-1"
+                                            className="w-4 h-4 text-[#D35D38] border-gray-300 focus:ring-[#D35D38]"
                                 />
-                                {g === 'MALE' ? 'Male' : 'Female'}
+                                        <span className="ml-2 text-[#2A2A2A]">
+                                            {gender === 'MALE' ? 'Male' : 'Female'}
+                                        </span>
                             </label>
                         ))}
-                        {errors.gender && <span className="text-red-500 text-sm">{errors.gender}</span>}
+                            </div>
+                            {errors.gender && <p className="text-red-500 text-sm mt-1">{errors.gender}</p>}
                     </div>
 
-                    <div className="relative">
+                        {/* Temple Selection */}
+                        <div>
+                            <label htmlFor="temple" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                Temple *
+                            </label>
                         <select
-                            required
+                                id="temple"
                             name="temple"
-                            id="temple"
                             value={formData.temple}
                             onChange={handleChange}
-                            className="w-full bg-transparent text-white border-b-2 border-gray-300 focus:outline-none focus:border-purple-500"
+                                disabled={isLoadingTemples}
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    errors.temple ? 'border-red-300' : 'border-gray-300'
+                                } ${isLoadingTemples ? 'opacity-50' : ''}`}
                         >
-                            <option value="">Select Your Temple</option>
+                                <option value="">
+                                    {isLoadingTemples ? 'Loading temples...' : 'Select your temple'}
+                                </option>
                             {temples.map((temple, index) => (
                                 <option key={index} value={temple}>{temple}</option>
                             ))}
                         </select>
-                        {errors.temple && <span className="text-red-500 text-sm">{errors.temple}</span>}
+                            {errors.temple && <p className="text-red-500 text-sm mt-1">{errors.temple}</p>}
                     </div>
 
-                    <div className="relative">
+                        {/* Date of Birth */}
+                        <div>
+                            <label htmlFor="dob" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                Date of Birth *
+                            </label>
                         <input
-                            className="peer h-10 w-full border-b-2 border-gray-300 text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500"
-                            required
+                                type="date"
                             id="dob"
                             name="dob"
-                            type="date"
                             value={formData.dob}
                             onChange={handleChange}
-                        />
-                        <label
-                            htmlFor="dob"
-                            className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                        >
-                            Date of Birth
-                        </label>
-                        {errors.dob && <span className="text-red-500 text-sm">{errors.dob}</span>}
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    errors.dob ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                            />
+                            {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob}</p>}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['aadhaar', 'confirmAadhaar'].map((field, index) => (
-                            <div className="relative" key={index}>
-                                <input
-                                    placeholder={field === 'aadhaar' ? 'Aadhaar Number' : 'Confirm Aadhaar'}
-                                    className="peer h-10 w-full border-b-2 border-gray-300 text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500"
-                                    required
-                                    id={field}
-                                    name={field}
-                                    type="text"
-                                    value={formData[field]}
-                                    onChange={handleChange}
-                                />
-                                <label
-                                    htmlFor={field}
-                                    className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                                >
-                                    {field === 'aadhaar' ? 'Aadhaar Number' : 'Confirm Aadhaar'}
+                        {/* Aadhaar Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="aadhaar" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                    Aadhaar Number *
                                 </label>
-                                {errors[field] && <span className="text-red-500 text-sm">{errors[field]}</span>}
+                                <input
+                                    type="text"
+                                    id="aadhaar"
+                                    name="aadhaar"
+                                    value={formData.aadhaar}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                        errors.aadhaar ? 'border-red-300' : 'border-gray-300'
+                                    }`}
+                                    placeholder="Enter 12-digit Aadhaar number"
+                                />
+                                {errors.aadhaar && <p className="text-red-500 text-sm mt-1">{errors.aadhaar}</p>}
                             </div>
-                        ))}
+
+                            <div>
+                                <label htmlFor="confirmAadhaar" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                    Confirm Aadhaar *
+                                </label>
+                                <input
+                                    type="text"
+                                    id="confirmAadhaar"
+                                    name="confirmAadhaar"
+                                    value={formData.confirmAadhaar}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                        errors.confirmAadhaar ? 'border-red-300' : 'border-gray-300'
+                                    }`}
+                                    placeholder="Confirm your Aadhaar number"
+                                />
+                                {errors.confirmAadhaar && <p className="text-red-500 text-sm mt-1">{errors.confirmAadhaar}</p>}
+                            </div>
                     </div>
 
                     {/* Email */}
-                    <div className="relative">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                Email Address *
+                            </label>
                         <input
-                            placeholder="Email"
-                            className="peer h-10 w-full border-b-2 border-gray-300 text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500"
-                            required
+                                type="email"
                             id="email"
                             name="email"
-                            type="email"
                             value={formData.email}
                             onChange={handleChange}
-                        />
-                        <label
-                            htmlFor="email"
-                            className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                        >
-                            Email
-                        </label>
-                        {errors.email && <span className="text-red-500 text-sm">{errors.email}</span>}
-                    </div>
-
-                    {/* Password and Confirm Password */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {['password', 'confirmPassword'].map((field, index) => (
-                            <div className="relative" key={index}>
-                                <input
-                                    placeholder={field === 'password' ? 'Password' : 'Confirm Password'}
-                                    className="peer h-10 w-full border-b-2 border-gray-300 text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500"
-                                    required
-                                    id={field}
-                                    name={field}
-                                    type="password"
-                                    value={formData[field]}
-                                    onChange={handleChange}
-                                />
-                                <label
-                                    htmlFor={field}
-                                    className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                                >
-                                    {field === 'password' ? 'Password' : 'Confirm Password'}
-                                </label>
-                                {errors[field] && <span className="text-red-500 text-sm">{errors[field]}</span>}
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Terms and Submit */}
-                    <div className="text-white">
-                        <label className="flex items-center">
-                            <input
-                                type="checkbox"
-                                name="terms"
-                                checked={formData.terms}
-                                onChange={handleChange}
-                                className="mr-2"
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    errors.email ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="Enter your email address"
                             />
-                            I accept the terms and conditions
-                        </label>
-                        {errors.terms && <span className="text-red-500 text-sm block">{errors.terms}</span>}
+                            {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
                     </div>
 
+                        {/* Password Fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                    Password *
+                                </label>
+                                <input
+                                    type="password"
+                                    id="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                        errors.password ? 'border-red-300' : 'border-gray-300'
+                                    }`}
+                                    placeholder="Create a password (min 8 characters)"
+                                />
+                                {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+                            </div>
+
+                            <div>
+                                <label htmlFor="confirmPassword" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                    Confirm Password *
+                                </label>
+                                <input
+                                    type="password"
+                                    id="confirmPassword"
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                        errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                                    }`}
+                                    placeholder="Confirm your password"
+                                />
+                                {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
+                            </div>
+                    </div>
+
+
+
+                        {/* Submit Button */}
                     <div>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className={`w-full py-2 px-4 ${
+                                className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
                                 isSubmitting
-                                    ? 'bg-gray-500 cursor-not-allowed'
-                                    : 'bg-purple-700 hover:bg-purple-800'
-                            } text-white font-semibold rounded-lg shadow-md focus:outline-none`}
-                        >
-                            {isSubmitting ? 'Registering...' : 'Register'}
+                                        ? 'bg-gray-400 cursor-not-allowed text-white'
+                                        : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
+                                }`}
+                            >
+                                {isSubmitting ? (
+                                    <span className="flex items-center justify-center">
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Creating Account...
+                                    </span>
+                                ) : (
+                                    'Create Account'
+                                )}
                         </button>
                     </div>
-                    <p className="text-center text-sm text-white">
+
+                        {/* Login Link */}
+                        <div className="text-center">
+                            <p className="text-[#5A5A5A]">
                         Already have an account?{' '}
-                        <Link to="/login" className="text-blue-200 hover:underline">
-                            Login
+                                <Link to="/login" className="text-[#D35D38] font-semibold hover:underline">
+                                    Sign In
                         </Link>
                     </p>
+                        </div>
                 </form>
+                </div>
             </div>
         </div>
     );

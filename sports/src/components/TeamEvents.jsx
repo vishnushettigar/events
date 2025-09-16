@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import axios from 'axios';
+import { userAPI, eventAPI } from '../utils/api';
 import { getCurrentUserTemple } from '../utils/templeUtils';
 
 // Custom debounce hook
@@ -22,7 +22,7 @@ const CollapsibleList = ({ title, children }) => {
     return (
         <div className="mb-6 border rounded shadow">
             <button
-                className="w-full text-left px-4 py-3 bg-blue-100 hover:bg-blue-200 font-semibold text-lg rounded-t focus:outline-none flex justify-between items-center"
+                className="w-full text-left px-4 py-3 bg-[#F0F0F0] hover:bg-[#E0E0E0] font-semibold text-lg rounded-t focus:outline-none flex justify-between items-center text-[#2A2A2A]"
                 onClick={() => setOpen((prev) => !prev)}
             >
                 {title}
@@ -45,37 +45,17 @@ const TeamEvents = () => {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    throw new Error('No authentication token found');
-                }
-
                 // Fetch user profile
-                const profileResponse = await axios.get('http://localhost:4000/api/users/profile', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setUserProfile(profileResponse.data);
+                const profileResponse = await userAPI.getProfile();
+                setUserProfile(profileResponse);
 
                 // Fetch team events
-                const eventsResponse = await axios.get('http://localhost:4000/api/events/team-events', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setEvents(eventsResponse.data);
+                const eventsResponse = await eventAPI.getTeamEvents();
+                setEvents(eventsResponse);
 
                 // Fetch registered teams
-                const teamsResponse = await axios.get('http://localhost:4000/api/events/temple-teams', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                setRegisteredTeams(teamsResponse.data);
+                const teamsResponse = await eventAPI.getTempleTeams();
+                setRegisteredTeams(teamsResponse);
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to fetch data');
@@ -91,7 +71,15 @@ const TeamEvents = () => {
             setError(null);
             setSuccess(null);
 
-            // Filter out empty player entries
+
+            // Require all player fields to be filled
+            const allFieldsFilled = players.every(player => player.name && player.aadharNumber && player.profileId);
+            if (!allFieldsFilled) {
+                setError('Please fill in all player fields before submitting.');
+                return;
+            }
+
+            // Filter out empty player entries (should not be needed, but keep for safety)
             const validPlayers = players.filter(player => player.name && player.profileId);
 
             if (validPlayers.length === 0) {
@@ -113,38 +101,25 @@ const TeamEvents = () => {
 
             if (registrationId) {
                 // Update existing team
-                const response = await axios.put(`http://localhost:4000/api/events/update-team/${registrationId}`, {
+                const response = await eventAPI.updateTeam(registrationId, {
                     member_user_ids: validPlayers.map(player => player.profileId)
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
                 });
                 setSuccess('Team updated successfully!');
             } else {
                 // Register new team
-                const response = await axios.post('http://localhost:4000/api/events/register-team', {
+            const response = await eventAPI.registerTeam({
                     temple_id: userProfile.temple_id,
-                    event_id: eventId,
+                event_id: eventId,
                     member_user_ids: validPlayers.map(player => player.profileId)
-                }, {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                setSuccess('Team registered successfully!');
+            });
+            setSuccess('Team registered successfully!');
             }
             
             // Refresh registered teams
-            const teamsResponse = await axios.get('http://localhost:4000/api/events/temple-teams', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            setRegisteredTeams(teamsResponse.data);
+            const teamsResponse = await eventAPI.getTempleTeams();
+            setRegisteredTeams(teamsResponse);
         } catch (err) {
-            setError(err.response?.data?.error || 'Error processing team');
+            setError(err.message || 'Error processing team');
         } finally {
             setLoading(false);
         }
@@ -179,53 +154,63 @@ const TeamEvents = () => {
         return event?.event_type?.name || 'Unknown Event';
     };
 
-    // Helper function to get registered team for an event
-    const getRegisteredTeam = (eventName, gender) => {
+    // Helper function to get registered teams for an event
+    const getRegisteredTeams = (eventName, gender) => {
         const eventId = getEventId(eventName, gender);
-        return registeredTeams.find(team => team.event_id === eventId);
+        return registeredTeams.filter(team => team.event_id === eventId);
+    };
+
+    // Helper function to get registered team for an event (for backward compatibility)
+    const getRegisteredTeam = (eventName, gender) => {
+        const teams = getRegisteredTeams(eventName, gender);
+        return teams.length > 0 ? teams[0] : null;
     };
 
     const TeamForm = ({ eventName, playerCount, gender, buttonColor }) => {
-        const registeredTeam = getRegisteredTeam(eventName, gender);
-        const isEditing = !!registeredTeam;
+        const registeredTeams = getRegisteredTeams(eventName, gender);
+        const isEditing = registeredTeams.length > 0;
+        const isMixedGender = gender === 'ALL';
         
-        // Initialize players with registered team data if available, otherwise empty
-        const initialPlayers = registeredTeam ? 
-            registeredTeam.members.map(member => ({
-                name: `${member.first_name} ${member.last_name || ''}`.trim(),
-                aadharNumber: member.aadhar_number || '',
-                profileId: member.id
-            })) : 
-            Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' });
+        // Initialize players with empty array
+        const initialPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' });
 
         const [players, setPlayers] = useState(initialPlayers);
         const [loadingPlayers, setLoadingPlayers] = useState(Array(playerCount).fill(false));
         const [errors, setErrors] = useState(Array(playerCount).fill(null));
         const [editMode, setEditMode] = useState(false);
+        const [editingTeamId, setEditingTeamId] = useState(null);
         const [suggestions, setSuggestions] = useState([]);
         const [showSuggestions, setShowSuggestions] = useState(Array(playerCount).fill(false));
         const [loadingSuggestions, setLoadingSuggestions] = useState(false);
         const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
 
-        // Update players when registeredTeam changes
+        // Initialize form state when component mounts, playerCount changes, or registeredTeams changes
         useEffect(() => {
-            if (registeredTeam) {
-                const teamPlayers = registeredTeam.members.map(member => ({
-                    name: `${member.first_name} ${member.last_name || ''}`.trim(),
-                    aadharNumber: member.aadhar_number || '',
-                    profileId: member.id
-                }));
+            if (registeredTeams.length > 0 && !isMixedGender) {
+                // For single gender events, load the first team in edit mode
+                const firstTeam = registeredTeams[0];
+                const teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
+                    const member = firstTeam.members[index];
+                    return member ? {
+                        name: `${member.first_name} ${member.last_name || ''}`.trim(),
+                        aadharNumber: member.aadhar_number || '',
+                        profileId: member.id
+                    } : { name: '', aadharNumber: '', profileId: '' };
+                });
                 setPlayers(teamPlayers);
-                setEditMode(false); // Reset edit mode when team data changes
+                setEditMode(true);
+                setEditingTeamId(firstTeam.id);
             } else {
+                // Reset to empty form for new registration or mixed gender events
                 setPlayers(Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }));
                 setEditMode(false);
+                setEditingTeamId(null);
             }
             // Reset suggestions state
             setShowSuggestions(Array(playerCount).fill(false));
             setSuggestions([]);
             setActiveSuggestionIndex(-1);
-        }, [registeredTeam, playerCount]);
+        }, [playerCount, registeredTeams.length, isMixedGender]);
 
         // Close suggestions when clicking outside
         useEffect(() => {
@@ -248,14 +233,10 @@ const TeamEvents = () => {
             try {
                 console.log('Fetching temple users for search term:', searchTerm);
                 setLoadingSuggestions(true);
-                const response = await axios.get('http://localhost:4000/api/users/templeusers', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
+                const response = await userAPI.getTempleUsers();
                 
-                console.log('Temple users response:', response.data);
-                const templeUsers = response.data;
+                console.log('Temple users response:', response);
+                const templeUsers = response;
                 
                 // Filter users whose Aadhaar number starts with the search term
                 const filteredUsers = templeUsers.filter(user => {
@@ -294,14 +275,9 @@ const TeamEvents = () => {
                     return newState;
                 });
 
-                const response = await axios.get(`http://localhost:4000/api/users/search-by-aadhar`, {
-                    params: { aadharNumber },
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
+                const response = await userAPI.searchByAadhar(aadharNumber);
 
-                const user = response.data;
+                const user = response;
 
                 if (!userProfile || user.temple_id !== userProfile.temple_id) {
                     setErrors(prev => {
@@ -331,7 +307,7 @@ const TeamEvents = () => {
             } catch (error) {
                 setErrors(prev => {
                     const newState = [...prev];
-                    newState[index] = error.response?.data?.error || 'Error fetching user details';
+                    newState[index] = error.message || 'Error fetching user details';
                     return newState;
                 });
             } finally {
@@ -457,23 +433,88 @@ const TeamEvents = () => {
                 return;
             }
 
-            handleSubmit(eventName, gender, players, registeredTeam?.id);
+
+            // Validate mixed gender events (ALL gender) must have one MALE and one FEMALE
+            if (gender === 'ALL') {
+                const validPlayers = players.filter(player => player.aadharNumber && player.profileId);
+                if (validPlayers.length !== 2) {
+                    setError('Mixed gender events must have exactly 2 participants.');
+                    return;
+                }
+
+                // Prevent duplicate registration of the same team (same two Aadhaar numbers in any order)
+                const thisTeamAadhaars = validPlayers.map(p => p.aadharNumber).sort().join(',');
+                const duplicateTeam = registeredTeams.some(team => {
+                    const teamAadhaars = team.members.map(m => m.aadhar_number).sort().join(',');
+                    return teamAadhaars === thisTeamAadhaars && (!editMode || team.id !== editingTeamId);
+                });
+                if (duplicateTeam) {
+                    setError('This team is already registered for this event.');
+                    return;
+                }
+
+                // Prevent duplicate registration of a player in any team for this event
+                const allRegisteredAadhaars = registeredTeams.flatMap(team => team.members.map(m => m.aadhar_number));
+                const duplicatePlayer = validPlayers.some(p => allRegisteredAadhaars.includes(p.aadharNumber) && (!editMode || !registeredTeams.some(team => team.id === editingTeamId && team.members.some(m => m.aadhar_number === p.aadharNumber))));
+                if (duplicatePlayer) {
+                    setError('One or both participants are already registered in another team for this event.');
+                    return;
+                }
+
+                // Fetch gender information for the selected players
+                const validateMixedGender = async () => {
+                    try {
+                        const genderPromises = validPlayers.map(player => 
+                            userAPI.searchByAadhar(player.aadharNumber)
+                        );
+                        const responses = await Promise.all(genderPromises);
+                        const playerGenders = responses.map(response => response.gender);
+                        // Check that first player is MALE and second player is FEMALE
+                        if (playerGenders[0] !== 'MALE') {
+                            setError('First participant must be MALE.');
+                            return;
+                        }
+                        if (playerGenders[1] !== 'FEMALE') {
+                            setError('Second participant must be FEMALE.');
+                            return;
+                        }
+                        // If validation passes, proceed with submission
+                        handleSubmit(eventName, gender, players, editingTeamId);
+                    } catch (error) {
+                        setError('Error validating participant genders. Please try again.');
+                    }
+                };
+                validateMixedGender();
+                return;
+            }
+
+            handleSubmit(eventName, gender, players, editingTeamId);
         };
 
-        const handleEditClick = () => {
-            setEditMode(true);
-        };
 
-        const handleCancelEdit = () => {
-            // Reset to original data
-            if (registeredTeam) {
-                const teamPlayers = registeredTeam.members.map(member => ({
+
+        const handleEditTeam = (team) => {
+            // Set the team data for editing
+            const teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
+                const member = team.members[index];
+                return member ? {
                     name: `${member.first_name} ${member.last_name || ''}`.trim(),
                     aadharNumber: member.aadhar_number || '',
                     profileId: member.id
-                }));
-                setPlayers(teamPlayers);
-            }
+                } : { name: '', aadharNumber: '', profileId: '' };
+            });
+            setPlayers(teamPlayers);
+            setEditingTeamId(team.id);
+            setEditMode(true);
+            setErrors(Array(playerCount).fill(null));
+            setSuggestions([]);
+            setShowSuggestions(Array(playerCount).fill(false));
+        };
+
+        const handleCancelEdit = () => {
+            // Reset to empty form for new team registration
+            setPlayers(Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }));
+            setEditingTeamId(null);
             setEditMode(false);
             setErrors(Array(playerCount).fill(null));
             setSuggestions([]);
@@ -482,97 +523,136 @@ const TeamEvents = () => {
 
         return (
             <div className="space-y-4">
+                {/* Show existing teams for mixed gender events */}
+                {isMixedGender && registeredTeams.length > 0 && (
+                    <div className="mb-6">
+                        <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">Registered Teams ({registeredTeams.length})</h4>
+                        <div className="space-y-3">
+                            {registeredTeams.map((team, teamIndex) => (
+                                <div key={team.id} className="bg-[#F8DFBE] p-4 rounded-lg border border-[#E0E0E0]">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <h5 className="font-semibold text-[#2A2A2A]">Team {teamIndex + 1}</h5>
+                                        <button
+                                            className="px-3 py-1 bg-[#D35D38] text-white rounded text-sm hover:opacity-90"
+                                            onClick={() => handleEditTeam(team)}
+                                        >
+                                            Edit
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        {team.members.map((member, memberIndex) => (
+                                            <div key={member.id} className="text-sm">
+                                                <span className="font-medium text-[#D35D38]">
+                                                    {memberIndex === 0 ? 'MALE' : 'FEMALE'}:
+                                                </span>
+                                                <span className="ml-2 text-[#2A2A2A]">
+                                                    {member.first_name} {member.last_name || ''} ({member.aadhar_number})
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Team Registration Form */}
+                <div className="border-t pt-4">
+                    <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">
+                        {isMixedGender && registeredTeams.length > 0 ? 'Add New Team' : 'Team Registration'}
+                    </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {players.map((player, i) => (
                         <div key={i} className="flex gap-2 items-center">
-                            <span className="w-8 text-right">{i + 1}.</span>
-                            <div className="w-1/2 relative">
+                                <span className="w-8 text-right">
+                                    {i + 1}.
+                                    {/* {gender === 'ALL' && (
+                                        <span className="block text-xs font-medium text-[#D35D38]">
+                                            {i === 0 ? 'MALE' : 'FEMALE'}
+                                        </span>
+                                    )} */}
+                                </span>
+                                <div className="w-1/2 relative">
                                 <input
                                     type="text"
-                                    placeholder="Aadhaar Number"
-                                    className={`w-full p-2 border rounded ${!editMode && isEditing ? 'bg-gray-100' : ''}`}
+                                        placeholder={`Aadhaar Number ${gender === 'ALL' ? `(${i === 0 ? 'MALE' : 'FEMALE'})` : ''}`}
+                                        className={`w-full p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
                                     value={player.aadharNumber}
                                     onChange={(e) => handlePlayerChange(i, 'aadharNumber', e.target.value)}
                                     maxLength={12}
-                                    readOnly={!editMode && isEditing}
+                                        readOnly={!editMode && registeredTeams.length > 0 && !isMixedGender}
                                 />
-                                {loadingPlayers[i] && editMode && (
+                                    {loadingPlayers[i] && editMode && (
                                     <div className="text-sm text-gray-500">Loading...</div>
                                 )}
-                                {errors[i] && editMode && (
+                                {errors[i] && (
                                     <div className="text-sm text-red-500">{errors[i]}</div>
                                 )}
-                                
-                                {/* Suggestions Dropdown */}
-                                {showSuggestions[i] && suggestions.length > 0 && !(!editMode && isEditing) && (
-                                    <div className="suggestions-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                        {loadingSuggestions ? (
-                                            <div className="p-2 text-sm text-gray-500">Loading suggestions...</div>
-                                        ) : (
-                                            suggestions.map((suggestion, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className={`p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
-                                                        idx === activeSuggestionIndex ? 'bg-blue-50' : ''
-                                                    }`}
-                                                    onClick={() => handleSuggestionSelect(suggestion, i)}
-                                                >
-                                                    <div className="font-medium text-sm text-gray-900">{suggestion.aadhar_number}</div>
-                                                    <div className="text-xs text-gray-600">{suggestion.name}</div>
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
+                                    
+                                                                    {/* Suggestions Dropdown */}
+                                {showSuggestions[i] && suggestions.length > 0 && (editMode || registeredTeams.length === 0 || isMixedGender) && (
+                                        <div className="suggestions-container absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                            {loadingSuggestions ? (
+                                                <div className="p-2 text-sm text-gray-500">Loading suggestions...</div>
+                                            ) : (
+                                                suggestions.map((suggestion, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        className={`p-2 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 ${
+                                                            idx === activeSuggestionIndex ? 'bg-blue-50' : ''
+                                                        }`}
+                                                        onClick={() => handleSuggestionSelect(suggestion, i)}
+                                                    >
+                                                        <div className="font-medium text-sm text-gray-900">{suggestion.aadhar_number}</div>
+                                                        <div className="text-xs text-gray-600">{suggestion.name}</div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
                                 )}
                             </div>
                             <input
                                 type="text"
                                 placeholder="Name"
-                                className={`w-1/2 p-2 border rounded ${!editMode && isEditing ? 'bg-gray-100' : ''}`}
+                                    className={`w-1/2 p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
                                 value={player.name}
                                 onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
-                                readOnly={(!editMode && isEditing) || loadingPlayers[i]}
+                                    readOnly={(!editMode && registeredTeams.length > 0 && !isMixedGender) || loadingPlayers[i]}
                             />
                         </div>
                     ))}
                 </div>
-                <div className="flex gap-2">
-                    {!isEditing ? (
-                        // New team registration
-                        <button
-                            className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
-                            onClick={handleSubmitForm}
-                            disabled={loading || errors.some(error => error !== null) || !userProfile}
-                        >
-                            {loading ? 'Processing...' : `Submit ${eventName} Team`}
-                        </button>
-                    ) : editMode ? (
-                        // Edit mode - show Save and Cancel buttons
-                        <>
-                            <button
+                    <div className="flex gap-2 mt-4">
+                        {editMode ? (
+                            // Edit mode - show Save and Cancel buttons
+                            <>
+                                <button
+                                    className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
+                                    onClick={handleSubmitForm}
+                                    disabled={loading || errors.some(error => error !== null) || !userProfile}
+                                >
+                                    {loading ? 'Processing...' : 'Save Changes'}
+                                </button>
+                                <button
+                                    className="px-4 py-2 bg-gray-500 text-white rounded hover:opacity-90"
+                                    onClick={handleCancelEdit}
+                                    disabled={loading}
+                                >
+                                    Cancel
+                                </button>
+                            </>
+                        ) : (
+                            // New team registration
+                <button
                                 className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
                                 onClick={handleSubmitForm}
                                 disabled={loading || errors.some(error => error !== null) || !userProfile}
-                            >
-                                {loading ? 'Processing...' : 'Save Changes'}
-                            </button>
-                            <button
-                                className="px-4 py-2 bg-gray-500 text-white rounded hover:opacity-90"
-                                onClick={handleCancelEdit}
-                                disabled={loading}
-                            >
-                                Cancel
-                            </button>
-                        </>
-                    ) : (
-                        // Read-only mode - show Edit button
-                        <button
-                            className="px-4 py-2 bg-blue-600 text-white rounded hover:opacity-90"
-                            onClick={handleEditClick}
-                        >
-                            Edit Team
-                        </button>
-                    )}
+                >
+                                {loading ? 'Processing...' : `Submit ${eventName} Team`}
+                </button>
+                        )}
+                    </div>
                 </div>
             </div>
         );
@@ -580,44 +660,44 @@ const TeamEvents = () => {
 
     if (!userProfile) {
         return (
-            <section className="p-6 bg-gray-100 min-h-screen">
-                <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-700 mx-auto"></div>
-                        <p className="mt-2">Loading...</p>
-                    </div>
+                    <section className="p-6 bg-[#F0F0F0] min-h-screen">
+            <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38] mx-auto"></div>
+                    <p className="mt-2 text-[#2A2A2A]">Loading...</p>
                 </div>
-            </section>
+            </div>
+        </section>
         );
     }
 
     // Check if user has TEMPLE_ADMIN role
     if (userProfile.role !== 'TEMPLE_ADMIN') {
-        return (
-            <section className="p-6 bg-gray-100 min-h-screen">
-                <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-bold mb-6">Group Events Registration</h2>
-                    <div className="text-center p-8">
-                        <div className="text-red-600 text-xl font-semibold mb-4">
-                            Access Denied
-                        </div>
-                        <p className="text-gray-600 mb-4">
-                            Only Temple Administrators can register teams for group events.
-                        </p>
-                        <p className="text-sm text-gray-500">
-                            Your current role: {userProfile.role}
-                        </p>
+    return (
+                    <section className="p-6 bg-[#F0F0F0] min-h-screen">
+            <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow-md">
+                <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
+                <div className="text-center p-8">
+                    <div className="text-[#D35D38] text-xl font-semibold mb-4">
+                        Access Denied
                     </div>
+                    <p className="text-[#5A5A5A] mb-4">
+                        Only Temple Administrators can register teams for group events.
+                    </p>
+                    <p className="text-sm text-[#5A5A5A]">
+                        Your current role: {userProfile.role}
+                    </p>
                 </div>
-            </section>
+            </div>
+        </section>
         );
     }
 
     return (
-        <section className="min-h-screen">
-            <div className="px-4 py-6 max-w-6xl mx-auto bg-white">
-                <h2 className="text-2xl font-bold mb-6">Group Events Registration</h2>
-                <p className='font-extrabold text-red-500 pb-4'>**Participants in team events must register before the temple admin adds their names.**</p>
+        <section className="min-h-screen bg-[#F0F0F0]">
+            <div className="px-4 py-6 max-w-6xl mx-auto  m-4">
+                <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
+                <p className='font-extrabold text-[#D35D38] pb-4'>**Participants in team events must register before the temple admin adds their names.**</p>
 
                 {error && (
                     <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -633,47 +713,55 @@ const TeamEvents = () => {
 
                 {/* Registration Forms */}
                 <div className="mb-10">
-                    <h3 className="text-xl font-semibold mb-4 text-blue-700">Team Registration</h3>
+                    <h3 className="text-xl font-semibold mb-4 text-[#2A2A2A]">Team Registration</h3>
                     
                     {/* Men's Section */}
                     <div className="mb-8">
-                        <h4 className="text-lg font-semibold mb-4 text-blue-600">Men's Events</h4>
-                        <div className="space-y-6">
+                        <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Men's Events</h4>
+                    <div className="space-y-6">
                             <CollapsibleList title="Volleyball (9 Players)">
-                                <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
-                            </CollapsibleList>
+                                <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
+                        </CollapsibleList>
                             <CollapsibleList title="Tug of War (9 Players)">
-                                <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-blue-600" />
-                            </CollapsibleList>
+                                <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
+                        </CollapsibleList>
                             <CollapsibleList title="Relay - 100 X 4 (4 Players)">
-                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-blue-600" />
-                            </CollapsibleList>
-                        </div>
+                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-[#D35D38]" />
+                        </CollapsibleList>
                     </div>
+                </div>
 
-                    {/* Women's Section */}
+                {/* Women's Section */}
                     <div className="mb-8">
-                        <h4 className="text-lg font-semibold mb-4 text-pink-600">Women's Events</h4>
-                        <div className="space-y-6">
-                            <CollapsibleList title="Throwball (10 Players)">
-                                <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-pink-600" />
+                        <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Women's Events</h4>
+                    <div className="space-y-6">
+                        <CollapsibleList title="Throwball (10 Players)">
+                                <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-[#D35D38]" />
                             </CollapsibleList>
                             <CollapsibleList title="Tug of War (9 Players)">
-                                <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-pink-600" />
-                            </CollapsibleList>
+                                <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-[#D35D38]" />
+                        </CollapsibleList>
                             <CollapsibleList title="Relay - 100 X 4 (4 Players)">
-                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-pink-600" />
-                            </CollapsibleList>
+                                <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-[#D35D38]" />
+                        </CollapsibleList>
                         </div>
                     </div>
 
                     {/* Mixed Gender Events */}
                     <div>
-                        <h4 className="text-lg font-semibold mb-4 text-green-600">Mixed Gender Events</h4>
+                        <h4 className="text-lg font-semibold mb-4 text-[#D35D38]">Mixed Gender Events</h4>
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-800 font-medium">
+                                <span className="font-bold">Note:</span> Mixed gender events require exactly one MALE and one FEMALE participant.
+                            </p>
+                            <p className="text-sm text-blue-700 mt-1">
+                                <span className="font-semibold">Order:</span> First participant must be MALE, second participant must be FEMALE.
+                            </p>
+                        </div>
                         <div className="space-y-6">
                             <CollapsibleList title="Couple Relay - 50 x 2 (2 Players)">
-                                <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-green-600" />
-                            </CollapsibleList>
+                                <TeamForm eventName="Couple Relay - 50 x 2" playerCount={2} gender="ALL" buttonColor="bg-[#D35D38]" />
+                        </CollapsibleList>
                         </div>
                     </div>
                 </div>

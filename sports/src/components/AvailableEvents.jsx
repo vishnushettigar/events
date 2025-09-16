@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { userAPI, eventAPI } from '../utils/api.js';
 
 const AvailableEvents = () => {
   const [events, setEvents] = useState([]);
@@ -12,23 +13,6 @@ const AvailableEvents = () => {
   const [eventToUnregister, setEventToUnregister] = useState(null);
   const navigate = useNavigate();
 
-  const getAuthHeaders = () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.error('No token found in localStorage');
-      navigate('/login');
-      return {};
-    }
-    console.log('Using token:', token);
-    return {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'Accept': '*/*',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Accept-Language': 'en-GB,en-US;q=0.9,en;q=0.8'
-    };
-  };
-
   useEffect(() => {
     const fetchEvents = async () => {
       try {
@@ -39,20 +23,7 @@ const AvailableEvents = () => {
         }
 
         // First fetch user profile
-        const profileResponse = await fetch('http://localhost:4000/api/users/profile', {
-          headers: getAuthHeaders()
-        });
-
-        if (!profileResponse.ok) {
-          if (profileResponse.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch user profile');
-        }
-
-        const profileData = await profileResponse.json();
+        const profileData = await userAPI.getProfile();
         console.log('User profile loaded:', profileData);
         
         if (!profileData.temple_id) {
@@ -62,25 +33,17 @@ const AvailableEvents = () => {
         setUserInfo(profileData);
 
         // Then fetch available events
-        const eventsResponse = await fetch('http://localhost:4000/api/users/available-events', {
-          headers: getAuthHeaders()
-        });
-
-        if (!eventsResponse.ok) {
-          if (eventsResponse.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          throw new Error('Failed to fetch events');
-        }
-
-        const eventsData = await eventsResponse.json();
+        const eventsData = await eventAPI.getAvailableEvents();
         console.log('Events loaded:', eventsData);
         setEvents(eventsData.events);
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
+        if (err.message.includes('401') || err.message.includes('Unauthorized')) {
+          localStorage.removeItem('token');
+          navigate('/login');
+          return;
+        }
         setError(err.message || 'Failed to fetch data');
         setLoading(false);
       }
@@ -108,41 +71,8 @@ const AvailableEvents = () => {
         };
         console.log('Sending registration request with:', requestBody);
 
-        const response = await fetch('http://localhost:4000/api/events/register-participant', {
-          method: 'POST',
-          headers: getAuthHeaders(),
-          body: JSON.stringify(requestBody)
-        });
-
-        const responseData = await response.json();
+        const responseData = await eventAPI.registerParticipant(requestBody);
         console.log('Server response:', responseData);
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
-            return;
-          }
-          
-          // Handle specific error cases
-          if (response.status === 403) {
-            throw new Error('You can only register for events from your own temple');
-          }
-          
-          if (response.status === 404) {
-            throw new Error('Event or user not found. Please try refreshing the page.');
-          }
-          
-          if (responseData.error) {
-            throw new Error(responseData.error);
-          }
-          
-          if (responseData.errors && responseData.errors.length > 0) {
-            throw new Error(responseData.errors[0].msg);
-          }
-          
-          throw new Error('Failed to register for event. Please try again.');
-        }
 
         // Update the event's registration status with the status from the backend
         setEvents(prevEvents => 
@@ -161,7 +91,15 @@ const AvailableEvents = () => {
           userInfo: userInfo,
           selectedEvent: selectedEvent
         });
-        alert(error.message);
+        
+        // Handle specific error cases
+        if (error.message.includes('403')) {
+          alert('You can only register for events from your own temple');
+        } else if (error.message.includes('404')) {
+          alert('Event or user not found. Please try refreshing the page.');
+        } else {
+          alert(error.message || 'Failed to register for event. Please try again.');
+        }
       }
     }
   };
@@ -179,7 +117,7 @@ const AvailableEvents = () => {
     switch (status) {
       case 'ACCEPTED':
         return {
-          text: 'Approved',
+          text: 'REGISTERED',
           className: 'bg-green-100 text-green-700'
         };
       case 'PENDING':
@@ -203,7 +141,7 @@ const AvailableEvents = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#D35D38]"></div>
       </div>
     );
   }
@@ -221,7 +159,7 @@ const AvailableEvents = () => {
   return (
     <>
       <div className='flex-1'>
-      <div className='bg-blue-600 rounded-br-md rounded-bl-md'>
+      <div className='bg-[#D35D38] rounded-br-md rounded-bl-md'>
           <div className='flex flex-col  w-[80%] mx-auto text-white items-start  p-6'>
             <div className='flex flex-row'>
               <ul className="text-white space-y-4 list-disc pl-6">
@@ -237,69 +175,87 @@ const AvailableEvents = () => {
               </ul>
             </div>
             {userInfo && (
-              <div className='flex flex-row gap-4 pt-6'>
-                <h2>Point of contact for {userInfo.temple}:</h2>
-                <h2>{userInfo.temple_admin_name || 'Not available'}</h2>
-                <h2>{userInfo.temple_admin_phone || 'Not available'}</h2>
+              <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 pt-6'>
+                <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center'>
+                  <h2 className='text-sm sm:text-base font-semibold'>Point of contact for {userInfo.temple}:</h2>
+                  <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
+                    <span className='font-medium'>{userInfo.temple_admin_name || 'Not available'}</span>
+                    <span className='font-medium'>{userInfo.temple_admin_phone || 'Not available'}</span>
+                  </div>
+                </div>
               </div>
             )}
           </div>
         </div>
       </div>
     
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-[#F0F0F0] min-h-screen">
       {userInfo && (
         <div className="mb-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-4">{userInfo.first_name} {userInfo.last_name}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h2 className="text-2xl font-bold mb-4 text-[#2A2A2A]">{userInfo.first_name} {userInfo.last_name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <p className="text-gray-600">Age</p>
-              <p className="font-semibold">{userInfo.age} years</p>
+              <p className="text-[#5A5A5A]">Age</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.age} years</p>
             </div>
             <div>
-              <p className="text-gray-600">Gender</p>
-              <p className="font-semibold">{userInfo.gender === 'M' ? 'Male' : userInfo.gender === 'F' ? 'Female' : userInfo.gender}</p>
+              <p className="text-[#5A5A5A]">Age Category</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.age_category || 'Not specified'}</p>
             </div>
             <div>
-              <p className="text-gray-600">Temple</p>
-              <p className="font-semibold">{userInfo.temple || 'Not specified'}</p>
+              <p className="text-[#5A5A5A]">Gender</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.gender === 'M' ? 'Male' : userInfo.gender === 'F' ? 'Female' : userInfo.gender}</p>
+            </div>
+            <div>
+              <p className="text-[#5A5A5A]">Temple</p>
+              <p className="font-semibold text-[#2A2A2A]">{userInfo.temple || 'Not specified'}</p>
             </div>
           </div>
         </div>
       )}
 
-      <h2 className="text-2xl font-bold mb-6">Available Events</h2>
+      <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Available Events</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {events.map((event) => {
-          const registeredCount = events.filter(e => e.is_registered && e.registration_status === 'ACCEPTED').length;
-          const isMaxRegistrationsReached = registeredCount >= 3;
+          // Exclude age categories 0-5, 6-10, 61-90 from registration limit
+          const excludedAgeCategories = ['0-5', '6-10', '61-90'];
+          const eventAgeCategory = event.age_category?.name || '';
+          const isExcluded = excludedAgeCategories.includes(eventAgeCategory);
+
+          // Count only ACCEPTED and PENDING registrations toward the limit, excluding the above age categories
+          const activeRegistrations = events.filter(e => 
+            !excludedAgeCategories.includes(e.age_category?.name || '') &&
+            e.is_registered && 
+            (e.registration_status === 'ACCEPTED' || e.registration_status === 'PENDING')
+          ).length;
+          const isMaxRegistrationsReached = activeRegistrations >= 3 && !isExcluded;
           const isDisabled = isMaxRegistrationsReached && !event.is_registered;
           const statusDisplay = getStatusDisplay(event.registration_status);
 
           return (
             <div key={event.id} className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-2">{event.name}</h3>
-              <div className="space-y-2 mb-4">
-                <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-2 text-[#2A2A2A]">{event.name}</h3>
+              {/* <div className="space-y-2 mb-4">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Type:</span> {event.type}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Age Category:</span> {event.age_category.name}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Gender:</span> {event.gender}
                 </p>
-                <p className="text-gray-600">
+                <p className="text-[#5A5A5A]">
                   <span className="font-medium">Participants:</span> {event.participant_count}
                 </p>
-              </div>
+              </div> */}
               {event.is_registered ? (
                 <div className="flex flex-col gap-2">
                   <div className={`px-4 py-2 rounded ${statusDisplay.className}`}>
                     {statusDisplay.text}
                   </div>
                   {event.registration_status !== 'DECLINED' && (
-                    <div className="text-sm text-gray-600 italic">
+                    <div className="text-sm text-[#5A5A5A] italic">
                       {/* Contact temple admin to cancel registration */}
                     </div>
                   )}
@@ -311,7 +267,7 @@ const AvailableEvents = () => {
                   className={`w-full px-4 py-2 rounded transition-colors ${
                     isDisabled
                       ? 'bg-gray-300 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                      : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
                   }`}
                   title={isDisabled ? 'Maximum registration limit reached (3 events)' : 'Register'}
                 >
@@ -341,7 +297,7 @@ const AvailableEvents = () => {
               </button>
               <button
                 onClick={handleConfirm}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
+                className="bg-[#D35D38] text-white px-4 py-2 rounded hover:bg-[#B84A2E] transition"
               >
                 Confirm
               </button>

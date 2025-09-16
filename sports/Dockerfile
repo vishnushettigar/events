@@ -13,8 +13,11 @@ RUN npm install
 # Copy the rest of the application
 COPY . .
 
-# Build the application
-RUN npm run build
+# Create node_modules directory with proper permissions
+RUN mkdir -p /app/node_modules/.vite && chown -R node:node /app
+
+# Switch to node user
+USER node
 
 # Expose port
 EXPOSE 5173

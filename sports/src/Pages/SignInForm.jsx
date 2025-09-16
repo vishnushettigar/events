@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authAPI } from '../utils/api';
 
 const SignInForm = () => {
     const navigate = useNavigate();
@@ -45,22 +46,10 @@ const SignInForm = () => {
 
         setIsSubmitting(true);
         try {
-            const response = await fetch('http://localhost:4000/api/users/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            const data = await authAPI.login({
                     username: formData.aadhaar,
                     password: formData.password
-                })
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || data.message || 'Login failed');
-            }
 
             // Store the token in localStorage
             localStorage.setItem('token', data.token);
@@ -77,8 +66,34 @@ const SignInForm = () => {
             setFormData({ aadhaar: '', password: '' });
             setErrors({});
 
-            // Redirect to myevents page
-            navigate('/myevents');
+            // Check user role and redirect accordingly
+            console.log('Login response:', data);
+            console.log('User profile:', data.user?.profile);
+            console.log('User role ID:', data.user?.profile?.role?.id);
+            console.log('User role_id (direct):', data.user?.profile?.role_id);
+            console.log('Role object:', data.user?.profile?.role);
+            
+            // Check both role.id and role_id patterns
+            const userRoleId = data.user?.profile?.role?.id || data.user?.profile?.role_id;
+            console.log('Detected role ID:', userRoleId);
+            
+            if (userRoleId === 4) {
+                // Viewer - redirect to viewer panel
+                console.log('Redirecting to viewer panel');
+                navigate('/viewer');
+            } else if (userRoleId === 5) {
+                // Admin panel - redirect to admin panel
+                console.log('Redirecting to admin panel');
+                navigate('/admin');
+            } else if (userRoleId === 3) {
+                // Staff user - redirect to staff panel
+                console.log('Redirecting to staff panel');
+                navigate('/staffpanel');
+            } else {
+                // Regular user - redirect to myevents page
+                console.log('Redirecting to myevents');
+                navigate('/myevents');
+            }
         } catch (err) {
             console.error('Login error:', err);
             setErrors({ 
@@ -92,90 +107,101 @@ const SignInForm = () => {
     const isAuthenticated = !!localStorage.getItem('token');
 
     return (
-        <div className="pt-16 ">
-            <div
-                style={{ animation: 'slideInFromLeft 1s ease-out' }}
-                className=" mx-auto max-w-md w-full bg-gradient-to-r from-blue-800 to-purple-600 rounded-xl shadow-2xl overflow-hidden p-8 space-y-8"
-            >
-                <h2 className="text-center text-4xl font-extrabold text-white">Sign In</h2>
-                <p className="text-center text-gray-200">Login to your account</p>
+        <div className="min-h-screen bg-[#F0F0F0] py-12 px-4">
+            <div className="max-w-md mx-auto">
+                {/* Header Section */}
+                <div className="text-center mb-8">
+                    <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
+                        Welcome Back
+                    </h1>
+                    <p className="text-lg text-[#5A5A5A]">
+                        Sign in to your account
+                    </p>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Sign In Form */}
+                <div className="">
+                    <form onSubmit={handleSubmit} className="space-y-6">
                     {errors.submit && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
+                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                             {errors.submit}
                         </div>
                     )}
 
-                    <div className="relative">
+                        {/* Aadhaar Number */}
+                        <div>
+                            <label htmlFor="aadhaar" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                Aadhaar Number *
+                            </label>
                         <input
-                            placeholder="Aadhaar Number"
-                            className={`peer h-10 w-full border-b-2 ${
-                                errors.aadhaar ? 'border-red-500' : 'border-gray-300'
-                            } text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500`}
-                            required
+                                type="text"
                             id="aadhaar"
                             name="aadhaar"
-                            type="text"
                             value={formData.aadhaar}
                             onChange={handleChange}
-                        />
-                        <label
-                            htmlFor="aadhaar"
-                            className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                        >
-                            Aadhaar Number
-                        </label>
-                        {errors.aadhaar && (
-                            <span className="text-red-500 text-sm">{errors.aadhaar}</span>
-                        )}
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    errors.aadhaar ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="Enter your 12-digit Aadhaar number"
+                            />
+                            {errors.aadhaar && <p className="text-red-500 text-sm mt-1">{errors.aadhaar}</p>}
                     </div>
 
-                    <div className="relative">
+                        {/* Password */}
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+                                Password *
+                            </label>
                         <input
-                            placeholder="Password"
-                            className={`peer h-10 w-full border-b-2 ${
-                                errors.password ? 'border-red-500' : 'border-gray-300'
-                            } text-white bg-transparent placeholder-transparent focus:outline-none focus:border-purple-500`}
-                            required
+                                type="password"
                             id="password"
                             name="password"
-                            type="password"
                             value={formData.password}
                             onChange={handleChange}
-                        />
-                        <label
-                            htmlFor="password"
-                            className="absolute left-0 -top-3.5 text-gray-500 text-sm transition-all peer-placeholder-shown:text-base peer-placeholder-shown:top-2 peer-placeholder-shown:text-gray-400 peer-focus:-top-3.5 peer-focus:text-sm peer-focus:text-purple-500"
-                        >
-                            Password
-                        </label>
-                        {errors.password && (
-                            <span className="text-red-500 text-sm">{errors.password}</span>
-                        )}
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    errors.password ? 'border-red-300' : 'border-gray-300'
+                                }`}
+                                placeholder="Enter your password"
+                            />
+                            {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
                     </div>
 
+                        {/* Submit Button */}
                     <div>
                         <button
                             type="submit"
                             disabled={isSubmitting}
-                            className={`w-full py-2 px-4 ${
+                                className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
                                 isSubmitting
-                                    ? 'bg-gray-500 cursor-not-allowed'
-                                    : 'bg-purple-700 hover:bg-purple-800'
-                            } text-white font-semibold rounded-lg shadow-md focus:outline-none`}
-                        >
-                            {isSubmitting ? 'Signing In...' : 'Sign In'}
+                                        ? 'bg-gray-400 cursor-not-allowed text-white'
+                                        : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
+                                }`}
+                            >
+                                {isSubmitting ? (
+                                    <span className="flex items-center justify-center">
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Signing In...
+                                    </span>
+                                ) : (
+                                    'Sign In'
+                                )}
                         </button>
                     </div>
 
-                    <p className="text-center text-sm text-white">
+                        {/* Register Link */}
+                        <div className="text-center">
+                            <p className="text-[#5A5A5A]">
                         Don't have an account?{' '}
-                        <Link to="/register" className="text-blue-200 hover:underline">
-                            Register
+                                <Link to="/register" className="text-[#D35D38] font-semibold hover:underline">
+                                    Create Account
                         </Link>
                     </p>
+                        </div>
                 </form>
+                </div>
             </div>
         </div>
     );

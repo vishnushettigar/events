@@ -1,6 +1,7 @@
 /**
  * Utility functions for temple-related operations
  */
+import { userAPI } from './api.js';
 
 /**
  * Get temple information by temple ID
@@ -9,23 +10,8 @@
  */
 export const getTempleById = async (templeId) => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No authentication token found');
-        }
-
-        const response = await fetch(`http://localhost:4000/api/users/temple/${templeId}`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch temple information');
-        }
-
-        return await response.json();
+        const response = await userAPI.getTempleById(templeId);
+        return response;
     } catch (error) {
         console.error('Error fetching temple:', error);
         throw error;
@@ -53,23 +39,7 @@ export const getTempleNameById = async (templeId) => {
  */
 export const getCurrentUserTemple = async () => {
     try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            throw new Error('No authentication token found');
-        }
-
-        const response = await fetch('http://localhost:4000/api/users/profile', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch user profile');
-        }
-
-        const data = await response.json();
+        const data = await userAPI.getProfile();
         return {
             id: data.temple_id,
             name: data.temple
@@ -77,5 +47,37 @@ export const getCurrentUserTemple = async () => {
     } catch (error) {
         console.error('Error fetching current user temple:', error);
         throw error;
+    }
+};
+
+/**
+ * Get all temples from the backend
+ * @returns {Promise<Array>} Array of temple objects
+ */
+export const getAllTemples = async () => {
+    try {
+        return await userAPI.getAllTemples();
+    } catch (error) {
+        console.error('Error fetching temples:', error);
+        throw error;
+    }
+};
+
+/**
+ * Get temple names as an array
+ * @returns {Promise<Array<string>>} Array of temple names
+ */
+export const getTempleNames = async () => {
+    try {
+        const temples = await getAllTemples();
+        return temples.map(temple => temple.name);
+    } catch (error) {
+        console.error('Error fetching temple names:', error);
+        // Fallback to hardcoded list if API fails
+        return [
+            'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
+            'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
+            'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
+        ];
     }
 }; 

@@ -1,4 +1,5 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
+
 const prisma = new PrismaClient();
 
 // Overall Championship Report
@@ -18,7 +19,8 @@ async function getOverallChampionshipReport() {
 
 // Event-wise Performance Report
 async function getEventWisePerformanceReport() {
-  const report = await prisma.mst_event.findMany({
+  // Get all events with their registrations and results
+  const events = await prisma.mst_event.findMany({
     where: {
       is_deleted: false
     },
@@ -26,52 +28,73 @@ async function getEventWisePerformanceReport() {
       event_type: true,
       age_category: true,
       registrations: {
+        where: {
+          is_deleted: false,
+          status: 'ACCEPTED',
+          event_result: {
+            isNot: null
+          }
+        },
         include: {
-          event_result: true,
           user: {
             include: {
-              profile: true
+              temple: true
             }
-          }
+          },
+          event_result: true
         }
       },
       team_registrations: {
+        where: {
+          is_deleted: false,
+          status: 'ACCEPTED',
+          event_result: {
+            isNot: null
+          }
+        },
         include: {
-          event_result: true,
-          temple: true
+          temple: true,
+          event_result: true
         }
       }
-    }
+    },
+    orderBy: [
+      { event_type: { name: 'asc' } },
+      { age_category: { from_age: 'asc' } },
+      { gender: 'asc' }
+    ]
   });
 
-  return report;
+  return events;
 }
 
 // Age Category-wise Report
 async function getAgeCategoryWiseReport() {
-  const report = await prisma.mst_age_category.findMany({
+  const report = await prisma.ind_event_registration.findMany({
     where: {
-      is_deleted: false
+      is_deleted: false,
+      event_result: {
+        isNot: null
+      }
     },
     include: {
-      events: {
+      event: {
         include: {
-          registrations: {
-            include: {
-              event_result: true,
-              user: {
-                include: {
-                  profile: true
-                }
-              }
+          age_category: true,
+          event_type: true
             }
           },
-          team_registrations: {
+      user: {
             include: {
-              event_result: true,
               temple: true
             }
-          }
+      },
+      event_result: true
+    },
+    orderBy: {
+      event: {
+        age_category: {
+          from_age: 'asc'
         }
       }
     }
@@ -82,26 +105,29 @@ async function getAgeCategoryWiseReport() {
 
 // Gender-wise Report
 async function getGenderWiseReport() {
-  const report = await prisma.mst_event.findMany({
+  const report = await prisma.ind_event_registration.findMany({
     where: {
-      is_deleted: false
+      is_deleted: false,
+      event_result: {
+        isNot: null
+      }
     },
     include: {
-      registrations: {
+      event: {
         include: {
-          event_result: true,
-          user: {
-            include: {
-              profile: true
-            }
-          }
+          event_type: true
         }
       },
-      team_registrations: {
+      user: {
         include: {
-          event_result: true,
           temple: true
         }
+      },
+      event_result: true
+    },
+    orderBy: {
+      user: {
+        gender: 'asc'
       }
     }
   });
@@ -109,7 +135,7 @@ async function getGenderWiseReport() {
   return report;
 }
 
-module.exports = {
+export {
   getOverallChampionshipReport,
   getEventWisePerformanceReport,
   getAgeCategoryWiseReport,

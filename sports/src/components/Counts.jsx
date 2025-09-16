@@ -1,54 +1,58 @@
-import React from 'react'
+import React from "react";
+import { eventHighlights, eventHighlightsKannada } from "../constants/constants";
+import { useLanguage } from "../contexts/LanguageContext";
 
-const links = [
-   {
-     text: '16 temples',
-     href: '',
-   },
-   {
-     text: '70+ Events',
-     href: '',
-   },
-   {
-     text: '1000+ Participants',
-     href: '',
-   },
-   {
-     text: '200+ winners',
-     href: '',
-   },
- ];
 
- const clickCTA = (text) => {
-   console.log(`Clicked: ${text}`);
-   // Add event tracking or navigation logic if needed
- };
+const clickCTA = (text) => {
+  console.log(`Clicked: ${text}`);
+  // Add event tracking or navigation logic if needed
+};
 
 const Counts = () => {
+  const { isEnglish } = useLanguage();
+
+  const eventHighlightsToDisplay = isEnglish ? eventHighlights : eventHighlightsKannada;
+
   return (
-    <div className="w-[80%] mx-auto my-10">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold text-blue-800 mb-2 drop-shadow">Event Highlights</h1>
-        <p className="text-lg text-gray-600">Explore the highlights of the event</p>
+    <div className="w-[90%]  mx-auto mb-8  px-0 md:w-[90%] lg:px-4">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2 ">
+          {isEnglish ? "Event Highlights" : " ಮುಖ್ಯಾಂಶಗಳು"}
+        </h1>
+        <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">
+          {isEnglish ? "Explore the highlights of the event" : "ಕಾರ್ಯಕ್ರಮದ ಮುಖ್ಯಾಂಶಗಳು"}
+        </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-        {links.map((link, index) => (
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {/* With map */}
+        {eventHighlightsToDisplay.map((event, index) => (
           <button
             key={index}
-            className="flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-purple-500 text-white rounded-2xl shadow-lg p-8 transition-transform transform hover:scale-105 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-4 focus:ring-blue-300"
-            onClick={() => clickCTA(link.text)}
+            className="relative flex flex-col bg-[#EAE2D5] text-[#2A2A2A] rounded-xl md:rounded-2xl  hover:bg-[#ded5c5] overflow-hidden h-32 sm:h-40 md:h-48 lg:h-52"
+            onClick={() => clickCTA(`${event.count}${event.ifPlus} ${event.title}`)}
           >
-            <span className="text-5xl font-bold mb-2">
-              {link.text.match(/\d+\+?/)}
-            </span>
-            <span className="text-lg font-semibold tracking-wide">
-              {link.text.replace(/\d+\s?\+?/, '').trim()}
-            </span>
+            {/* Text at top left */}
+            <div className="text-left p-3 md:p-4 z-10 relative">
+              <span className="text-3xl sm:text-4xl md:text-5xl  font-bold block">
+                {event.count}
+                <sup className="font-normal">{event.ifPlus}</sup>
+              </span>
+              <span className="text-[#5A5A5A] text-sm sm:text-base md:text-lg lg:text-xl tracking-wide">
+                {event.title}
+              </span>
+            </div>
+
+            {/* Image at bottom right */}
+            <img
+              src={event.image}
+              alt={`${event.count}${event.ifPlus} ${event.title}`}
+              className="w-[100px] sm:w-[160px]  object-contain absolute right-0 bottom-0 "
+            />
           </button>
         ))}
       </div>
     </div>
   );
-}
+};
 
 export default Counts;

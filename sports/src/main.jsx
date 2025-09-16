@@ -10,12 +10,15 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import TempleParticipants from './components/Templeparticipants.jsx';
 import Myevents from './components/Myevents.jsx';
 import TeamEvents from './components/TeamEvents.jsx';
-import Events from './components/Events.jsx';
 import Alltemplereports from './Pages/Alltemplereports.jsx';
 import Templedetailedreports from './Pages/Templedetailedreports.jsx';
 import Participantslist from './Pages/Participantslist.jsx';
 import Error from './Pages/Error.jsx';
 import AvailableEvents from './components/AvailableEvents.jsx';
+import StaffPanel from './staff/StaffPanel.jsx';
+import AdminPanel from './admin/AdminPanel.jsx';
+import ProtectedRoute from './components/ProtectedRoute.jsx';
+import Viewer from './viewer/Viewer.jsx';
 
 // routing configurations//
  const appRouter = createBrowserRouter([
@@ -34,6 +37,18 @@ import AvailableEvents from './components/AvailableEvents.jsx';
       {
         path: "/register",
         element: <Register />
+      },
+      {
+        path: "/staffpanel",
+        element: <StaffPanel />
+      },
+      {
+        path: "/admin",
+        element: <ProtectedRoute requiredRole="ADMIN"><AdminPanel /></ProtectedRoute>
+      },
+      {
+        path: "/viewer",
+        element: <ProtectedRoute requiredRole="VIEWER"><Viewer /></ProtectedRoute>
       },
       {
         path: "/myevents",
@@ -68,8 +83,7 @@ import AvailableEvents from './components/AvailableEvents.jsx';
       {
         path: "/participantslist",
         element: <Participantslist />
-      }
-      
+      },
     ],
     errorElement: <Error />
   }

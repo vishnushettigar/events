@@ -1,7 +1,11 @@
-const express = require('express');
-const { body, validationResult } = require('express-validator');
-const eventManagementService = require('../services/eventManagementService');
-const { authenticate, requireRole } = require('../middleware/auth');
+import express from 'express';
+import { body, validationResult } from 'express-validator';
+import * as eventManagementService from '../services/eventManagementService.js';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import { PrismaClient } from '@prisma/client';
+import { dataFetchLimiter } from '../middleware/rateLimiter.js';
+
+const prisma = new PrismaClient();
 const router = express.Router();
 
 /**
@@ -47,7 +51,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/event-types', authenticate, requireRole('SUPER_USER'), [
+router.post('/event-types', dataFetchLimiter, authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Event type name is required'),
   body('type').isIn(['TEAM', 'INDIVIDUAL']).withMessage('Invalid event type'),
   body('participant_count').isInt({ min: 1 }).withMessage('Participant count must be at least 1')
@@ -69,7 +73,7 @@ router.post('/event-types', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.put('/event-types/:id', authenticate, requireRole('SUPER_USER'), [
+router.put('/event-types/:id', authenticate, requireRole('ADMIN'), [
   body('name').optional().notEmpty().withMessage('Event type name cannot be empty'),
   body('type').optional().isIn(['TEAM', 'INDIVIDUAL']).withMessage('Invalid event type'),
   body('participant_count').optional().isInt({ min: 1 }).withMessage('Participant count must be at least 1')
@@ -87,7 +91,7 @@ router.put('/event-types/:id', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.delete('/event-types/:id', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.delete('/event-types/:id', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const eventType = await eventManagementService.deleteEventType(parseInt(req.params.id));
     res.json(eventType);
@@ -150,7 +154,7 @@ router.get('/event-types', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/age-categories', authenticate, requireRole('SUPER_USER'), [
+router.post('/age-categories', authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Age category name is required'),
   body('from_age').isInt({ min: 0 }).withMessage('From age must be a positive number'),
   body('to_age').isInt({ min: 0 }).withMessage('To age must be a positive number')
@@ -172,7 +176,7 @@ router.post('/age-categories', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.put('/age-categories/:id', authenticate, requireRole('SUPER_USER'), [
+router.put('/age-categories/:id', authenticate, requireRole('ADMIN'), [
   body('name').optional().notEmpty().withMessage('Age category name cannot be empty'),
   body('from_age').optional().isInt({ min: 0 }).withMessage('From age must be a positive number'),
   body('to_age').optional().isInt({ min: 0 }).withMessage('To age must be a positive number')
@@ -190,7 +194,7 @@ router.put('/age-categories/:id', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.delete('/age-categories/:id', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.delete('/age-categories/:id', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const ageCategory = await eventManagementService.deleteAgeCategory(parseInt(req.params.id));
     res.json(ageCategory);
@@ -260,11 +264,11 @@ router.get('/age-categories', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/events', authenticate, requireRole('SUPER_USER'), [
+router.post('/events', authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Event name is required'),
   body('event_type_id').isInt().withMessage('Invalid event type ID'),
   body('age_category_id').isInt().withMessage('Invalid age category ID'),
-  body('gender').isIn(['MALE', 'FEMALE', 'ALL']).withMessage('Invalid gender'),
+  body('gender').isIn(['MALE', 'FEMALE', 'MIXED']).withMessage('Invalid gender'),
   body('temple_id').isInt().withMessage('Invalid temple ID')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -286,11 +290,11 @@ router.post('/events', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.put('/events/:id', authenticate, requireRole('SUPER_USER'), [
+router.put('/events/:id', authenticate, requireRole('ADMIN'), [
   body('name').optional().notEmpty().withMessage('Event name cannot be empty'),
   body('event_type_id').optional().isInt().withMessage('Invalid event type ID'),
   body('age_category_id').optional().isInt().withMessage('Invalid age category ID'),
-  body('gender').optional().isIn(['MALE', 'FEMALE', 'ALL']).withMessage('Invalid gender'),
+  body('gender').optional().isIn(['MALE', 'FEMALE', 'MIXED']).withMessage('Invalid gender'),
   body('temple_id').optional().isInt().withMessage('Invalid temple ID')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -306,7 +310,7 @@ router.put('/events/:id', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.delete('/events/:id', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.delete('/events/:id', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const event = await eventManagementService.deleteEvent(parseInt(req.params.id));
     res.json(event);
@@ -378,7 +382,7 @@ router.get('/events', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/events/:event_id/schedules', authenticate, requireRole('SUPER_USER'), [
+router.post('/events/:event_id/schedules', authenticate, requireRole('ADMIN'), [
   body('start_time').isISO8601().withMessage('Invalid start time'),
   body('end_time').isISO8601().withMessage('Invalid end time')
 ], async (req, res) => {
@@ -399,7 +403,7 @@ router.post('/events/:event_id/schedules', authenticate, requireRole('SUPER_USER
   }
 });
 
-router.put('/schedules/:id', authenticate, requireRole('SUPER_USER'), [
+router.put('/schedules/:id', authenticate, requireRole('ADMIN'), [
   body('start_time').optional().isISO8601().withMessage('Invalid start time'),
   body('end_time').optional().isISO8601().withMessage('Invalid end time')
 ], async (req, res) => {
@@ -419,7 +423,7 @@ router.put('/schedules/:id', authenticate, requireRole('SUPER_USER'), [
   }
 });
 
-router.delete('/schedules/:id', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.delete('/schedules/:id', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const schedule = await eventManagementService.deleteEventSchedule(parseInt(req.params.id));
     res.json(schedule);
@@ -439,4 +443,4 @@ router.get('/events/:event_id/schedules', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

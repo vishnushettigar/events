@@ -3,7 +3,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  binaryTargets = ["native", "linux-arm64-openssl-1.1.x"]
+  binaryTargets = ["native", "linux-arm64-openssl-1.1.x", "linux-musl-arm64-openssl-3.0.x"]
 }
 
 datasource db {
@@ -44,7 +44,7 @@ enum RegistrationStatus {
 
 model Mst_age_category {
   id         Int     @id @default(autoincrement())
-  name       String
+  name       String  @unique
   from_age   Int
   to_age     Int
   is_deleted Boolean @default(false)
@@ -68,7 +68,7 @@ model Mst_event {
 enum Gender {
   MALE
   FEMALE
-  ALL
+  MIXED
 }
 
 model Mst_event_result {

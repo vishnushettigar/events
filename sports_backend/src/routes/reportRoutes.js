@@ -1,6 +1,7 @@
-const express = require('express');
-const { authenticate, requireRole } = require('../middleware/auth');
-const reportService = require('../services/reportService');
+import express from 'express';
+import { authenticate, requireRole } from '../middleware/auth.js';
+import * as reportService from '../services/reportService.js';
+
 const router = express.Router();
 
 /**
@@ -41,7 +42,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/championship', authenticate, requireRole('SUPER_USER'), async (req, res) => {
+router.get('/championship', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const report = await reportService.getOverallChampionshipReport();
     res.json(report);
@@ -202,4 +203,4 @@ router.get('/gender', authenticate, async (req, res) => {
   }
 });
 
-module.exports = router; 
+export default router; 

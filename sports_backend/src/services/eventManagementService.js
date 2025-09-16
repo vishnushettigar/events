@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // Event Type Management
@@ -253,7 +253,7 @@ async function listEventSchedules(event_id) {
   });
 }
 
-module.exports = {
+export {
   // Event Type Management
   createEventType,
   updateEventType,
