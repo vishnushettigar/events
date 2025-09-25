@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userAPI, eventAPI } from '../utils/api.js';
+import PointsTable from './PointsTable';
 
 const AvailableEvents = () => {
   const [events, setEvents] = useState([]);
@@ -11,6 +12,8 @@ const AvailableEvents = () => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [eventToUnregister, setEventToUnregister] = useState(null);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
+  const [showPointsTable, setShowPointsTable] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -105,7 +108,49 @@ const AvailableEvents = () => {
   };
 
   const handleUnregister = (event) => {
-    alert('Only temple administrators can cancel registrations. Please contact your temple admin if you need to cancel your registration.');
+    setEventToUnregister(event);
+    setShowCancelModal(true);
+    setCancelSuccess(false);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (eventToUnregister) {
+      try {
+        const response = await eventAPI.unregisterParticipant(eventToUnregister.id);
+        
+        if (response.success) {
+          // Update the events state to remove the registration
+          setEvents(prevEvents =>
+            prevEvents.map(event =>
+              event.id === eventToUnregister.id
+                ? { ...event, is_registered: false, registration_status: null }
+                : event
+            )
+          );
+
+          setCancelSuccess(true);
+          
+          // Close modal after showing success message
+          setTimeout(() => {
+            setShowCancelModal(false);
+            setEventToUnregister(null);
+            setCancelSuccess(false);
+          }, 2000);
+        } else {
+          throw new Error(response.message || 'Failed to cancel registration');
+        }
+        
+      } catch (error) {
+        console.error('Cancellation error:', error);
+        alert('Failed to cancel registration. Please try again.');
+      }
+    }
+  };
+
+  const handleCancelModalClose = () => {
+    setShowCancelModal(false);
+    setEventToUnregister(null);
+    setCancelSuccess(false);
   };
 
   const handleCancel = () => {
@@ -174,6 +219,7 @@ const AvailableEvents = () => {
                 </li>
               </ul>
             </div>
+            
             {userInfo && (
               <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 pt-6'>
                 <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center'>
@@ -211,6 +257,27 @@ const AvailableEvents = () => {
               <p className="font-semibold text-[#2A2A2A]">{userInfo.temple || 'Not specified'}</p>
             </div>
           </div>
+          <div className='mt-4'>
+            <h4 className='text-[#D35D38] font-semibold bg-yellow-200 px-4 py-2 rounded-lg border-l-4 border-[#D35D38] shadow-md animate-pulse'>Last date for registration: 18-12-2025</h4> 
+          </div>
+          
+          {/* Points Table Button */}
+          <div className='mt-4 flex justify-center'>
+            <button
+              onClick={() => setShowPointsTable(!showPointsTable)}
+              className='bg-[#D35D38] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#B84A2A] transition-colors shadow-md flex items-center gap-2'
+            >
+              <span>🏛️</span>
+              {showPointsTable ? 'Hide Points Table' : 'View Points Table'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Points Table Section */}
+      {showPointsTable && (
+        <div className="mb-8">
+          <PointsTable />
         </div>
       )}
 
@@ -255,9 +322,12 @@ const AvailableEvents = () => {
                     {statusDisplay.text}
                   </div>
                   {event.registration_status !== 'DECLINED' && (
-                    <div className="text-sm text-[#5A5A5A] italic">
-                      {/* Contact temple admin to cancel registration */}
-                    </div>
+                    <button
+                      onClick={() => handleUnregister(event)}
+                      className="w-full px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors text-sm"
+                    >
+                      Cancel Registration
+                    </button>
                   )}
                 </div>
               ) : (
@@ -302,6 +372,50 @@ const AvailableEvents = () => {
                 Confirm
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancellation Confirmation Modal */}
+      {showCancelModal && eventToUnregister && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-md">
+            {!cancelSuccess ? (
+              <>
+                <h2 className="text-lg font-semibold mb-4 text-red-600">Cancel Registration</h2>
+                <p>
+                  Are you sure you want to cancel your registration for{" "}
+                  <span className="font-bold">{eventToUnregister.name}</span>?
+                </p>
+                <p className="text-sm text-gray-600 mt-2">
+                  This action cannot be undone. You will need to register again if you change your mind.
+                </p>
+                <div className="mt-6 flex justify-end gap-4">
+                  <button
+                    onClick={handleCancelModalClose}
+                    className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
+                  >
+                    Keep Registration
+                  </button>
+                  <button
+                    onClick={handleConfirmCancel}
+                    className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
+                  >
+                    Cancel Registration
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-center">
+                  <div className="text-green-500 text-4xl mb-4">✓</div>
+                  <h2 className="text-lg font-semibold mb-4 text-green-600">Registration Cancelled Successfully</h2>
+                  <p className="text-gray-600">
+                    Your registration for <span className="font-bold">{eventToUnregister.name}</span> has been cancelled.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

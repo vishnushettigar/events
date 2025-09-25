@@ -13,6 +13,7 @@ import EventDetails from "../components/EventDetails";
 // import Loginbg from "../assets/Login-Img.png"
 import { useLanguage } from "../contexts/LanguageContext";
 import SportsHistoryMarquee from "../components/SportsHistoryMarquee";
+import SportsHistoryHome from "../components/SportsHistoryHome";
 
 const Home = () => {
   const { isEnglish } = useLanguage();
@@ -44,10 +45,10 @@ const Home = () => {
 
           {/* Right Side - Content */}
           <div className="flex-1 flex flex-col items-start md:items-start md:text-left mb-6">
-            <h1 className="text-4xl md:text-5xl font-bold text-[#2A2A2A]  mb-3">
+            <h1 className="text-4xl md:text-5xl font-bold text-[#2A2A2A]  mb-3 whitespace-pre-line">
               {isEnglish 
                 ? <>33<sup>rd</sup> Padmashali Kreedothsava - 2025</>
-                : "33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025"
+                : <>33ನೇ ಪದ್ಮಶಾಲಿ <br/> ಕ್ರೀಡೋತ್ಸವ - 2025</>
               }
             </h1>
             {/* <p className="text-[16px] md:text-[20px] text-[#5A5A5A] mb-2">
@@ -78,7 +79,7 @@ const Home = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section>     
       <div className="bg-[#F0F0F0]">
         <div>
           {" "}
@@ -90,9 +91,10 @@ const Home = () => {
         <div>
           <Rules />
         </div>
-        <div>
-          <SportsHistoryMarquee />
-        </div>
+         {/* Sports History Section */}
+      <div >
+        <SportsHistoryHome />
+      </div>
         <div>
           <Location />
         </div>

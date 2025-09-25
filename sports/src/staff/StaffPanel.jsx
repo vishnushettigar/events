@@ -30,11 +30,22 @@ const StaffPanel = () => {
   const [loadingTemples, setLoadingTemples] = useState(false);
   const [templeError, setTempleError] = useState(null);
 
+  // For Champions section - Top Temples
+  const [topTemples, setTopTemples] = useState([]);
+  const [loadingTopTemples, setLoadingTopTemples] = useState(false);
+  const [topTemplesError, setTopTemplesError] = useState(null);
+
+  // For Schedule section
+  const [scheduleData, setScheduleData] = useState({ individual: [], team: [] });
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+  const [scheduleError, setScheduleError] = useState(null);
+
   const tabs = [
     { id: 'update-results', name: 'Individual', endpoint: '/api/events/participant-data' },
     { id: 'teams', name: 'Teams', endpoint: '/api/events/team-events' },
     { id: 'champions', name: 'Champions', endpoint: '/api/users/champions' },
     { id: 'all-result', name: 'All Results', endpoint: '/api/users/all-results' },
+    { id: 'schedule', name: 'Schedule', endpoint: '/api/events/schedule' },
     { id: 'temples', name: 'Temple Reports', endpoint: '/api/admin/temples' }
   ];
 
@@ -64,6 +75,56 @@ const StaffPanel = () => {
     }
   };
 
+  // Fetch top temples for champions section
+  const fetchTopTemples = async () => {
+    try {
+      setLoadingTopTemples(true);
+      setTopTemplesError(null);
+
+      const temples = await userAPI.getAllTemples();
+      
+      // Transform and sort temples by points
+      const topTemplesData = temples
+        .map((temple) => ({
+          temple_id: temple.id,
+          temple_name: temple.name,
+          total_points: temple.total_points || 0
+        }))
+        .sort((a, b) => b.total_points - a.total_points)
+        .slice(0, 5); // Get top 5 temples
+      
+      setTopTemples(topTemplesData);
+    } catch (err) {
+      console.error('Error fetching top temples:', err);
+      setTopTemplesError(err.message);
+      setTopTemples([]);
+    } finally {
+      setLoadingTopTemples(false);
+    }
+  };
+
+  // Fetch schedule data
+  const fetchScheduleData = async () => {
+    try {
+      setLoadingSchedule(true);
+      setScheduleError(null);
+
+      // Fetch all events from the new comprehensive endpoint
+      const response = await eventAPI.getAllEventsComplete();
+      
+      setScheduleData({
+        individual: response.individual || [],
+        team: response.team || []
+      });
+    } catch (err) {
+      console.error('Error fetching schedule data:', err);
+      setScheduleError(err.message);
+      setScheduleData({ individual: [], team: [] });
+    } finally {
+      setLoadingSchedule(false);
+    }
+  };
+
   useEffect(() => {
     // Clear data when switching tabs to prevent structure conflicts
     setData([]);
@@ -77,8 +138,11 @@ const StaffPanel = () => {
       fetchTeamEvents();
     } else if (activeTab === 'champions') {
       fetchChampions();
+      fetchTopTemples();
     } else if (activeTab === 'all-result') {
       fetchAllResults();
+    } else if (activeTab === 'schedule') {
+      fetchScheduleData();
     } else if (activeTab === 'results') {
       fetchResults();
     } else {
@@ -330,21 +394,197 @@ const StaffPanel = () => {
     const [eventParticipants, setEventParticipants] = useState([]);
     const [loadingParticipants, setLoadingParticipants] = useState(false);
     const [participantError, setParticipantError] = useState(null);
+    const [trialMeasurements, setTrialMeasurements] = useState({});
+    const [laneCount, setLaneCount] = useState(8);
+    const [heats, setHeats] = useState([]);
+    const [selectedHeat, setSelectedHeat] = useState(null);
+    const [timings, setTimings] = useState({});
+    const [showFinalHeat, setShowFinalHeat] = useState(false);
+    const [finalHeatParticipants, setFinalHeatParticipants] = useState([]);
+
+    // Check if this event requires trial measurements
+    const isTrialEvent = () => {
+      const eventName = title.toLowerCase();
+      return eventName.includes('long-jump') || eventName.includes('shot put') || eventName.includes('long jump');
+    };
+
+    // Check if this event requires heats (running events)
+    const isHeatEvent = () => {
+      const eventName = title.toLowerCase();
+      return eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
+    };
+
+    // Handle trial measurement input
+    const handleTrialInput = (participantId, trialNumber, value) => {
+      setTrialMeasurements(prev => ({
+        ...prev,
+        [`${participantId}_${trialNumber}`]: value
+      }));
+    };
+
+    // Handle timing input
+    const handleTimingInput = (participantId, value) => {
+      setTimings(prev => ({
+        ...prev,
+        [participantId]: value
+      }));
+    };
+
+    // Generate heats with temple separation logic
+    const generateHeats = (participants, lanes) => {
+      if (participants.length <= lanes) {
+        return [{ id: 1, participants: participants, laneCount: participants.length }];
+      }
+
+      const heats = [];
+      const templeGroups = {};
+      
+      // Group participants by temple
+      participants.forEach(participant => {
+        const temple = participant.temple_name;
+        if (!templeGroups[temple]) {
+          templeGroups[temple] = [];
+        }
+        templeGroups[temple].push(participant);
+      });
+
+      const temples = Object.keys(templeGroups);
+      let currentHeat = { id: 1, participants: [], laneCount: 0 };
+      let templeIndex = 0;
+
+      // Distribute participants ensuring no same temple in same heat
+      while (templeIndex < temples.length) {
+        const temple = temples[templeIndex];
+        const templeParticipants = templeGroups[temple];
+        
+        // If adding this temple would exceed lane capacity, start new heat
+        if (currentHeat.participants.length + templeParticipants.length > lanes) {
+          if (currentHeat.participants.length > 0) {
+            heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
+            currentHeat = { id: heats.length + 1, participants: [], laneCount: 0 };
+          }
+        }
+
+        // Add temple participants to current heat
+        templeParticipants.forEach(participant => {
+          if (currentHeat.participants.length < lanes) {
+            currentHeat.participants.push(participant);
+            currentHeat.laneCount++;
+          } else {
+            // If current heat is full, start new heat
+            heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
+            currentHeat = { id: heats.length + 1, participants: [participant], laneCount: 1 };
+          }
+        });
+
+        templeIndex++;
+      }
+
+      // Add the last heat if it has participants
+      if (currentHeat.participants.length > 0) {
+        heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
+      }
+
+      return heats;
+    };
+
+    // Convert timing string to seconds for comparison
+    const parseTiming = (timing) => {
+      if (!timing || timing === '') return Infinity;
+      
+      // Handle formats like "12.34", "1:23.45", "00:12.34"
+      const parts = timing.split(':');
+      if (parts.length === 2) {
+        // Format: MM:SS.ss
+        const minutes = parseInt(parts[0]) || 0;
+        const seconds = parseFloat(parts[1]) || 0;
+        return minutes * 60 + seconds;
+      } else {
+        // Format: SS.ss
+        return parseFloat(timing) || Infinity;
+      }
+    };
+
+    // Get all participants with timings from all heats
+    const getAllParticipantsWithTimings = () => {
+      const allParticipants = [];
+      
+      heats.forEach(heat => {
+        heat.participants.forEach(participant => {
+          const timing = timings[participant.id];
+          if (timing && timing !== '') {
+            allParticipants.push({
+              ...participant,
+              timing: timing,
+              timingSeconds: parseTiming(timing)
+            });
+          }
+        });
+      });
+      
+      return allParticipants;
+    };
+
+    // Generate final heat with top 8 participants
+    const generateFinalHeat = () => {
+      const participantsWithTimings = getAllParticipantsWithTimings();
+      
+      // Sort by timing (fastest first)
+      const sortedParticipants = participantsWithTimings.sort((a, b) => a.timingSeconds - b.timingSeconds);
+      
+      // Take top 8
+      const top8 = sortedParticipants.slice(0, 8);
+      setFinalHeatParticipants(top8);
+      setShowFinalHeat(true);
+    };
+
+    // Handle final heat participant selection
+    const handleFinalHeatSelection = (participantId, isSelected) => {
+      if (isSelected) {
+        // Add to final heat if not already there
+        const participant = eventParticipants.find(p => p.id === participantId);
+        if (participant && !finalHeatParticipants.find(p => p.id === participantId)) {
+          setFinalHeatParticipants(prev => [...prev, {
+            ...participant,
+            timing: timings[participantId] || '',
+            timingSeconds: parseTiming(timings[participantId])
+          }]);
+        }
+      } else {
+        // Remove from final heat
+        setFinalHeatParticipants(prev => prev.filter(p => p.id !== participantId));
+      }
+    };
 
     // Print function for event participants
     const handlePrint = () => {
       const printWindow = window.open('', '_blank');
+      let participantsToPrint = eventParticipants;
+      let printTitle = title;
+      
+      if (isHeatEvent()) {
+        if (showFinalHeat) {
+          participantsToPrint = finalHeatParticipants;
+          printTitle = `${title} - Final Heat`;
+        } else if (selectedHeat) {
+          participantsToPrint = selectedHeat.participants;
+          printTitle = `${title} - Heat ${selectedHeat.id}`;
+        }
+      }
+      
       const printContent = `
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Event Participants - ${title}</title>
+          <title>Event Participants - ${printTitle}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .header { text-align: center; margin-bottom: 20px; }
             .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
             .event-details { font-size: 16px; margin-bottom: 20px; }
             .event-details span { margin-right: 20px; }
+            .heat-info { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
+            .final-heat-info { background-color: #e8f5e8; padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 2px solid #4caf50; }
             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
             th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
             th { background-color: #f2f2f2; font-weight: bold; }
@@ -352,6 +592,9 @@ const StaffPanel = () => {
             .first { background-color: #fff3cd; color: #856404; }
             .second { background-color: #f8f9fa; color: #6c757d; }
             .third { background-color: #ffeaa7; color: #d63031; }
+            .trial-data { font-weight: bold; color: #D35D38; }
+            .timing-data { font-weight: bold; color: #D35D38; }
+            .final-heat-timing { font-weight: bold; color: #4caf50; }
             @media print {
               body { margin: 0; }
               .no-print { display: none; }
@@ -364,9 +607,22 @@ const StaffPanel = () => {
             <div class="event-details">
               <span><strong>Age Category:</strong> ${ageCategory}</span>
               <span><strong>Gender:</strong> ${gender}</span>
-              <span><strong>Event:</strong> ${title}</span>
+              <span><strong>Event:</strong> ${printTitle}</span>
             </div>
           </div>
+          ${isHeatEvent() && showFinalHeat ? `
+            <div class="final-heat-info">
+              <strong>🏁 Final Heat Information:</strong><br>
+              Participants: ${finalHeatParticipants.length}/8 | Top performers from all heats<br>
+              Temples: ${[...new Set(finalHeatParticipants.map(p => p.temple_name))].join(', ')}
+            </div>
+          ` : isHeatEvent() && selectedHeat ? `
+            <div class="heat-info">
+              <strong>Heat ${selectedHeat.id} Information:</strong><br>
+              Participants: ${selectedHeat.participants.length} | Lane Count: ${laneCount}<br>
+              Temples: ${[...new Set(selectedHeat.participants.map(p => p.temple_name))].join(', ')}
+            </div>
+          ` : ''}
           <table>
             <thead>
               <tr>
@@ -374,11 +630,17 @@ const StaffPanel = () => {
                 <th>NAME</th>
                 <th>TEMPLE</th>
                 <th>AADHAR NO</th>
+                ${isTrialEvent() ? `
+                  <th>TRIAL 1</th>
+                  <th>TRIAL 2</th>
+                  <th>TRIAL 3</th>
+                ` : ''}
+                ${isHeatEvent() ? '<th>TIMING</th>' : ''}
                 <th>RESULTS</th>
               </tr>
             </thead>
             <tbody>
-              ${eventParticipants.map((participant, index) => {
+              ${participantsToPrint.map((participant, index) => {
                 const participantName = participant.registration_type === 'INDIVIDUAL' 
                   ? participant.participant_name 
                   : participant.team_name;
@@ -389,12 +651,25 @@ const StaffPanel = () => {
                       participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank
                     }</span>`
                   : '';
+                
+                const trial1 = trialMeasurements[`${participant.id}_1`] || '';
+                const trial2 = trialMeasurements[`${participant.id}_2`] || '';
+                const trial3 = trialMeasurements[`${participant.id}_3`] || '';
+                const timing = participant.timing || timings[participant.id] || '';
+                const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
+                
                 return `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${participantName}</td>
                     <td>${participant.temple_name}</td>
                     <td>${participant.aadhar_number || 'N/A'}</td>
+                    ${isTrialEvent() ? `
+                      <td class="trial-data">${trial1 ? trial1 + 'm' : '-'}</td>
+                      <td class="trial-data">${trial2 ? trial2 + 'm' : '-'}</td>
+                      <td class="trial-data">${trial3 ? trial3 + 'm' : '-'}</td>
+                    ` : ''}
+                    ${isHeatEvent() ? `<td class="${timingClass}">${timing || '-'}</td>` : ''}
                     <td>${resultDisplay}</td>
                   </tr>
                 `;
@@ -421,6 +696,15 @@ const StaffPanel = () => {
         setParticipantError(null);
         const data = await eventAPI.getEventParticipants(eventId);
         setEventParticipants(data);
+        
+        // Generate heats for running events
+        if (isHeatEvent() && data.length > 0) {
+          const generatedHeats = generateHeats(data, laneCount);
+          setHeats(generatedHeats);
+          if (generatedHeats.length > 0) {
+            setSelectedHeat(generatedHeats[0]);
+          }
+        }
     } catch (err) {
         console.error('Error fetching event participants:', err);
         setParticipantError(err.message);
@@ -476,91 +760,318 @@ const StaffPanel = () => {
                 Error: {participantError}
               </div>
             ) : eventParticipants.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#F8DFBE] border border-[#F8DFBE]">
-                  <thead className="bg-white border-b border-[#F8DFBE]">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">SL.NO</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">NAME</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TEMPLE</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">AADHAR NO</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">RESULTS</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">ACTIONS</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-[#F8DFBE]">
-                    {eventParticipants.map((participant, index) => (
-                      <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
-                          {index + 1}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
-                          {participant.registration_type === 'INDIVIDUAL' 
-                            ? participant.participant_name 
-                            : participant.team_name}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
-                          {participant.temple_name}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
-                          {participant.aadhar_number || 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                          {participant.result?.rank ? (
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                              participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                              participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {participant.result.rank === 'FIRST' ? '🥇 1st' :
-                               participant.result.rank === 'SECOND' ? '🥈 2nd' :
-                               participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs"></span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">
-                          <div className="flex gap-2">
-                            <select 
-                              className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
-                              defaultValue={participant.result?.rank || ""}
-                              id={`rank-${participant.id}`}
-                            >
-                              <option value="">Select Rank</option>
-                              <option value="FIRST">🥇 1st Place</option>
-                              <option value="SECOND">🥈 2nd Place</option>
-                              <option value="THIRD">🥉 3rd Place</option>
-                              <option value="CLEAR">Clear Result</option>
-                            </select>
-                            <button 
-                              className="px-3 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
+              <div className="space-y-4">
+                {/* Heat Selection for Running Events */}
+                {isHeatEvent() && heats.length > 0 && (
+                  <div className="bg-[#F8DFBE] p-4 rounded-lg">
+                    <div className="flex flex-wrap items-center gap-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-[#2A2A2A]">Lane Count:</label>
+                        <select
+                          value={laneCount}
+                          onChange={(e) => {
+                            const newLaneCount = parseInt(e.target.value);
+                            setLaneCount(newLaneCount);
+                            const newHeats = generateHeats(eventParticipants, newLaneCount);
+                            setHeats(newHeats);
+                            if (newHeats.length > 0) {
+                              setSelectedHeat(newHeats[0]);
+                            }
+                          }}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value={6}>6 Lanes</option>
+                          <option value={7}>7 Lanes</option>
+                          <option value={8}>8 Lanes</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label className="text-sm font-medium text-[#2A2A2A]">Select Heat:</label>
+                        <div className="flex gap-2 flex-wrap">
+                          {heats.map((heat) => (
+                            <button
+                              key={heat.id}
                               onClick={() => {
-                                const select = document.getElementById(`rank-${participant.id}`);
-                                if (select.value) {
-                                  const participantName = participant.registration_type === 'INDIVIDUAL' 
-                                    ? participant.participant_name 
-                                    : participant.team_name;
-                                  handleIndividualResultUpdate(
-                                    participant.id, 
-                                    select.value, 
-                                    participantName, 
-                                    participant.temple_name,
-                                    title, // event name
-                                    participant.aadhar_number || 'N/A'
-                                  );
-                                }
+                                setSelectedHeat(heat);
+                                setShowFinalHeat(false);
                               }}
+                              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                selectedHeat?.id === heat.id && !showFinalHeat
+                                  ? 'bg-[#D35D38] text-white'
+                                  : 'bg-white text-[#2A2A2A] hover:bg-gray-100'
+                              }`}
                             >
-                              Update
+                              Heat {heat.id} ({heat.laneCount} participants)
                             </button>
-                          </div>
-                        </td>
+                          ))}
+                          <button
+                            onClick={() => {
+                              setShowFinalHeat(true);
+                              setSelectedHeat(null);
+                              if (finalHeatParticipants.length === 0) {
+                                generateFinalHeat();
+                              }
+                            }}
+                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                              showFinalHeat
+                                ? 'bg-green-600 text-white'
+                                : 'bg-green-100 text-green-800 hover:bg-green-200'
+                            }`}
+                          >
+                            🏁 Final Heat ({finalHeatParticipants.length}/8)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    {selectedHeat && (
+                      <div className="text-sm text-[#5A5A5A]">
+                        <strong>Heat {selectedHeat.id}:</strong> {selectedHeat.participants.length} participants
+                        {selectedHeat.participants.length > 0 && (
+                          <span className="ml-2">
+                            (Temples: {[...new Set(selectedHeat.participants.map(p => p.temple_name))].join(', ')})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {showFinalHeat && (
+                      <div className="text-sm text-[#5A5A5A]">
+                        <strong>🏁 Final Heat:</strong> {finalHeatParticipants.length}/8 participants
+                        {finalHeatParticipants.length > 0 && (
+                          <span className="ml-2">
+                            (Temples: {[...new Set(finalHeatParticipants.map(p => p.temple_name))].join(', ')})
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Final Heat Management */}
+                {isHeatEvent() && showFinalHeat && (
+                  <div className="bg-[#E8F5E8] p-4 rounded-lg border-2 border-green-300">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <h4 className="text-lg font-semibold text-[#2A2A2A]">🏁 Final Heat Management</h4>
+                        <button
+                          onClick={generateFinalHeat}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                        >
+                          Auto Select Top 8
+                        </button>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded border">
+                        <h5 className="font-medium text-[#2A2A2A] mb-2">Final Heat Participants ({finalHeatParticipants.length}/8)</h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                          {finalHeatParticipants.map((participant, index) => (
+                            <div key={participant.id} className="bg-green-50 p-2 rounded border flex justify-between items-center">
+                              <div>
+                                <div className="font-medium text-sm">{participant.participant_name || participant.team_name}</div>
+                                <div className="text-xs text-gray-600">{participant.temple_name}</div>
+                                <div className="text-xs font-bold text-green-600">{participant.timing}</div>
+                              </div>
+                              <button
+                                onClick={() => handleFinalHeatSelection(participant.id, false)}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded border">
+                        <h5 className="font-medium text-[#2A2A2A] mb-2">All Participants with Timings</h5>
+                        <div className="max-h-60 overflow-y-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-gray-50">
+                                <th className="px-2 py-1 text-left">Select</th>
+                                <th className="px-2 py-1 text-left">Name</th>
+                                <th className="px-2 py-1 text-left">Temple</th>
+                                <th className="px-2 py-1 text-left">Timing</th>
+                                <th className="px-2 py-1 text-left">Heat</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {getAllParticipantsWithTimings()
+                                .sort((a, b) => a.timingSeconds - b.timingSeconds)
+                                .map((participant, index) => {
+                                  const isSelected = finalHeatParticipants.find(p => p.id === participant.id);
+                                  const heatNumber = heats.findIndex(heat => 
+                                    heat.participants.find(p => p.id === participant.id)
+                                  ) + 1;
+                                  
+                                  return (
+                                    <tr key={participant.id} className="border-b">
+                                      <td className="px-2 py-1">
+                                        <input
+                                          type="checkbox"
+                                          checked={!!isSelected}
+                                          onChange={(e) => handleFinalHeatSelection(participant.id, e.target.checked)}
+                                          disabled={!isSelected && finalHeatParticipants.length >= 8}
+                                          className="rounded"
+                                        />
+                                      </td>
+                                      <td className="px-2 py-1">{participant.participant_name || participant.team_name}</td>
+                                      <td className="px-2 py-1">{participant.temple_name}</td>
+                                      <td className="px-2 py-1 font-bold text-green-600">{participant.timing}</td>
+                                      <td className="px-2 py-1">Heat {heatNumber}</td>
+                                    </tr>
+                                  );
+                                })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-[#F8DFBE] border border-[#F8DFBE]">
+                    <thead className="bg-white border-b border-[#F8DFBE]">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">SL.NO</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">NAME</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TEMPLE</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">AADHAR NO</th>
+                        {isTrialEvent() && (
+                          <>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 1</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 2</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 3</th>
+                          </>
+                        )}
+                        {isHeatEvent() && (
+                          <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TIMING</th>
+                        )}
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">RESULTS</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">ACTIONS</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                  <tbody className="bg-white divide-y divide-[#F8DFBE]">
+                    {(isHeatEvent() && showFinalHeat ? finalHeatParticipants : 
+                      isHeatEvent() && selectedHeat ? selectedHeat.participants : 
+                      eventParticipants).map((participant, index) => (
+                        <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
+                            {participant.registration_type === 'INDIVIDUAL' 
+                              ? participant.participant_name 
+                              : participant.team_name}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
+                            {participant.temple_name}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
+                            {participant.aadhar_number || 'N/A'}
+                          </td>
+                          {isTrialEvent() && (
+                            <>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={trialMeasurements[`${participant.id}_1`] || ''}
+                                  onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
+                                />
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={trialMeasurements[`${participant.id}_2`] || ''}
+                                  onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
+                                />
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={trialMeasurements[`${participant.id}_3`] || ''}
+                                  onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
+                                />
+                              </td>
+                            </>
+                          )}
+                          {isHeatEvent() && (
+                            <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                              <input
+                                type="text"
+                                placeholder="00:00.00"
+                                className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                value={timings[participant.id] || ''}
+                                onChange={(e) => handleTimingInput(participant.id, e.target.value)}
+                              />
+                            </td>
+                          )}
+                          <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                            {participant.result?.rank ? (
+                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                {participant.result.rank === 'FIRST' ? '🥇 1st' :
+                                 participant.result.rank === 'SECOND' ? '🥈 2nd' :
+                                 participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400 text-xs"></span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">
+                            <div className="flex gap-2">
+                              <select 
+                                className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
+                                defaultValue={participant.result?.rank || ""}
+                                id={`rank-${participant.id}`}
+                              >
+                                <option value="">Select Rank</option>
+                                <option value="FIRST">🥇 1st Place</option>
+                                <option value="SECOND">🥈 2nd Place</option>
+                                <option value="THIRD">🥉 3rd Place</option>
+                                <option value="CLEAR">Clear Result</option>
+                              </select>
+                              <button 
+                                className="px-3 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
+                                onClick={() => {
+                                  const select = document.getElementById(`rank-${participant.id}`);
+                                  if (select.value) {
+                                    const participantName = participant.registration_type === 'INDIVIDUAL' 
+                                      ? participant.participant_name 
+                                      : participant.team_name;
+                                    handleIndividualResultUpdate(
+                                      participant.id, 
+                                      select.value, 
+                                      participantName, 
+                                      participant.temple_name,
+                                      title, // event name
+                                      participant.aadhar_number || 'N/A'
+                                    );
+                                  }
+                                }}
+                              >
+                                Update
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : (
               <p className="text-gray-500 text-center py-4">No participants registered for this event</p>
@@ -687,6 +1198,8 @@ const StaffPanel = () => {
       </div>
     );
   };
+
+  // tabs code start from here 
 
   // Render Update Individual Results
   const renderUpdateResults = () => {
@@ -1240,11 +1753,239 @@ const StaffPanel = () => {
           <p className="text-[#5A5A5A] mt-1">Top performers from all categories</p>
         </div>
 
+        {/* Top 5 Temples Section */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-white">🏛️ Top 5 Temples</h3>
+              <p className="text-xs sm:text-sm text-white/80 mt-1">Temples ranked by total points</p>
+            </div>
+            <button
+              onClick={() => {
+                const printWindow = window.open('', '_blank');
+                const printContent = `
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>Top 5 Temples - Champions</title>
+                    <style>
+                      body { font-family: Arial, sans-serif; margin: 20px; }
+                      .header { text-align: center; margin-bottom: 20px; }
+                      .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                      .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                      th { background-color: #f2f2f2; font-weight: bold; }
+                      .rank-badge { padding: 4px 8px; border-radius: 50%; color: white; font-weight: bold; }
+                      .rank-1 { background-color: #ffd700; }
+                      .rank-2 { background-color: #c0c0c0; }
+                      .rank-3 { background-color: #cd7f32; }
+                      .rank-other { background-color: #6c757d; }
+                      @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="header">
+                      <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                      <div class="section-title">🏛️ Top 5 Temples</div>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th>Temple Name</th>
+                          <th>Total Points</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${topTemples.map((temple, index) => `
+                          <tr>
+                            <td>
+                              <span class="rank-badge ${
+                                index === 0 ? 'rank-1' : 
+                                index === 1 ? 'rank-2' : 
+                                index === 2 ? 'rank-3' : 'rank-other'
+                              }">
+                                ${index + 1}
+                              </span>
+                            </td>
+                            <td>${temple.temple_name}</td>
+                            <td><strong>${temple.total_points}</strong></td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </body>
+                  </html>
+                `;
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+              }}
+              className="bg-white text-[#D35D38] px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors"
+            >
+              🖨️ Print
+            </button>
+          </div>
+          
+          {loadingTopTemples ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+              <span className="ml-3 text-[#2A2A2A]">Loading top temples...</span>
+            </div>
+          ) : topTemplesError ? (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 m-4 rounded">
+              <strong className="font-bold">Error!</strong>
+              <span className="block sm:inline"> {topTemplesError}</span>
+            </div>
+          ) : topTemples.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                      Rank
+                    </th>
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                      Temple Name
+                    </th>
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                      Total Points
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {topTemples.map((temple, index) => (
+                    <tr key={temple.temple_id} className="hover:bg-gray-50">
+                      <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm ${
+                            index === 0 ? 'bg-yellow-500' : 
+                            index === 1 ? 'bg-gray-400' : 
+                            index === 2 ? 'bg-orange-600' :
+                            'bg-gray-300 text-gray-700'
+                          }`}>
+                            {index + 1}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
+                        <div className="text-xs sm:text-sm font-medium text-[#2A2A2A]">
+                          {temple.temple_name}
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
+                        <span className="text-sm sm:text-lg font-bold text-[#D35D38]">
+                          {temple.total_points}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-[#5A5A5A]">
+              No temple data available
+            </div>
+          )}
+        </div>
+
         {/* Champions Table */}
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
-            <h3 className="text-base sm:text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
-            <p className="text-xs sm:text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
+          <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h3 className="text-base sm:text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
+              <p className="text-xs sm:text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
+            </div>
+            <button
+              onClick={() => {
+                const printWindow = window.open('', '_blank');
+                const printContent = `
+                  <!DOCTYPE html>
+                  <html>
+                  <head>
+                    <title>Champions Leaderboard</title>
+                    <style>
+                      body { font-family: Arial, sans-serif; margin: 20px; }
+                      .header { text-align: center; margin-bottom: 20px; }
+                      .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                      .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                      th { background-color: #f2f2f2; font-weight: bold; }
+                      .rank-badge { padding: 4px 8px; border-radius: 50%; color: white; font-weight: bold; }
+                      .rank-1 { background-color: #ffd700; }
+                      .rank-2 { background-color: #c0c0c0; }
+                      .rank-3 { background-color: #cd7f32; }
+                      .rank-other { background-color: #6c757d; }
+                      .result-badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+                      .first { background-color: #fff3cd; color: #856404; }
+                      .second { background-color: #f8f9fa; color: #6c757d; }
+                      .third { background-color: #ffeaa7; color: #d63031; }
+                      @media print {
+                        body { margin: 0; }
+                        .no-print { display: none; }
+                      }
+                    </style>
+                  </head>
+                  <body>
+                    <div class="header">
+                      <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                      <div class="section-title">🏆 Champions Leaderboard</div>
+                    </div>
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th>Category</th>
+                          <th>Name</th>
+                          <th>Temple</th>
+                          <th>Aadhar No</th>
+                          <th>Points</th>
+                          <th>Events Won</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${allChampions.map((champion, index) => `
+                          <tr>
+                            <td>
+                              <span class="rank-badge ${
+                                index === 0 ? 'rank-1' : 
+                                index === 1 ? 'rank-2' : 
+                                index === 2 ? 'rank-3' : 'rank-other'
+                              }">
+                                ${index + 1}
+                              </span>
+                            </td>
+                            <td>${champion.category || 'N/A'}</td>
+                            <td>${champion.name || 'N/A'}</td>
+                            <td>${champion.temple || 'N/A'}</td>
+                            <td>${champion.aadhar_number || 'N/A'}</td>
+                            <td><strong>${champion.points || 0}</strong></td>
+                            <td>${champion.events_count || 0}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </body>
+                  </html>
+                `;
+                printWindow.document.write(printContent);
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+                printWindow.close();
+              }}
+              className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
+            >
+              🖨️ Print
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -1350,6 +2091,204 @@ const StaffPanel = () => {
     );
   };
 
+  // Render Schedule
+  const renderSchedule = () => {
+    if (loadingSchedule) {
+      return (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+          <span className="ml-2 text-[#2A2A2A]">Loading schedule...</span>
+        </div>
+      );
+    }
+
+    if (scheduleError) {
+      return (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+          <strong>Error:</strong> {scheduleError}
+        </div>
+      );
+    }
+
+    // Group individual events by age category and gender
+    const groupedIndividualEvents = scheduleData.individual.reduce((acc, event) => {
+      const key = `${event.age_category?.name || 'Unknown'}::${event.gender}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(event);
+      return acc;
+    }, {});
+
+    // Group team events by gender
+    const groupedTeamEvents = scheduleData.team.reduce((acc, event) => {
+      const key = event.gender || 'ALL';
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(event);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-[#2A2A2A]">📅 Complete Event Schedule</h1>
+          <p className="text-[#5A5A5A] mt-1">All individual and team events organized by age category and gender</p>
+        </div>
+
+        {/* Individual Events Section */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-white">🏃 Individual Events ({scheduleData.individual.length})</h3>
+            <p className="text-xs sm:text-sm text-white/80 mt-1">Individual competitions by age category and gender</p>
+          </div>
+          
+          <div className="p-4 sm:p-6">
+            {Object.keys(groupedIndividualEvents).length > 0 ? (
+              <div className="space-y-6">
+                {Object.entries(groupedIndividualEvents).map(([key, events]) => {
+                  const [ageCategory, gender] = key.split('::');
+                  return (
+                    <div key={key} className="border border-[#F8DFBE] rounded-lg p-4">
+                      <h4 className="text-lg font-semibold text-[#D35D38] mb-4 border-b border-[#F8DFBE] pb-2">
+                        {ageCategory} - {gender} ({events.length} events)
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {events.map((event, index) => (
+                          <div key={event.id || index} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0] hover:shadow-md transition-shadow">
+                            <div className="flex items-center justify-between mb-3">
+                              <h5 className="font-semibold text-[#2A2A2A] text-sm leading-tight">{event.name}</h5>
+                              <span className="text-xs bg-[#D35D38] text-white px-2 py-1 rounded-full whitespace-nowrap">
+                                Individual
+                              </span>
+                            </div>
+                            <div className="space-y-2 text-xs text-[#5A5A5A]">
+                              <div className="flex justify-between">
+                                <span><strong>Age:</strong> {event.age_category?.name}</span>
+                                <span><strong>Gender:</strong> {event.gender}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span><strong>Participants:</strong> {event.participant_count}</span>
+                                <span><strong>Registered:</strong> {event.registrations_count}</span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span><strong>Status:</strong></span>
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                  event.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                }`}>
+                                  {event.is_closed ? 'Closed' : 'Open'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-[#5A5A5A]">
+                No individual events found
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Team Events Section */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-white">🤝 Team Events ({scheduleData.team.length})</h3>
+            <p className="text-xs sm:text-sm text-white/80 mt-1">Team competitions by gender</p>
+          </div>
+          
+          <div className="p-4 sm:p-6">
+            {Object.keys(groupedTeamEvents).length > 0 ? (
+              <div className="space-y-6">
+                {Object.entries(groupedTeamEvents).map(([gender, events]) => (
+                  <div key={gender} className="border border-[#F8DFBE] rounded-lg p-4">
+                    <h4 className="text-lg font-semibold text-[#D35D38] mb-4 border-b border-[#F8DFBE] pb-2">
+                      {gender} Team Events ({events.length} events)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {events.map((event, index) => (
+                        <div key={event.id || index} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0] hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between mb-3">
+                            <h5 className="font-semibold text-[#2A2A2A] text-sm leading-tight">
+                              {event.name}
+                            </h5>
+                            <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full whitespace-nowrap">
+                              Team
+                            </span>
+                          </div>
+                          <div className="space-y-2 text-xs text-[#5A5A5A]">
+                            <div className="flex justify-between">
+                              <span><strong>Age:</strong> {event.age_category?.name}</span>
+                              <span><strong>Gender:</strong> {event.gender}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span><strong>Team Size:</strong> {event.participant_count}</span>
+                              <span><strong>Registered:</strong> {event.team_registrations_count}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span><strong>Status:</strong></span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                event.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                              }`}>
+                                {event.is_closed ? 'Closed' : 'Open'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-[#5A5A5A]">
+                No team events found
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Summary Statistics */}
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h3 className="text-lg font-semibold text-[#D35D38] mb-4 text-center">📊 Event Summary</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            <div className="bg-[#F8DFBE] rounded-lg p-4">
+              <p className="text-2xl font-bold text-[#D35D38]">
+                {scheduleData.individual.length}
+              </p>
+              <p className="text-sm text-[#5A5A5A]">Individual Events</p>
+            </div>
+            <div className="bg-[#F8DFBE] rounded-lg p-4">
+              <p className="text-2xl font-bold text-[#D35D38]">
+                {scheduleData.team.length}
+              </p>
+              <p className="text-sm text-[#5A5A5A]">Team Events</p>
+            </div>
+            <div className="bg-[#F8DFBE] rounded-lg p-4">
+              <p className="text-2xl font-bold text-[#D35D38]">
+                {scheduleData.individual.length + scheduleData.team.length}
+              </p>
+              <p className="text-sm text-[#5A5A5A]">Total Events</p>
+            </div>
+            <div className="bg-[#F8DFBE] rounded-lg p-4">
+              <p className="text-2xl font-bold text-[#D35D38]">
+                {Object.keys(groupedIndividualEvents).length + Object.keys(groupedTeamEvents).length}
+              </p>
+              <p className="text-sm text-[#5A5A5A]">Categories</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Render All Results
   const renderAllResults = () => {
     if (loading) {
@@ -1388,20 +2327,32 @@ const StaffPanel = () => {
       }
     };
 
+    // Filter results based on selected filters
+    const filterResults = (results, ageFilter, genderFilter) => {
+      return results.filter(result => {
+        const [categoryAge, categoryGender] = result.category.split(' - ');
+        const ageMatch = !ageFilter || ageFilter === 'all' || categoryAge === ageFilter;
+        const genderMatch = !genderFilter || genderFilter === 'all' || categoryGender === genderFilter;
+        return ageMatch && genderMatch;
+      });
+    };
+
     // Collect individual and team results separately
-    const individualResults = [];
-    const teamResults = [];
+    const allIndividualResults = [];
+    const allTeamResults = [];
 
     // Process individual events
     if (data.individual) {
       data.individual.forEach(category => {
         category.events.forEach(event => {
-          individualResults.push({
+          allIndividualResults.push({
             category: `${category.age_category} - ${category.gender}`,
             eventName: event.event_name,
             firstPlace: getWinnerText(event.first, true),
             secondPlace: getWinnerText(event.second, true),
-            thirdPlace: getWinnerText(event.third, true)
+            thirdPlace: getWinnerText(event.third, true),
+            ageCategory: category.age_category,
+            gender: category.gender
           });
         });
       });
@@ -1411,16 +2362,22 @@ const StaffPanel = () => {
     if (data.team) {
       data.team.forEach(category => {
         category.events.forEach(event => {
-          teamResults.push({
+          allTeamResults.push({
             category: `${category.age_category} - ${category.gender}`,
             eventName: event.event_name,
             firstPlace: getWinnerText(event.first, false),
             secondPlace: getWinnerText(event.second, false),
-            thirdPlace: getWinnerText(event.third, false)
+            thirdPlace: getWinnerText(event.third, false),
+            ageCategory: category.age_category,
+            gender: category.gender
           });
         });
       });
     }
+
+    // Apply filters
+    const individualResults = filterResults(allIndividualResults, selectedAge, selectedGender);
+    const teamResults = filterResults(allTeamResults, selectedAge, selectedGender);
 
     // Helper function to render results table
     const renderResultsTable = (results, title, type) => {
@@ -1435,9 +2392,79 @@ const StaffPanel = () => {
 
       return (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-[#2A2A2A]">{title}</h3>
-            <p className="text-sm text-[#5A5A5A] mt-1">{results.length} events with results</p>
+          <div className="px-6 py-4 bg-[#F8DFBE] border-b border-gray-200 flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold text-[#2A2A2A]">{title}</h3>
+              <p className="text-sm text-[#5A5A5A] mt-1">{results.length} events with results</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  const printContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>${title} - All Results</title>
+                      <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .header { text-align: center; margin-bottom: 20px; }
+                        .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                        th { background-color: #f2f2f2; font-weight: bold; }
+                        .winner-text { font-weight: bold; }
+                        .first-place { color: #ffd700; font-weight: bold; }
+                        .second-place { color: #c0c0c0; font-weight: bold; }
+                        .third-place { color: #cd7f32; font-weight: bold; }
+                        @media print {
+                          body { margin: 0; }
+                          .no-print { display: none; }
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="header">
+                        <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                        <div class="section-title">${title}</div>
+                      </div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Category</th>
+                            <th>Event</th>
+                            <th>1st Place</th>
+                            <th>2nd Place</th>
+                            <th>3rd Place</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${results.map((result, index) => `
+                            <tr>
+                              <td class="winner-text">${result.category}</td>
+                              <td class="winner-text">${result.eventName}</td>
+                              <td class="first-place">${result.firstPlace}</td>
+                              <td class="second-place">${result.secondPlace}</td>
+                              <td class="third-place">${result.thirdPlace}</td>
+                            </tr>
+                          `).join('')}
+                        </tbody>
+                      </table>
+                    </body>
+                    </html>
+                  `;
+                  printWindow.document.write(printContent);
+                  printWindow.document.close();
+                  printWindow.focus();
+                  printWindow.print();
+                  printWindow.close();
+                }}
+                className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
+              >
+                🖨️ Print All
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
@@ -1457,6 +2484,9 @@ const StaffPanel = () => {
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
                     3rd Place
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                    Print
                   </th>
                 </tr>
               </thead>
@@ -1478,6 +2508,80 @@ const StaffPanel = () => {
                     <td className="px-4 py-3 text-sm text-[#5A5A5A]">
                       {result.thirdPlace}
                     </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => {
+                          const printWindow = window.open('', '_blank');
+                          const printContent = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                              <title>${result.eventName} - ${result.category}</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; margin: 20px; }
+                                .header { text-align: center; margin-bottom: 20px; }
+                                .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                                .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                                .event-details { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+                                .event-name { font-size: 20px; font-weight: bold; color: #2A2A2A; margin-bottom: 5px; }
+                                .event-category { font-size: 16px; color: #5A5A5A; }
+                                .winners-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                .winners-table th, .winners-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                .winners-table th { background-color: #f2f2f2; font-weight: bold; }
+                                .first-place { color: #ffd700; font-weight: bold; }
+                                .second-place { color: #c0c0c0; font-weight: bold; }
+                                .third-place { color: #cd7f32; font-weight: bold; }
+                                @media print {
+                                  body { margin: 0; }
+                                  .no-print { display: none; }
+                                }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="header">
+                                <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                                <div class="section-title">${title}</div>
+                              </div>
+                              <div class="event-details">
+                                <div class="event-name">${result.eventName}</div>
+                                <div class="event-category">${result.category}</div>
+                              </div>
+                              <table class="winners-table">
+                                <thead>
+                                  <tr>
+                                    <th>Position</th>
+                                    <th>Winner</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td class="first-place">1st Place</td>
+                                    <td class="first-place">${result.firstPlace}</td>
+                                  </tr>
+                                  <tr>
+                                    <td class="second-place">2nd Place</td>
+                                    <td class="second-place">${result.secondPlace}</td>
+                                  </tr>
+                                  <tr>
+                                    <td class="third-place">3rd Place</td>
+                                    <td class="third-place">${result.thirdPlace}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </body>
+                            </html>
+                          `;
+                          printWindow.document.write(printContent);
+                          printWindow.document.close();
+                          printWindow.focus();
+                          printWindow.print();
+                          printWindow.close();
+                        }}
+                        className="bg-[#D35D38] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#B84A2A] transition-colors"
+                      >
+                        🖨️
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1495,6 +2599,51 @@ const StaffPanel = () => {
           <p className="text-[#5A5A5A] mt-1">Complete list of winners from all events</p>
         </div>
 
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          {/* Age Category Filter */}
+          <div className="flex flex-col">
+            <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Age Category</label>
+            <select 
+              className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
+              value={selectedAge}
+              onChange={(e) => setSelectedAge(e.target.value)}
+            >
+              <option value="all">All Age Categories</option>
+              {ageGroups && ageGroups.length > 0 ? (
+                ageGroups.map((group) => (
+                  <option key={group.id} value={group.value}>
+                    {group.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Loading age groups...</option>
+              )}
+            </select>
+          </div>
+
+          {/* Gender Filter */}
+          <div className="flex flex-col">
+            <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Gender</label>
+            <select 
+              className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
+              value={selectedGender}
+              onChange={(e) => setSelectedGender(e.target.value)}
+            >
+              <option value="all">All Genders</option>
+              {genders && genders.length > 0 ? (
+                genders.map((gender) => (
+                  <option key={gender.id} value={gender.value}>
+                    {gender.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Loading genders...</option>
+              )}
+            </select>
+          </div>
+        </div>
+
         {/* Individual Events Results */}
         {renderResultsTable(individualResults, "🏃 Individual Events", "Individual")}
 
@@ -1504,6 +2653,68 @@ const StaffPanel = () => {
         {/* Summary */}
         {(individualResults.length > 0 || teamResults.length > 0) && (
           <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-[#2A2A2A]">📊 Results Summary</h3>
+              <button
+                onClick={() => {
+                  const printWindow = window.open('', '_blank');
+                  const printContent = `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>All Results Summary</title>
+                      <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .header { text-align: center; margin-bottom: 20px; }
+                        .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px; }
+                        .summary-item { text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 8px; }
+                        .summary-number { font-size: 24px; font-weight: bold; color: #D35D38; margin-bottom: 5px; }
+                        .summary-label { font-size: 14px; color: #6c757d; }
+                        @media print {
+                          body { margin: 0; }
+                          .no-print { display: none; }
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="header">
+                        <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                        <div class="section-title">📊 Results Summary</div>
+                      </div>
+                      <div class="summary-grid">
+                        <div class="summary-item">
+                          <div class="summary-number">${individualResults.length + teamResults.length}</div>
+                          <div class="summary-label">Total Events</div>
+                        </div>
+                        <div class="summary-item">
+                          <div class="summary-number">${individualResults.length}</div>
+                          <div class="summary-label">Individual Events</div>
+                        </div>
+                        <div class="summary-item">
+                          <div class="summary-number">${teamResults.length}</div>
+                          <div class="summary-label">Team Events</div>
+                        </div>
+                        <div class="summary-item">
+                          <div class="summary-number">${(individualResults.length + teamResults.length) * 3}</div>
+                          <div class="summary-label">Total Winners</div>
+                        </div>
+                      </div>
+                    </body>
+                    </html>
+                  `;
+                  printWindow.document.write(printContent);
+                  printWindow.document.close();
+                  printWindow.focus();
+                  printWindow.print();
+                  printWindow.close();
+                }}
+                className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
+              >
+                🖨️ Print Summary
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <p className="text-lg font-semibold text-[#D35D38]">{individualResults.length + teamResults.length}</p>
@@ -1880,6 +3091,8 @@ const StaffPanel = () => {
           renderChampions()
         ) : activeTab === 'all-result' ? (
           renderAllResults()
+        ) : activeTab === 'schedule' ? (
+          renderSchedule()
         ) : activeTab === 'results' ? (
           <>
         {/* Form */}

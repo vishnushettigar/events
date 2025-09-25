@@ -49,6 +49,66 @@ router.post('/register-participant', authenticate, [
   }
 });
 
+/**
+ * @swagger
+ * /events/unregister-participant/{eventId}:
+ *   delete:
+ *     summary: Cancel participant registration for an event
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Registration cancelled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Bad request
+ *       404:
+ *         description: Registration not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/unregister-participant/:eventId', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const userId = req.user.id; // Get user ID from authenticated user
+    
+    if (!eventId || isNaN(parseInt(eventId))) {
+      return res.status(400).json({ error: 'Valid event ID is required' });
+    }
+
+    const result = await eventService.unregisterParticipant(userId, parseInt(eventId));
+    res.json(result);
+  } catch (error) {
+    console.error('Unregistration error:', {
+      error: error.message,
+      stack: error.stack,
+      eventId: req.params.eventId,
+      userId: req.user.id
+    });
+
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Failed to cancel registration' });
+  }
+});
+
 router.post('/register-team', authenticate, requireRole('TEMPLE_ADMIN'), [
   body('temple_id').isInt().withMessage('Invalid temple ID'),
   body('event_id').isInt().withMessage('Invalid event ID'),
@@ -403,6 +463,80 @@ router.get('/event-participants/:eventId', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error fetching event participants:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch event participants' });
+  }
+});
+
+/**
+ * @swagger
+ * /events/all-events:
+ *   get:
+ *     summary: Get all events with complete details
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: All events retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 events:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Server error
+ */
+router.get('/all-events', authenticate, async (req, res) => {
+  try {
+    const events = await prisma.mst_event.findMany({
+      where: { is_deleted: false },
+      include: {
+        event_type: true,
+        age_category: true,
+        registrations: {
+          where: { is_deleted: false }
+        },
+        team_registrations: {
+          where: { is_deleted: false }
+        }
+      },
+      orderBy: [
+        { event_type: { type: 'asc' } },
+        { age_category: { from_age: 'asc' } },
+        { gender: 'asc' },
+        { event_type: { name: 'asc' } }
+      ]
+    });
+
+    // Transform events to include registration counts and categorize
+    const transformedEvents = events.map(event => ({
+      id: event.id,
+      name: event.event_type.name,
+      event_type: event.event_type,
+      age_category: event.age_category,
+      gender: event.gender,
+      is_closed: event.is_closed,
+      participant_count: event.event_type.participant_count,
+      registrations_count: event.registrations.length,
+      team_registrations_count: event.team_registrations.length,
+      total_registrations: event.registrations.length + event.team_registrations.length
+    }));
+
+    // Separate individual and team events
+    const individualEvents = transformedEvents.filter(event => event.event_type.type === 'INDIVIDUAL');
+    const teamEvents = transformedEvents.filter(event => event.event_type.type === 'TEAM');
+
+    res.json({ 
+      individual: individualEvents,
+      team: teamEvents,
+      total: transformedEvents.length
+    });
+  } catch (error) {
+    console.error('Error fetching all events:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
   }
 });
 

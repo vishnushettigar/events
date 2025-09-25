@@ -928,7 +928,6 @@ const UserManagement = () => {
 const ParticipantsManagement = () => {
   const [selectedAge, setSelectedAge] = useState('0-5');
   const [selectedGender, setSelectedGender] = useState('MALE');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedTemple, setSelectedTemple] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1015,12 +1014,10 @@ const ParticipantsManagement = () => {
       
       if (eventIds.length === 0) return;
 
-      // Build query parameters
+      // Build query parameters - only show APPROVED participants
       const params = new URLSearchParams();
       params.append('event_ids', eventIds.join(','));
-      if (selectedStatus !== 'ALL') {
-        params.append('status', selectedStatus);
-      }
+      params.append('status', 'ACCEPTED'); // Only show approved participants
       if (selectedTemple !== 'ALL') {
         params.append('temple_id', selectedTemple);
       }
@@ -1029,7 +1026,7 @@ const ParticipantsManagement = () => {
 
       const data = await participantAPI.getAllParticipants({
         event_ids: eventIds.join(','),
-        ...(selectedStatus !== 'ALL' && { status: selectedStatus }),
+        status: 'ACCEPTED', // Only show approved participants
         ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
       });
       console.log('Participants data received:', data);
@@ -1042,7 +1039,7 @@ const ParticipantsManagement = () => {
 
   useEffect(() => {
     fetchParticipants();
-  }, [events, selectedStatus, selectedTemple]);
+  }, [events, selectedTemple]);
 
   // Get participants for a specific event
   const getParticipantsForEvent = (eventId) => {
@@ -1060,13 +1057,18 @@ const ParticipantsManagement = () => {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[#2A2A2A]">Participants Management</h3>
         <div className="text-sm text-[#5A5A5A]">
-          Total Participants: {allParticipants.length}
+          Total Approved Participants: {allParticipants.length}
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            <span className="font-semibold">Note:</span> Only approved participants are displayed in this view.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Age Category Filter */}
           <div className="flex flex-col">
             <label className="mb-2 text-[#2A2A2A] font-medium">Age Category</label>
@@ -1107,20 +1109,7 @@ const ParticipantsManagement = () => {
             </select>
           </div>
 
-          {/* Status Filter */}
-          <div className="flex flex-col">
-            <label className="mb-2 text-[#2A2A2A] font-medium">Status</label>
-            <select 
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="ACCEPTED">Accepted</option>
-              <option value="DECLINED">Declined</option>
-            </select>
-          </div>
+          {/* Status Filter - Removed for admin view */}
 
           {/* Temple Filter */}
           <div className="flex flex-col">

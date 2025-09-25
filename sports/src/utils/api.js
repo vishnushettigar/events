@@ -129,10 +129,12 @@ export const userAPI = {
 
 export const eventAPI = {
   getAllEvents: () => apiService.get('/admin/events'),
+  getAllEventsComplete: () => apiService.get('/events/all-events'),
   getAvailableEvents: () => apiService.get('/users/available-events'),
   getEventPerformance: () => apiService.get('/reports/event-performance'),
   getParticipantData: (params) => apiService.get('/events/participant-data', params),
   registerParticipant: (data) => apiService.post('/events/register-participant', data),
+  unregisterParticipant: (eventId) => apiService.delete(`/events/unregister-participant/${eventId}`),
   getTempleParticipants: (params) => apiService.get('/events/temple-participants', params),
   updateIndividualResult: (id, rank) => apiService.put(`/events/update-individual-result/${id}`, { rank }),
   updateTeamResult: (id, rank) => apiService.put(`/events/update-team-result/${id}`, { rank }),

@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getTempleNames } from '../utils/templeUtils';
 import { authAPI } from '../utils/api';
+import { rules, rulesKannada } from '../constants/constants';
+import { useLanguage } from '../contexts/LanguageContext';
+import Toggle from '../components/Toggle';
 
 const Register = () => {
+    const { isEnglish } = useLanguage();
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -22,6 +26,8 @@ const Register = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [temples, setTemples] = useState([]);
     const [isLoadingTemples, setIsLoadingTemples] = useState(true);
+    const [showRulesModal, setShowRulesModal] = useState(false);
+    const [acceptRules, setAcceptRules] = useState(false);
 
     // Fetch temples from backend on component mount
     useEffect(() => {
@@ -94,62 +100,75 @@ const Register = () => {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = async (e) => {
+    const handleContinue = (e) => {
         e.preventDefault();
-        console.log('Form submission started');
+        console.log('Continue button clicked');
         
         if (validateForm()) {
-            console.log('Form validation passed, starting registration');
-            setIsSubmitting(true);
-            try {
-                const requestData = {
-                    username: formData.aadhaar,
-                    password: formData.password,
-                    email: formData.email,
-                    first_name: formData.firstName,
-                    last_name: formData.lastName,
-                    phone: formData.mobile,
-                    aadhar_number: formData.aadhaar,
-                    dob: formData.dob,
-                    gender: formData.gender.toUpperCase(),
-                    temple_name: formData.temple
-                };
-                
-                console.log('Sending registration request:', requestData);
-                
-                const data = await authAPI.register(requestData);
+            console.log('Form validation passed, showing rules modal');
+            setShowRulesModal(true);
+        }
+    };
 
-                console.log('Registration successful:', data);
+    const handleRegister = async () => {
+        if (!acceptRules) {
+            setErrors(prev => ({
+                ...prev,
+                rules: 'Please accept the rules and terms to continue'
+            }));
+            return;
+        }
 
-                // Store the JWT token
-                localStorage.setItem('token', data.token);
-                
-                // Registration successful
-                console.log('Registration successful:', data);
-                // Redirect to MyEvents page
-                window.location.href = '/myevents';
-            } catch (error) {
-                console.error('Registration error:', error);
-                
-                // Handle different types of errors
-                let errorMessage = 'Registration failed. Please try again.';
-                
-                if (error.message) {
-                    errorMessage = error.message;
-                } else if (error.errors && Array.isArray(error.errors)) {
-                    // Handle validation errors from backend
-                    errorMessage = error.errors.map(err => err.msg).join(', ');
-                } else if (typeof error === 'string') {
-                    errorMessage = error;
-                }
-                
-                setErrors(prev => ({
-                    ...prev,
-                    submit: errorMessage
-                }));
-            } finally {
-                setIsSubmitting(false);
+        console.log('Final registration started');
+        setIsSubmitting(true);
+        try {
+            const requestData = {
+                username: formData.aadhaar,
+                password: formData.password,
+                email: formData.email,
+                first_name: formData.firstName,
+                last_name: formData.lastName,
+                phone: formData.mobile,
+                aadhar_number: formData.aadhaar,
+                dob: formData.dob,
+                gender: formData.gender.toUpperCase(),
+                temple_name: formData.temple
+            };
+            
+            console.log('Sending registration request:', requestData);
+            
+            const data = await authAPI.register(requestData);
+
+            console.log('Registration successful:', data);
+
+            // Store the JWT token
+            localStorage.setItem('token', data.token);
+            
+            // Registration successful
+            console.log('Registration successful:', data);
+            // Redirect to MyEvents page
+            window.location.href = '/myevents';
+        } catch (error) {
+            console.error('Registration error:', error);
+            
+            // Handle different types of errors
+            let errorMessage = 'Registration failed. Please try again.';
+            
+            if (error.message) {
+                errorMessage = error.message;
+            } else if (error.errors && Array.isArray(error.errors)) {
+                // Handle validation errors from backend
+                errorMessage = error.errors.map(err => err.msg).join(', ');
+            } else if (typeof error === 'string') {
+                errorMessage = error;
             }
+            
+            setErrors(prev => ({
+                ...prev,
+                submit: errorMessage
+            }));
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -168,7 +187,7 @@ const Register = () => {
 
                 {/* Registration Form */}
                 <div className="">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleContinue} className="space-y-6">
                     {errors.submit && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                             {errors.submit}
@@ -400,7 +419,7 @@ const Register = () => {
 
 
 
-                        {/* Submit Button */}
+                        {/* Continue Button */}
                     <div>
                         <button
                             type="submit"
@@ -417,10 +436,10 @@ const Register = () => {
                                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
-                                        Creating Account...
+                                        Processing...
                                     </span>
                                 ) : (
-                                    'Create Account'
+                                    'Continue'
                                 )}
                         </button>
                     </div>
@@ -437,6 +456,185 @@ const Register = () => {
                 </form>
                 </div>
             </div>
+
+            {/* Rules Modal */}
+            {showRulesModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+                    <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
+                        {/* Modal Header */}
+                        <div className="bg-[#D35D38] text-white p-4 sm:p-6 flex-shrink-0">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-lg sm:text-2xl font-bold pr-2">
+                                    {isEnglish ? "Rules & Terms" : "ನಿಯಮಗಳು ಮತ್ತು ನಿಬಂಧನೆಗಳು"}
+                                </h2>
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                    {/* Language Toggle */}
+                                    <div className="scale-75 sm:scale-100">
+                                        <Toggle />
+                                    </div>
+                                    {/* Close Button */}
+                                    <button
+                                        onClick={() => setShowRulesModal(false)}
+                                        className="text-white hover:text-gray-200 text-xl sm:text-2xl font-bold flex-shrink-0"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modal Content */}
+                        <div className="p-4 sm:p-6 flex-1 overflow-y-auto min-h-0">
+                            <div className="space-y-4 sm:space-y-6">
+                                {(isEnglish ? rules : rulesKannada).map((rule, idx) => {
+                                    // Check if the rule contains table HTML
+                                    if (typeof rule === 'string' && rule.includes('<table')) {
+                                        return (
+                                            <div key={idx} className="mb-6">
+                                                <div className="text-base text-[#2A2A2A] leading-relaxed mb-4">
+                                                    {rule.split('<table')[0].trim()}
+                                                </div>
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full border-collapse border border-gray-400 bg-white rounded-lg shadow-sm text-xs sm:text-sm">
+                                                        <thead>
+                                                            <tr className="bg-[#D35D38] text-white">
+                                                                <th className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-left font-semibold">
+                                                                    {isEnglish ? "Event" : "ಸ್ಪರ್ಧೆ"}
+                                                                </th>
+                                                                <th className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold">
+                                                                    {isEnglish ? "1st" : "ಪ್ರಥಮ"}
+                                                                </th>
+                                                                <th className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold">
+                                                                    {isEnglish ? "2nd" : "ದ್ವಿತೀಯ"}
+                                                                </th>
+                                                                <th className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-semibold">
+                                                                    {isEnglish ? "3rd" : "ತೃತೀಯ"}
+                                                                </th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm">
+                                                                    {isEnglish ? "Individual Events" : "ವೈಯಕ್ತಿಕ ಸ್ಪರ್ಧೆಗಳು"}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-green-600 text-xs sm:text-sm">5</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-blue-600 text-xs sm:text-sm">3</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-orange-600 text-xs sm:text-sm">1</td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm">
+                                                                    {isEnglish ? "Couple Relay" : "ದಂಪತಿ ರಿಲೇ"}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-green-600 text-xs sm:text-sm">5</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-blue-600 text-xs sm:text-sm">3</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-orange-600 text-xs sm:text-sm">1</td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm">
+                                                                    {isEnglish ? "4x100 Relay" : "4x100 ರಿಲೇ"}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-green-600 text-xs sm:text-sm">10</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-blue-600 text-xs sm:text-sm">6</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-orange-600 text-xs sm:text-sm">3</td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm">
+                                                                    {isEnglish ? "Volleyball (Men)" : "ವಾಲಿಬಾಲ್ (ಪುರುಷರು)"}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-green-600 text-xs sm:text-sm">10</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-blue-600 text-xs sm:text-sm">5</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-gray-400 text-xs sm:text-sm">–</td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm">
+                                                                    {isEnglish ? "Throwball (Women)" : "ಥ್ರೋಬಾಲ್ (ಮಹಿಳೆಯರು)"}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-green-600 text-xs sm:text-sm">10</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-blue-600 text-xs sm:text-sm">5</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-gray-400 text-xs sm:text-sm">–</td>
+                                                            </tr>
+                                                            <tr className="hover:bg-gray-50">
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 font-medium text-xs sm:text-sm">
+                                                                    {isEnglish ? "Tug of War" : "ಹಗ್ಗಜಗ್ಗಾಟ"}
+                                                                </td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-green-600 text-xs sm:text-sm">10</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-blue-600 text-xs sm:text-sm">5</td>
+                                                                <td className="border border-gray-400 px-2 sm:px-4 py-2 sm:py-3 text-center font-bold text-gray-400 text-xs sm:text-sm">–</td>
+                                                            </tr>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    
+                                    // Regular rule display
+                                    return (
+                                        <div key={idx} className="flex items-start gap-3">
+                                            <span className="inline-block mt-1 text-[#D35D38] text-xl font-bold">•</span>
+                                            <span className="text-base text-[#2A2A2A] leading-relaxed">{rule}</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-gray-50 p-4 sm:p-6 border-t flex-shrink-0">
+                            <div className="space-y-3 sm:space-y-4">
+                                {/* Accept Rules Checkbox */}
+                                <div className="flex items-start gap-2 sm:gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id="acceptRules"
+                                        checked={acceptRules}
+                                        onChange={(e) => setAcceptRules(e.target.checked)}
+                                        className="mt-1 w-4 h-4 sm:w-5 sm:h-5 text-[#D35D38] border-gray-300 rounded focus:ring-[#D35D38] flex-shrink-0"
+                                    />
+                                    <label htmlFor="acceptRules" className="text-xs sm:text-sm text-[#2A2A2A] leading-relaxed">
+                                        {isEnglish 
+                                            ? "I accept the rules & terms and agree to participate in the Padmashali Annual Sports Meet 2025."
+                                            : "ನಾನು ನಿಯಮಗಳು ಮತ್ತು ನಿಬಂಧನೆಗಳನ್ನು ಸ್ವೀಕರಿಸುತ್ತೇನೆ ಮತ್ತು 2025ರ ಪದ್ಮಶಾಲಿ ವಾರ್ಷಿಕ ಕ್ರೀಡೋತ್ಸವದಲ್ಲಿ ಭಾಗವಹಿಸಲು ಒಪ್ಪುತ್ತೇನೆ."
+                                        }
+                                    </label>
+                                </div>
+                                {errors.rules && <p className="text-red-500 text-xs sm:text-sm">{errors.rules}</p>}
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                                    <button
+                                        onClick={() => setShowRulesModal(false)}
+                                        className="w-full sm:flex-1 py-3 px-4 sm:px-6 bg-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-400 transition-colors text-sm sm:text-base"
+                                    >
+                                        {isEnglish ? "Cancel" : "ರದ್ದುಗೊಳಿಸಿ"}
+                                    </button>
+                                    <button
+                                        onClick={handleRegister}
+                                        disabled={isSubmitting || !acceptRules}
+                                        className={`w-full sm:flex-1 py-3 px-4 sm:px-6 rounded-lg font-bold transition-all duration-200 text-sm sm:text-base ${
+                                            isSubmitting || !acceptRules
+                                                ? 'bg-gray-400 cursor-not-allowed text-white'
+                                                : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
+                                        }`}
+                                    >
+                                        {isSubmitting ? (
+                                            <span className="flex items-center justify-center">
+                                                <svg className="animate-spin -ml-1 mr-2 sm:mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                {isEnglish ? "Registering..." : "ನೋಂದಾಯಿಸಲಾಗುತ್ತಿದೆ..."}
+                                            </span>
+                                        ) : (
+                                            isEnglish ? "Register" : "ನೋಂದಾಯಿಸಿ"
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

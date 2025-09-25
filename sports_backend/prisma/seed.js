@@ -49,16 +49,16 @@ async function main() {
 
   // Seed age categories
   const ageCategories = [
+    { name: '0-5', from_age: 0, to_age: 5 },
     { name: '6-10', from_age: 6, to_age: 10 },
     { name: '11-14', from_age: 11, to_age: 14 },
     { name: '15-18', from_age: 15, to_age: 18 },
     { name: '19-24', from_age: 19, to_age: 24 },
     { name: '25-35', from_age: 25, to_age: 35 },
-    { name: '36-48', from_age: 36, to_age: 48 },
-    { name: '49-60', from_age: 49, to_age: 60 },
-    { name: 'All', from_age: 0, to_age: 99 },
-    { name: '61 - 90', from_age: 61, to_age: 90 },
-    { name: '0-5', from_age: 0, to_age: 5 }
+    { name: '36-49', from_age: 36, to_age: 49 },
+    { name: '50-60', from_age: 50, to_age: 60 },
+    { name: '61+', from_age: 61, to_age: 99 },
+    { name: 'All', from_age: 0, to_age: 99 }
   ];
 
   for (const ageCategory of ageCategories) {
@@ -75,23 +75,22 @@ async function main() {
 
   // Seed event types
   const eventTypes = [
+    { name: 'Frog Jump - 15 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Frog Jump - 25 mts', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Running - 25 mts', type: 'INDIVIDUAL', participant_count: 1 },
     { name: 'Running - 50 mts', type: 'INDIVIDUAL', participant_count: 1 },
     { name: 'Running - 100 mts', type: 'INDIVIDUAL', participant_count: 1 },
     { name: 'Running - 200 mts', type: 'INDIVIDUAL', participant_count: 1 },
     { name: 'Running - 400 mts', type: 'INDIVIDUAL', participant_count: 1 },
     { name: 'Running - 800 mts', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Running - 25 mts', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Relay - 100 X 4', type: 'TEAM', participant_count: 4 },
+    { name: 'Long jump', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Shot put', type: 'INDIVIDUAL', participant_count: 1 },
     { name: 'Lucky Circle', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Ball Passing', type: 'INDIVIDUAL', participant_count: 1 },
+    { name: 'Couple Relay - 50 x 2', type: 'TEAM', participant_count: 2 },
+    { name: 'Relay - 100 X 4', type: 'TEAM', participant_count: 4 },
     { name: 'Volleyball', type: 'TEAM', participant_count: 9 },
     { name: 'Throwball', type: 'TEAM', participant_count: 10 },
-    { name: 'Tug of War', type: 'TEAM', participant_count: 9 },
-    { name: 'Couple Relay - 50 x 2', type: 'TEAM', participant_count: 2 },
-    { name: 'Frog Jump - 25 mts', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Long jump', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'SHOT PUT', type: 'INDIVIDUAL', participant_count: 1 },
-    { name: 'Frog Jump - 15 mts', type: 'INDIVIDUAL', participant_count: 1 }
+    { name: 'Tug of War', type: 'TEAM', participant_count: 9 },     
   ];
 
   for (const eventType of eventTypes) {
@@ -108,80 +107,102 @@ async function main() {
 
   // Seed events
   const events = [
-    { event_type_id: 14, age_category_id: 1, gender: 'MALE', is_deleted: false, is_closed: false },
+    // 0-5 years
     { event_type_id: 1, age_category_id: 1, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 14, age_category_id: 1, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 1, age_category_id: 1, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 1, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 1, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 1, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 3, age_category_id: 1, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 6-10 years
     { event_type_id: 2, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 2, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 2, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 11-14 years
     { event_type_id: 4, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 5, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 4, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 5, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 4, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 15-18 years
     { event_type_id: 5, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 4, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 5, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 4, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 4, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 3, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 1, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 1, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 2, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 4, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 4, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 19-24 years
+    { event_type_id: 5, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 8, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 8, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 5, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 5, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 25-35 years
+    { event_type_id: 5, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 7, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 8, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 8, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 6, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 6, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 36-49 years
+    { event_type_id: 5, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 9, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 7, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 7, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 50-60 years
+    { event_type_id: 4, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 5, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 10, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 11, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 12, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 12, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 7, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 7, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 13, age_category_id: 8, gender: 'MIXED', is_deleted: false, is_closed: false },
-    { event_type_id: 9, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 8, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
+  
+    // 61+ years
+    { event_type_id: 11, age_category_id: 9, gender: 'MIXED', is_deleted: false, is_closed: false },
+  
+    // Team games category
+    { event_type_id: 12, age_category_id: 10, gender: 'MIXED', is_deleted: false, is_closed: false }, // Couple Relay
+    { event_type_id: 13, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Relay
     { event_type_id: 13, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 13, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 6, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 6, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 8, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 9, age_category_id: 9, gender: 'FEMALE', is_deleted: false, is_closed: false }
+    { event_type_id: 14, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Volleyball
+    { event_type_id: 14, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 15, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Throwball
+    { event_type_id: 15, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 16, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Tug of War
+    { event_type_id: 16, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
   ];
+  
+
 
   for (const event of events) {
     await prisma.mst_event.create({
@@ -191,49 +212,84 @@ async function main() {
 
   // Seed event results
   const eventResults = [
-    { event_type_id: 1, rank: 'FIRST', points: 5 },
-    { event_type_id: 1, rank: 'SECOND', points: 3 },
-    { event_type_id: 1, rank: 'THIRD', points: 1 },
-    { event_type_id: 2, rank: 'FIRST', points: 5 },
-    { event_type_id: 2, rank: 'SECOND', points: 3 },
-    { event_type_id: 2, rank: 'THIRD', points: 1 },
-    { event_type_id: 3, rank: 'FIRST', points: 5 },
-    { event_type_id: 3, rank: 'SECOND', points: 3 },
-    { event_type_id: 3, rank: 'THIRD', points: 1 },
+    // Frog Jump - 15 mts (no points, only ranks)
+    { event_type_id: 1, rank: 'FIRST', points: 0 },
+    { event_type_id: 1, rank: 'SECOND', points: 0 },
+    { event_type_id: 1, rank: 'THIRD', points: 0 },
+  
+    // Frog Jump - 25 mts (no points, only ranks)
+    { event_type_id: 2, rank: 'FIRST', points: 0 },
+    { event_type_id: 2, rank: 'SECOND', points: 0 },
+    { event_type_id: 2, rank: 'THIRD', points: 0 },
+  
+    // Running - 25 mts (no points, only ranks)
+    { event_type_id: 3, rank: 'FIRST', points: 0 },
+    { event_type_id: 3, rank: 'SECOND', points: 0 },
+    { event_type_id: 3, rank: 'THIRD', points: 0 },
+  
+    // Running - 50 mts 
     { event_type_id: 4, rank: 'FIRST', points: 5 },
     { event_type_id: 4, rank: 'SECOND', points: 3 },
     { event_type_id: 4, rank: 'THIRD', points: 1 },
+  
+    // Running - 100 mts
     { event_type_id: 5, rank: 'FIRST', points: 5 },
     { event_type_id: 5, rank: 'SECOND', points: 3 },
     { event_type_id: 5, rank: 'THIRD', points: 1 },
+  
+    // Running - 200 mts
     { event_type_id: 6, rank: 'FIRST', points: 5 },
     { event_type_id: 6, rank: 'SECOND', points: 3 },
     { event_type_id: 6, rank: 'THIRD', points: 1 },
-    { event_type_id: 7, rank: 'FIRST', points: 10 },
-    { event_type_id: 7, rank: 'SECOND', points: 5 },
-    { event_type_id: 7, rank: 'THIRD', points: 3 },
+  
+    // Running - 400 mts
+    { event_type_id: 7, rank: 'FIRST', points: 5 },
+    { event_type_id: 7, rank: 'SECOND', points: 3 },
+    { event_type_id: 7, rank: 'THIRD', points: 1 },
+  
+    // Running - 800 mts
     { event_type_id: 8, rank: 'FIRST', points: 5 },
     { event_type_id: 8, rank: 'SECOND', points: 3 },
     { event_type_id: 8, rank: 'THIRD', points: 1 },
+  
+    // Long Jump
     { event_type_id: 9, rank: 'FIRST', points: 5 },
     { event_type_id: 9, rank: 'SECOND', points: 3 },
     { event_type_id: 9, rank: 'THIRD', points: 1 },
-    { event_type_id: 10, rank: 'FIRST', points: 10 },
-    { event_type_id: 10, rank: 'SECOND', points: 5 },
-    { event_type_id: 11, rank: 'FIRST', points: 10 },
-    { event_type_id: 11, rank: 'SECOND', points: 5 },
-    { event_type_id: 12, rank: 'FIRST', points: 10 },
-    { event_type_id: 12, rank: 'SECOND', points: 5 },
-    { event_type_id: 13, rank: 'FIRST', points: 5 },
-    { event_type_id: 13, rank: 'SECOND', points: 3 },
-    { event_type_id: 13, rank: 'THIRD', points: 1 },
-    { event_type_id: 14, rank: 'FIRST', points: 5 },
-    { event_type_id: 14, rank: 'SECOND', points: 3 },
-    { event_type_id: 14, rank: 'THIRD', points: 1 },
-    { event_type_id: 15, rank: 'FIRST', points: 5 },
-    { event_type_id: 15, rank: 'SECOND', points: 3 },
-    { event_type_id: 15, rank: 'THIRD', points: 1 }
+  
+    // Shot Put
+    { event_type_id: 10, rank: 'FIRST', points: 5 },
+    { event_type_id: 10, rank: 'SECOND', points: 3 },
+    { event_type_id: 10, rank: 'THIRD', points: 1 },
+  
+    // Lucky Circle (no points, only ranks)
+    { event_type_id: 11, rank: 'FIRST', points: 0 },
+    { event_type_id: 11, rank: 'SECOND', points: 0 },
+    { event_type_id: 11, rank: 'THIRD', points: 0 },
+  
+    // Couple Relay - 50 x 2
+    { event_type_id: 12, rank: 'FIRST', points: 5 },
+    { event_type_id: 12, rank: 'SECOND', points: 3 },
+    { event_type_id: 12, rank: 'THIRD', points: 1 },
+  
+    // Relay - 100 x 4
+    { event_type_id: 13, rank: 'FIRST', points: 10 },
+    { event_type_id: 13, rank: 'SECOND', points: 6 },
+    { event_type_id: 13, rank: 'THIRD', points: 3 },
+  
+    // Volleyball
+    { event_type_id: 14, rank: 'FIRST', points: 10 },
+    { event_type_id: 14, rank: 'SECOND', points: 5 },
+  
+    // Throwball
+    { event_type_id: 15, rank: 'FIRST', points: 10 },
+    { event_type_id: 15, rank: 'SECOND', points: 5 },
+  
+    // Tug of War
+    { event_type_id: 16, rank: 'FIRST', points: 10 },
+    { event_type_id: 16, rank: 'SECOND', points: 5 },
   ];
+  
 
   for (const result of eventResults) {
       await prisma.mst_event_result.create({

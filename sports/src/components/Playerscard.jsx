@@ -153,9 +153,11 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
             </td>
 
             {/* Actions */}
-            <td className="px-4 py-3">
-                {getActionButtons()}
-            </td>
+            {!isAdmin && (
+                <td className="px-4 py-3">
+                    {getActionButtons()}
+                </td>
+            )}
         </tr>
     );
 };

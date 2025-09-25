@@ -95,6 +95,41 @@ async function registerParticipant(user_id, event_id) {
   }
 }
 
+async function unregisterParticipant(user_id, event_id) {
+  try {
+    console.log('Unregistering participant:', { user_id, event_id });
+
+    // Check if registration exists
+    const existingRegistration = await prisma.ind_event_registration.findFirst({
+      where: {
+        user_id: user_id,
+        event_id: event_id,
+        is_deleted: false
+      }
+    });
+
+    if (!existingRegistration) {
+      throw new Error('Registration not found or already cancelled');
+    }
+
+    // Actually delete the registration record
+    await prisma.ind_event_registration.delete({
+      where: {
+        id: existingRegistration.id
+      }
+    });
+
+    console.log('Registration deleted successfully');
+    return {
+      success: true,
+      message: 'Registration cancelled successfully'
+    };
+  } catch (error) {
+    console.error('Error in unregisterParticipant:', error);
+    throw error;
+  }
+}
+
 async function registerTeamEvent(temple_id, event_id, member_user_ids) {
   try {
     console.log('registerTeamEvent called with:', { temple_id, event_id, member_user_ids });
@@ -1185,6 +1220,7 @@ async function updateTeamEventResult(registrationId, rank, staffUserId) {
 
 export {
   registerParticipant,
+  unregisterParticipant,
   registerTeamEvent,
   updateTeamRegistration,
   updateEventResult,
