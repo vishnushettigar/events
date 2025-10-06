@@ -231,11 +231,9 @@ const TeamEvents = () => {
         // Fetch temple users for autocomplete
         const fetchTempleUsers = async (searchTerm) => {
             try {
-                console.log('Fetching temple users for search term:', searchTerm);
                 setLoadingSuggestions(true);
                 const response = await userAPI.getTempleUsers();
                 
-                console.log('Temple users response:', response);
                 const templeUsers = response;
                 
                 // Filter users whose Aadhaar number starts with the search term
@@ -243,11 +241,9 @@ const TeamEvents = () => {
                     if (!user.aadhar_number) return false;
                     const aadharStr = user.aadhar_number.toString();
                     const searchStr = searchTerm.toString();
-                    console.log(`Comparing: "${aadharStr}" starts with "${searchStr}" = ${aadharStr.startsWith(searchStr)}`);
                     return aadharStr.startsWith(searchStr);
                 });
                 
-                console.log('Filtered users:', filteredUsers);
                 setSuggestions(filteredUsers);
             } catch (error) {
                 console.error('Error fetching temple users:', error);
@@ -259,7 +255,6 @@ const TeamEvents = () => {
 
         // Debounced search for suggestions
         const debouncedFetchSuggestions = useDebounce((searchTerm) => {
-            console.log('Debounced fetch called with:', searchTerm);
             if (searchTerm.length >= 1) {
                 fetchTempleUsers(searchTerm);
             } else {
@@ -327,13 +322,11 @@ const TeamEvents = () => {
         }, 500);
 
         const handlePlayerChange = (index, field, value) => {
-            console.log('handlePlayerChange called:', { index, field, value });
             const newPlayers = [...players];
             newPlayers[index] = { ...newPlayers[index], [field]: value };
             setPlayers(newPlayers);
 
             if (field === 'aadharNumber') {
-                console.log('Processing Aadhaar number change:', value);
                 
                 // Check for duplicate Aadhaar numbers
                 const duplicateIndex = newPlayers.findIndex((player, idx) => 
@@ -363,7 +356,6 @@ const TeamEvents = () => {
                 setShowSuggestions(prev => {
                     const newState = [...prev];
                     newState[index] = value.length >= 1;
-                    console.log('Setting showSuggestions for index', index, 'to:', value.length >= 1);
                     return newState;
                 });
 

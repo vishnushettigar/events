@@ -65,37 +65,24 @@ const SignInForm = () => {
             // Reset form
             setFormData({ aadhaar: '', password: '' });
             setErrors({});
-
-            // Check user role and redirect accordingly
-            console.log('Login response:', data);
-            console.log('User profile:', data.user?.profile);
-            console.log('User role ID:', data.user?.profile?.role?.id);
-            console.log('User role_id (direct):', data.user?.profile?.role_id);
-            console.log('Role object:', data.user?.profile?.role);
             
             // Check both role.id and role_id patterns
             const userRoleId = data.user?.profile?.role?.id || data.user?.profile?.role_id;
-            console.log('Detected role ID:', userRoleId);
             
             if (userRoleId === 4) {
                 // Viewer - redirect to viewer panel
-                console.log('Redirecting to viewer panel');
                 navigate('/viewer');
             } else if (userRoleId === 5) {
                 // Admin panel - redirect to admin panel
-                console.log('Redirecting to admin panel');
                 navigate('/admin');
             } else if (userRoleId === 3) {
                 // Staff user - redirect to staff panel
-                console.log('Redirecting to staff panel');
                 navigate('/staffpanel');
             } else {
                 // Regular user - redirect to myevents page
-                console.log('Redirecting to myevents');
                 navigate('/myevents');
             }
         } catch (err) {
-            console.error('Login error:', err);
             setErrors({ 
                 submit: err.message || 'An error occurred during login. Please try again.' 
             });

@@ -108,6 +108,8 @@ export const authAPI = {
   getDashboardStats: () => apiService.get('/admin/dashboard-stats'),
   verifyViewerAccess: () => apiService.get('/viewer/verify-access'),
   getViewerDashboardStats: () => apiService.get('/viewer/dashboard-stats'),
+  checkAadhaar: (aadhaar) => apiService.post('/users/check-aadhaar', { aadhaar }),
+  checkEmail: (email) => apiService.post('/users/check-email', { email }),
 };
 
 export const userAPI = {
@@ -129,10 +131,12 @@ export const userAPI = {
 
 export const eventAPI = {
   getAllEvents: () => apiService.get('/admin/events'),
+  getAllEventsComplete: () => apiService.get('/events/all-events'),
   getAvailableEvents: () => apiService.get('/users/available-events'),
   getEventPerformance: () => apiService.get('/reports/event-performance'),
   getParticipantData: (params) => apiService.get('/events/participant-data', params),
   registerParticipant: (data) => apiService.post('/events/register-participant', data),
+  unregisterParticipant: (eventId) => apiService.delete(`/events/unregister-participant/${eventId}`),
   getTempleParticipants: (params) => apiService.get('/events/temple-participants', params),
   updateIndividualResult: (id, rank) => apiService.put(`/events/update-individual-result/${id}`, { rank }),
   updateTeamResult: (id, rank) => apiService.put(`/events/update-team-result/${id}`, { rank }),
@@ -141,6 +145,12 @@ export const eventAPI = {
   registerTeam: (data) => apiService.post('/events/register-team', data),
   updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
   getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
+  getTeamParticipants: (registrationId) => apiService.get(`/events/team-participants/${registrationId}`),
+  
+  // Heat management
+  generateHeats: (eventId, laneCount) => apiService.post('/events/generate-heats', { event_id: eventId, lane_count: laneCount }),
+  getHeats: (eventId) => apiService.get(`/events/heats/${eventId}`),
+  saveTimings: (eventId, heatNumber, timings) => apiService.post('/events/save-timings', { event_id: eventId, heat_number: heatNumber, timings }),
 };
 
 export const participantAPI = {

@@ -39,7 +39,7 @@ const Navbar = () => {
                 const data = await userAPI.getProfile();
                 setUserInfo(data);
             } catch (error) {
-                console.error('Error fetching user profile:', error);
+                // console.error('Error fetching user profile:', error);
                 if (error.message.includes('401') || error.message.includes('Unauthorized')) {
                     localStorage.removeItem('token');
                     setIsLoggedIn(false);

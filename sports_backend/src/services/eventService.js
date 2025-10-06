@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { calculateAge, getAgeCategory, isExcludedAgeCategory } from '../utils/ageUtils.js';
+
 const prisma = new PrismaClient();
 
 async function registerParticipant(user_id, event_id) {
@@ -70,6 +72,7 @@ async function registerParticipant(user_id, event_id) {
     // Create registration
   const registration = await prisma.ind_event_registration.create({
     data: {
+        year: new Date().getFullYear(),
         user_id: user_id,
         event_id: event_id,
         status: status,
@@ -91,6 +94,41 @@ async function registerParticipant(user_id, event_id) {
   return registration;
   } catch (error) {
     console.error('Error in registerParticipant:', error);
+    throw error;
+  }
+}
+
+async function unregisterParticipant(user_id, event_id) {
+  try {
+    console.log('Unregistering participant:', { user_id, event_id });
+
+    // Check if registration exists
+    const existingRegistration = await prisma.ind_event_registration.findFirst({
+      where: {
+        user_id: user_id,
+        event_id: event_id,
+        is_deleted: false
+      }
+    });
+
+    if (!existingRegistration) {
+      throw new Error('Registration not found or already cancelled');
+    }
+
+    // Actually delete the registration record
+    await prisma.ind_event_registration.delete({
+      where: {
+        id: existingRegistration.id
+      }
+    });
+
+    console.log('Registration deleted successfully');
+    return {
+      success: true,
+      message: 'Registration cancelled successfully'
+    };
+  } catch (error) {
+    console.error('Error in unregisterParticipant:', error);
     throw error;
   }
 }
@@ -153,6 +191,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
 
   const registration = await prisma.team_event_registration.create({
     data: {
+      year: new Date().getFullYear(),
       temple_id,
       event_id,
         member_user_ids: member_user_ids.join(','),
@@ -312,11 +351,14 @@ async function getTempleParticipants(temple_id, filters = {}) {
     });
     console.log('Number of users in temple:', templeUsers);
 
+  const currentYear = new Date().getFullYear();
+  
   const where = {
       user: {
       temple_id: temple_id
     },
-    is_deleted: false
+    is_deleted: false,
+    year: currentYear  // Only show current year data
   };
 
   // Add optional filters
@@ -818,7 +860,8 @@ async function getEventParticipants(eventId) {
         where: {
           event_id: eventId,
           is_deleted: false,
-          status: 'ACCEPTED'
+          status: 'ACCEPTED',
+          year: new Date().getFullYear()  // Only count current year data
         }
       });
       console.log('Total approved individual registrations found:', registrationCount);
@@ -828,7 +871,8 @@ async function getEventParticipants(eventId) {
         where: {
           event_id: eventId,
           is_deleted: false,
-          status: 'ACCEPTED'
+          status: 'ACCEPTED',
+          year: new Date().getFullYear()  // Only show current year data
         },
         include: {
           user: {
@@ -880,7 +924,8 @@ async function getEventParticipants(eventId) {
         where: {
           event_id: eventId,
           is_deleted: false,
-          status: 'ACCEPTED'
+          status: 'ACCEPTED',
+          year: new Date().getFullYear()  // Only count current year data
         }
       });
       console.log('Total approved team registrations found:', teamRegistrationCount);
@@ -890,7 +935,8 @@ async function getEventParticipants(eventId) {
         where: {
           event_id: eventId,
           is_deleted: false,
-          status: 'ACCEPTED'
+          status: 'ACCEPTED',
+          year: new Date().getFullYear()  // Only show current year data
         },
         include: {
           temple: true,
@@ -1043,6 +1089,43 @@ async function getEventResultId(eventTypeId, rank) {
   }
 }
 
+// Get event result ID with zero points for excluded age categories
+async function getEventResultIdWithZeroPoints(eventTypeId, rank) {
+  try {
+    console.log('Getting zero-point result for:', { eventTypeId, rank });
+    
+    // First, try to find an existing zero-point result
+    let result = await prisma.mst_event_result.findFirst({
+      where: {
+        event_type_id: eventTypeId,
+        rank: rank,
+        points: 0
+      }
+    });
+
+    if (result) {
+      console.log('Found existing zero-point result:', result.id);
+      return result.id;
+    }
+
+    // If no zero-point result exists, create one
+    console.log('Creating new zero-point result for event type:', eventTypeId, 'rank:', rank);
+    const newResult = await prisma.mst_event_result.create({
+      data: {
+        event_type_id: eventTypeId,
+        rank: rank,
+        points: 0
+      }
+    });
+
+    console.log('Created zero-point result:', newResult.id);
+    return newResult.id;
+  } catch (error) {
+    console.error('Error getting/creating zero-point result:', error);
+    throw error;
+  }
+}
+
 // Update individual event result
 async function updateIndividualEventResult(registrationId, rank, staffUserId) {
   try {
@@ -1054,7 +1137,8 @@ async function updateIndividualEventResult(registrationId, rank, staffUserId) {
       include: {
         event: {
           include: {
-            event_type: true
+            event_type: true,
+            age_category: true
           }
         }
       }
@@ -1067,15 +1151,35 @@ async function updateIndividualEventResult(registrationId, rank, staffUserId) {
     let resultId = null;
     let rankValue = null;
 
+    // Check if this age category should be excluded from points
+    const participantAgeCategory = registration.event.age_category.name;
+    const shouldExcludePoints = isExcludedAgeCategory(participantAgeCategory);
+
+    console.log('Age category check:', { 
+      participantAgeCategory, 
+      shouldExcludePoints
+    });
+
     if (rank === 'CLEAR') {
       // Clear the result by setting event_result_id to null
       resultId = null;
       rankValue = 'CLEARED';
     } else {
-      // Get the event result ID for the specified rank
-      resultId = await getEventResultId(registration.event.event_type_id, rank);
-      if (!resultId) {
-        throw new Error(`Result not found for rank: ${rank}`);
+      // Check if this age category should receive points
+      if (shouldExcludePoints) {
+        // For excluded age categories, create or find a result with 0 points
+        resultId = await getEventResultIdWithZeroPoints(registration.event.event_type_id, rank);
+        if (!resultId) {
+          throw new Error(`Zero-point result not found for rank: ${rank}`);
+        }
+        console.log('Using zero-point result for excluded age category:', participantAgeCategory);
+      } else {
+        // Get the normal event result ID for the specified rank
+        resultId = await getEventResultId(registration.event.event_type_id, rank);
+        if (!resultId) {
+          throw new Error(`Result not found for rank: ${rank}`);
+        }
+        console.log('Using normal result with points for age category:', participantAgeCategory);
       }
       rankValue = rank;
     }
@@ -1183,8 +1287,60 @@ async function updateTeamEventResult(registrationId, rank, staffUserId) {
   }
 }
 
+// Get team participants for a specific registration
+async function getTeamParticipants(registrationId) {
+  try {
+    console.log('Fetching team participants for registration:', registrationId);
+
+    // Get the team registration details
+    const registration = await prisma.team_event_registration.findUnique({
+      where: { id: registrationId },
+      include: {
+        temple: true
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Team registration not found');
+    }
+
+    // Parse member user IDs
+    const memberUserIds = registration.member_user_ids 
+      ? registration.member_user_ids.split(',').map(id => parseInt(id.trim()))
+      : [];
+
+    if (memberUserIds.length === 0) {
+      return [];
+    }
+
+    // Get participant details
+    const participants = await prisma.profile.findMany({
+      where: {
+        id: { in: memberUserIds }
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        aadhar_number: true,
+        phone: true,
+        email: true,
+        gender: true,
+        dob: true
+      }
+    });
+
+    console.log('Found team participants:', participants.length);
+    return participants;
+  } catch (error) {
+    console.error('Error in getTeamParticipants:', error);
+    throw error;
+  }
+}
+
 export {
   registerParticipant,
+  unregisterParticipant,
   registerTeamEvent,
   updateTeamRegistration,
   updateEventResult,
@@ -1198,5 +1354,7 @@ export {
   getEventParticipants,
   updateIndividualEventResult,
   updateTeamEventResult,
-  getEventResultId
+  getEventResultId,
+  getEventResultIdWithZeroPoints,
+  getTeamParticipants
 }; 

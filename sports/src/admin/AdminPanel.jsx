@@ -525,10 +525,7 @@ const UserManagement = () => {
         ...(filters.temple && { temple: filters.temple })
       };
 
-      console.log('Fetching users with params:', params);
-
       const data = await userAPI.getAllUsers(params);
-      console.log('Users data received:', data);
       
       setUsers(data.users);
       setPagination(prev => ({
@@ -928,7 +925,6 @@ const UserManagement = () => {
 const ParticipantsManagement = () => {
   const [selectedAge, setSelectedAge] = useState('0-5');
   const [selectedGender, setSelectedGender] = useState('MALE');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedTemple, setSelectedTemple] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -948,14 +944,11 @@ const ParticipantsManagement = () => {
           throw new Error('No authentication token found');
         }
 
-        console.log('Fetching participant data with filters:', { selectedAge, selectedGender });
-
         // Fetch participant data
         const data = await eventAPI.getParticipantData({
           ageCategory: selectedAge,
           gender: selectedGender
         });
-        console.log('Participant data received:', data);
         
         // Filter out the 'All' option from age groups
         const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
@@ -1011,28 +1004,22 @@ const ParticipantsManagement = () => {
       }
 
       const eventIds = getAllEventIds();
-      console.log('Event IDs for participants fetch:', eventIds);
       
       if (eventIds.length === 0) return;
 
-      // Build query parameters
+      // Build query parameters - only show APPROVED participants
       const params = new URLSearchParams();
       params.append('event_ids', eventIds.join(','));
-      if (selectedStatus !== 'ALL') {
-        params.append('status', selectedStatus);
-      }
+      params.append('status', 'ACCEPTED'); // Only show approved participants
       if (selectedTemple !== 'ALL') {
         params.append('temple_id', selectedTemple);
       }
 
-      console.log('Fetching participants with params:', params.toString());
-
       const data = await participantAPI.getAllParticipants({
         event_ids: eventIds.join(','),
-        ...(selectedStatus !== 'ALL' && { status: selectedStatus }),
+        status: 'ACCEPTED', // Only show approved participants
         ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
       });
-      console.log('Participants data received:', data);
       setAllParticipants(data);
     } catch (err) {
       console.error('Error fetching participants:', err);
@@ -1042,7 +1029,7 @@ const ParticipantsManagement = () => {
 
   useEffect(() => {
     fetchParticipants();
-  }, [events, selectedStatus, selectedTemple]);
+  }, [events, selectedTemple]);
 
   // Get participants for a specific event
   const getParticipantsForEvent = (eventId) => {
@@ -1060,13 +1047,18 @@ const ParticipantsManagement = () => {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[#2A2A2A]">Participants Management</h3>
         <div className="text-sm text-[#5A5A5A]">
-          Total Participants: {allParticipants.length}
+          Total Approved Participants: {allParticipants.length}
         </div>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            <span className="font-semibold">Note:</span> Only approved participants are displayed in this view.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Age Category Filter */}
           <div className="flex flex-col">
             <label className="mb-2 text-[#2A2A2A] font-medium">Age Category</label>
@@ -1107,20 +1099,7 @@ const ParticipantsManagement = () => {
             </select>
           </div>
 
-          {/* Status Filter */}
-          <div className="flex flex-col">
-            <label className="mb-2 text-[#2A2A2A] font-medium">Status</label>
-            <select 
-              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="PENDING">Pending</option>
-              <option value="ACCEPTED">Accepted</option>
-              <option value="DECLINED">Declined</option>
-            </select>
-          </div>
+          {/* Status Filter - Removed for admin view */}
 
           {/* Temple Filter */}
           <div className="flex flex-col">
@@ -1220,15 +1199,12 @@ const TeamsManagement = () => {
       // First try to fetch as user IDs
       let data = await userAPI.getUserDetails(userIds.join(','));
       if (data.users && data.users.length > 0) {
-        console.log('Found users by user IDs:', data.users.length);
         return data.users;
       }
 
       // If no users found, try as profile IDs
-      console.log('No users found, trying as profile IDs...');
       data = await userAPI.getProfileDetails(userIds.join(','));
       if (data.profiles && data.profiles.length > 0) {
-        console.log('Found profiles by profile IDs:', data.profiles.length);
         // Convert profiles to user-like format for consistency
         return data.profiles.map(profile => ({
           id: profile.id,
@@ -1242,8 +1218,6 @@ const TeamsManagement = () => {
           }
         }));
       }
-
-      console.log('No users or profiles found for IDs:', userIds);
       return [];
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -1497,7 +1471,7 @@ const TeamsManagement = () => {
                                       <div className="flex space-x-2">
                                         <button 
                                           onClick={() => {
-                                            console.log('View teams for temple:', temple.temple_name, temple.teams);
+                                            // TODO: Implement view teams functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-semibold text-xs"
                                         >
@@ -1505,7 +1479,7 @@ const TeamsManagement = () => {
                                         </button>
                                         <button 
                                           onClick={() => {
-                                            console.log('View temple details:', temple);
+                                            // TODO: Implement temple details functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                                         >
@@ -1610,7 +1584,7 @@ const TeamsManagement = () => {
                                       <div className="flex space-x-2">
                                         <button 
                                           onClick={() => {
-                                            console.log('View teams for temple:', temple.temple_name, temple.teams);
+                                            // TODO: Implement view teams functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-pink-600 text-white rounded-lg shadow hover:bg-pink-700 transition font-semibold text-xs"
                                         >
@@ -1618,7 +1592,7 @@ const TeamsManagement = () => {
                                         </button>
                                         <button 
                                           onClick={() => {
-                                            console.log('View temple details:', temple);
+                                            // TODO: Implement temple details functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                                         >
@@ -1858,7 +1832,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
         <div className="flex space-x-2">
           <button 
             onClick={() => {
-              console.log('View team details:', team, members);
+              // TODO: Implement view team details functionality
             }}
             className="inline-block px-3 py-1 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition font-semibold text-xs"
           >
@@ -1866,7 +1840,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
           </button>
           <button 
             onClick={() => {
-              console.log('Edit team:', team);
+              // TODO: Implement edit team functionality
             }}
             className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
           >
@@ -2741,7 +2715,6 @@ const SystemSettings = () => {
     try {
       // Here you would typically save to backend
       // await settingsAPI.updateSettings(settings);
-      console.log('Saving settings:', settings);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

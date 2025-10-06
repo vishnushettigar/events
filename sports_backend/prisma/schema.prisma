@@ -24,6 +24,7 @@ model Champion {
 
 model Ind_event_registration {
   id              Int      @id @default(autoincrement())
+  year            Int      // NEW ✅ To separate yearly registrations
   event           Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
   event_id        Int
   user            Profile  @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -34,6 +35,7 @@ model Ind_event_registration {
   modified_at     DateTime  @updatedAt
   is_deleted      Boolean   @default(false)
   status          RegistrationStatus @default(PENDING)
+  performances    event_performance[]
 }
 
 enum RegistrationStatus {
@@ -63,6 +65,7 @@ model Mst_event {
   registrations  Ind_event_registration[]
   team_registrations Team_event_registration[]
   schedules      event_schedule[]
+  performances   event_performance[]
 }
 
 enum Gender {
@@ -157,6 +160,7 @@ model Settings {
 
 model Team_event_registration {
   id              Int     @id @default(autoincrement())
+  year            Int      // NEW ✅ To separate yearly registrations
   temple          Mst_temple @relation(fields: [temple_id], references: [id], onDelete: Cascade)
   temple_id       Int
   event_result    Mst_event_result? @relation("TeamEventResultRelation", fields: [event_result_id], references: [id], onDelete: Cascade)
@@ -212,4 +216,17 @@ model event_schedule {
   event Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
 
   @@index([event_id])
+}
+
+model event_performance {
+  id              Int      @id @default(autoincrement())
+  year            Int      // NEW ✅ To separate yearly registrations
+  registration    Ind_event_registration @relation(fields: [registration_id], references: [id], onDelete: Cascade)
+  registration_id Int
+  event           Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  event_id        Int
+  heat_number     Int?     // e.g., Heat 1, Heat 2
+  heat_time       Decimal? @db.Decimal(8, 3) // Only store heat timing for qualifying rounds
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
