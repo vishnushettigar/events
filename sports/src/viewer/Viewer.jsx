@@ -444,14 +444,11 @@ const ParticipantsManagement = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log('Fetching participant data with filters:', { selectedAge, selectedGender });
-
         // Fetch participant data
         const data = await viewerAPI.getParticipantData({
           ageCategory: selectedAge,
           gender: selectedGender
         });
-        console.log('Participant data received:', data);
         
         // Filter out the 'All' option from age groups
         const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
@@ -502,22 +499,14 @@ const ParticipantsManagement = () => {
   const fetchParticipants = async () => {
     try {
       const eventIds = getAllEventIds();
-      console.log('Event IDs for participants fetch:', eventIds);
       
       if (eventIds.length === 0) return;
-
-      console.log('Fetching participants with filters:', {
-        event_ids: eventIds.join(','),
-        status: selectedStatus !== 'ALL' ? selectedStatus : undefined,
-        temple_id: selectedTemple !== 'ALL' ? selectedTemple : undefined
-      });
 
       const data = await viewerAPI.getParticipants({
         event_ids: eventIds.join(','),
         ...(selectedStatus !== 'ALL' && { status: selectedStatus }),
         ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
       });
-      console.log('Participants data received:', data);
       setAllParticipants(data);
     } catch (err) {
       console.error('Error fetching participants:', err);
@@ -703,15 +692,12 @@ const TeamsManagement = () => {
       // First try to fetch as user IDs
       let data = await viewerAPI.getUserDetails(userIds.join(','));
       if (data.users && data.users.length > 0) {
-        console.log('Found users by user IDs:', data.users.length);
         return data.users;
       }
 
       // If no users found, try as profile IDs
-      console.log('No users found, trying as profile IDs...');
       data = await viewerAPI.getProfileDetails(userIds.join(','));
       if (data.profiles && data.profiles.length > 0) {
-        console.log('Found profiles by profile IDs:', data.profiles.length);
         // Convert profiles to user-like format for consistency
         return data.profiles.map(profile => ({
           id: profile.id,
@@ -725,8 +711,6 @@ const TeamsManagement = () => {
           }
         }));
       }
-
-      console.log('No users or profiles found for IDs:', userIds);
       return [];
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -1140,13 +1124,17 @@ const TempleManagement = () => {
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => console.log('View temple points:', temple.name, temple.id)}
+                          onClick={() => {
+                            // TODO: Implement view temple points functionality
+                          }}
                           className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-semibold text-xs"
                         >
                           View Points
                         </button>
                         <button 
-                          onClick={() => console.log('View temple participants:', temple.name, temple.id)}
+                          onClick={() => {
+                            // TODO: Implement view temple participants functionality
+                          }}
                           className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                         >
                           View All Participants
@@ -1866,7 +1854,6 @@ const SystemSettings = () => {
     try {
       // Here you would typically save to backend
       // await settingsAPI.updateSettings(settings);
-      console.log('Saving settings:', settings);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -2159,7 +2146,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
                   <div className="flex space-x-2">
                     <button 
                       onClick={() => {
-                        console.log('View teams for temple:', temple.temple_name, temple.teams);
+                        // TODO: Implement view teams functionality
                       }}
                       className={`inline-block px-3 py-1 bg-[#D35D38]  text-white rounded-lg shadow transition font-semibold text-xs`}
                     >
@@ -2167,7 +2154,7 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
                     </button>
                     <button 
                       onClick={() => {
-                        console.log('View temple details:', temple);
+                        // TODO: Implement temple details functionality
                       }}
                       className="inline-block px-3 py-1 bg-[#D35D38]  text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                     >
@@ -2322,7 +2309,9 @@ const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => 
       </td>
       {/* <td className="px-6 py-4">
         <button
-          onClick={() => console.log('View team details:', team)}
+          onClick={() => {
+            // TODO: Implement view team details functionality
+          }}
           className="px-3 py-1 bg-[#D35D38] text-white rounded-lg text-xs hover:bg-green-700"
         >
           View Details

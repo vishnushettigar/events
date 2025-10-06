@@ -468,6 +468,68 @@ router.get('/event-participants/:eventId', authenticate, async (req, res) => {
 
 /**
  * @swagger
+ * /api/events/team-participants/{registrationId}:
+ *   get:
+ *     tags: [Events]
+ *     summary: Get team participants for a specific registration
+ *     description: Retrieve all team members for a specific team registration
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: registrationId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Team registration ID
+ *     responses:
+ *       200:
+ *         description: Team participants retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   first_name:
+ *                     type: string
+ *                   last_name:
+ *                     type: string
+ *                   aadhar_number:
+ *                     type: string
+ *                   phone:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *       400:
+ *         description: Invalid registration ID
+ *       404:
+ *         description: Registration not found
+ *       500:
+ *         description: Server error
+ */
+// Get team participants for a specific registration
+router.get('/team-participants/:registrationId', authenticate, async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    
+    if (!registrationId || isNaN(parseInt(registrationId))) {
+      return res.status(400).json({ error: 'Valid registration ID is required' });
+    }
+
+    const participants = await eventService.getTeamParticipants(parseInt(registrationId));
+    res.json(participants);
+  } catch (error) {
+    console.error('Error fetching team participants:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch team participants' });
+  }
+});
+
+/**
+ * @swagger
  * /events/all-events:
  *   get:
  *     summary: Get all events with complete details
@@ -644,6 +706,234 @@ router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 
       return res.status(404).json({ error: error.message });
     }
     res.status(500).json({ error: error.message || 'Team result update failed' });
+  }
+});
+
+// Generate heats for running events
+router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('lane_count').isInt({ min: 6, max: 8 }).withMessage('Lane count must be 6 or 8')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { event_id, lane_count } = req.body;
+
+  try {
+    // Check if event is a running event (100m or 200m)
+    const event = await prisma.mst_event.findUnique({
+      where: { id: event_id },
+      include: {
+        event_type: true,
+        registrations: {
+          where: { status: 'ACCEPTED' },
+          include: {
+            user: {
+              include: { temple: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const eventName = event.event_type.name.toLowerCase();
+    if (!eventName.includes('running - 100 mts') && !eventName.includes('running - 200 mts')) {
+      return res.status(400).json({ error: 'Heat generation is only available for Running 100m and 200m events' });
+    }
+
+    // Check if heats already exist
+    const existingHeats = await prisma.event_performance.findMany({
+      where: { event_id },
+      select: { heat_number: true }
+    });
+
+    if (existingHeats.length > 0) {
+      return res.status(400).json({ error: 'Heats already generated for this event' });
+    }
+
+    const participants = event.registrations.map(reg => ({
+      id: reg.id,
+      participant_name: reg.user.first_name + ' ' + (reg.user.last_name || ''),
+      temple_name: reg.user.temple.name,
+      temple_id: reg.user.temple_id,
+      aadhar_number: reg.user.aadhar_number
+    }));
+
+    // Group participants by temple
+    const templeGroups = {};
+    participants.forEach(participant => {
+      const temple = participant.temple_name;
+      if (!templeGroups[temple]) {
+        templeGroups[temple] = [];
+      }
+      templeGroups[temple].push(participant);
+    });
+
+    // Generate heats with temple separation logic
+    const heats = [];
+    const temples = Object.keys(templeGroups);
+    let currentHeat = { id: 1, participants: [], laneCount: 0 };
+    let templeIndex = 0;
+
+    // Distribute participants ensuring no same temple in same heat
+    while (templeIndex < temples.length) {
+      const temple = temples[templeIndex];
+      const templeParticipants = templeGroups[temple];
+      
+      // If adding this temple would exceed lane capacity, start new heat
+      if (currentHeat.participants.length + templeParticipants.length > lane_count) {
+        if (currentHeat.participants.length > 0) {
+          heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
+          currentHeat = { id: heats.length + 1, participants: [], laneCount: 0 };
+        }
+      }
+
+      // Add temple participants to current heat
+      templeParticipants.forEach(participant => {
+        if (currentHeat.participants.length < lane_count) {
+          currentHeat.participants.push(participant);
+          currentHeat.laneCount++;
+        } else {
+          // If current heat is full, start new heat
+          heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
+          currentHeat = { id: heats.length + 1, participants: [participant], laneCount: 1 };
+        }
+      });
+
+      templeIndex++;
+    }
+
+    // Add the last heat if it has participants
+    if (currentHeat.participants.length > 0) {
+      heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
+    }
+
+    // Save heats to database
+    const heatRecords = [];
+    heats.forEach(heat => {
+      heat.participants.forEach(participant => {
+        heatRecords.push({
+          year: new Date().getFullYear(),
+          registration_id: participant.id,
+          event_id: event_id,
+          heat_number: heat.id,
+          heat_time: null
+        });
+      });
+    });
+
+    await prisma.event_performance.createMany({
+      data: heatRecords
+    });
+
+    res.json({
+      message: 'Heats generated successfully',
+      heats: heats.map(heat => ({
+        id: heat.id,
+        participants: heat.participants.length,
+        laneCount: heat.laneCount
+      })),
+      totalHeats: heats.length
+    });
+
+  } catch (error) {
+    console.error('Error generating heats:', error);
+    res.status(500).json({ error: error.message || 'Failed to generate heats' });
+  }
+});
+
+// Get heats for an event
+router.get('/heats/:eventId', authenticate, async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const heats = await prisma.event_performance.findMany({
+      where: { 
+        event_id: parseInt(eventId),
+        year: new Date().getFullYear()  // Only show current year heats
+      },
+      include: {
+        registration: {
+          include: {
+            user: {
+              include: { temple: true }
+            }
+          }
+        }
+      },
+      orderBy: [
+        { heat_number: 'asc' },
+        { id: 'asc' }
+      ]
+    });
+
+    // Group by heat number
+    const groupedHeats = {};
+    heats.forEach(heat => {
+      const heatNumber = heat.heat_number;
+      if (!groupedHeats[heatNumber]) {
+        groupedHeats[heatNumber] = [];
+      }
+      groupedHeats[heatNumber].push({
+        id: heat.registration.id,
+        participant_name: heat.registration.user.first_name + ' ' + (heat.registration.user.last_name || ''),
+        temple_name: heat.registration.user.temple.name,
+        aadhar_number: heat.registration.user.aadhar_number,
+        heat_time: heat.heat_time
+      });
+    });
+
+    res.json(groupedHeats);
+
+  } catch (error) {
+    console.error('Error fetching heats:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch heats' });
+  }
+});
+
+// Save heat timings
+router.post('/save-timings', authenticate, requireRole('STAFF'), [
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('heat_number').isInt().withMessage('Invalid heat number'),
+  body('timings').isArray().withMessage('Timings must be an array'),
+  body('timings.*.registration_id').isInt().withMessage('Invalid registration ID'),
+  body('timings.*.heat_time').isString().withMessage('Heat time must be a string')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { event_id, heat_number, timings } = req.body;
+
+  try {
+    // Update timings for each participant
+    const updatePromises = timings.map(timing => 
+      prisma.event_performance.updateMany({
+        where: {
+          event_id: event_id,
+          heat_number: heat_number,
+          registration_id: timing.registration_id
+        },
+        data: {
+          heat_time: timing.heat_time
+        }
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    res.json({ message: 'Timings saved successfully' });
+
+  } catch (error) {
+    console.error('Error saving timings:', error);
+    res.status(500).json({ error: error.message || 'Failed to save timings' });
   }
 });
 

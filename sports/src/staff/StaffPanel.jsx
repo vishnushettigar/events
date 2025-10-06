@@ -188,6 +188,126 @@ const StaffPanel = () => {
     }
   };
 
+  // Fetch team participant details for printing
+  const fetchTeamParticipants = async (registrationIds) => {
+    try {
+      const participants = [];
+      for (const registrationId of registrationIds) {
+        const teamData = await eventAPI.getTeamParticipants(registrationId);
+        participants.push(...teamData);
+      }
+      return participants;
+    } catch (error) {
+      console.error('Error fetching team participants:', error);
+      return [];
+    }
+  };
+
+  // Print team participants
+  const printTeamParticipants = async (temple, eventName, registrationIds) => {
+    try {
+      const participants = await fetchTeamParticipants(registrationIds);
+      
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Team Participants - ${eventName}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              margin: 20px;
+              color: #333;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              border-bottom: 3px solid #D35D38;
+              padding-bottom: 20px;
+            }
+            .header h1 {
+              color: #D35D38;
+              margin: 0;
+              font-size: 24px;
+            }
+            .header h2 {
+              color: #666;
+              margin: 10px 0 0 0;
+              font-size: 18px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 12px;
+              text-align: left;
+            }
+            th {
+              background-color: #D35D38;
+              color: white;
+              font-weight: bold;
+            }
+            tr:nth-child(even) {
+              background-color: #f9f9f9;
+            }
+            .temple-name {
+              font-weight: bold;
+              color: #D35D38;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${eventName}</h1>
+            <h2>Team: <span class="temple-name">${temple.temple_name}</span></h2>
+            <p>Total Members: ${participants.length}</p>
+          </div>
+          
+          <table>
+            <thead>
+              <tr>
+                <th>SL.NO</th>
+                <th>MEMBER NAME</th>
+                <th>AADHAAR NUMBER</th>
+                <th>PHONE</th>
+                <th>EMAIL</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${participants.map((participant, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${participant.first_name} ${participant.last_name || ''}</td>
+                  <td>${participant.aadhar_number || 'N/A'}</td>
+                  <td>${participant.phone || 'N/A'}</td>
+                  <td>${participant.email || 'N/A'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+        </html>
+      `;
+      
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+    } catch (error) {
+      console.error('Error printing team participants:', error);
+      alert('Error loading team participant details for printing');
+    }
+  };
+
   // Fetch champions data
   const fetchChampions = async () => {
     try {
@@ -395,12 +515,13 @@ const StaffPanel = () => {
     const [loadingParticipants, setLoadingParticipants] = useState(false);
     const [participantError, setParticipantError] = useState(null);
     const [trialMeasurements, setTrialMeasurements] = useState({});
-    const [laneCount, setLaneCount] = useState(8);
-    const [heats, setHeats] = useState([]);
+    const [heats, setHeats] = useState({});
     const [selectedHeat, setSelectedHeat] = useState(null);
     const [timings, setTimings] = useState({});
     const [showFinalHeat, setShowFinalHeat] = useState(false);
     const [finalHeatParticipants, setFinalHeatParticipants] = useState([]);
+    const [loadingHeats, setLoadingHeats] = useState(false);
+    const [savingTimings, setSavingTimings] = useState(false);
 
     // Check if this event requires trial measurements
     const isTrialEvent = () => {
@@ -430,124 +551,213 @@ const StaffPanel = () => {
       }));
     };
 
-    // Generate heats with temple separation logic
-    const generateHeats = (participants, lanes) => {
-      if (participants.length <= lanes) {
-        return [{ id: 1, participants: participants, laneCount: participants.length }];
-      }
-
-      const heats = [];
-      const templeGroups = {};
+    // Save timings for current heat
+    const saveHeatTimings = async () => {
+      if (!selectedHeat || !heats[selectedHeat]) return;
       
-      // Group participants by temple
-      participants.forEach(participant => {
-        const temple = participant.temple_name;
-        if (!templeGroups[temple]) {
-          templeGroups[temple] = [];
-        }
-        templeGroups[temple].push(participant);
-      });
-
-      const temples = Object.keys(templeGroups);
-      let currentHeat = { id: 1, participants: [], laneCount: 0 };
-      let templeIndex = 0;
-
-      // Distribute participants ensuring no same temple in same heat
-      while (templeIndex < temples.length) {
-        const temple = temples[templeIndex];
-        const templeParticipants = templeGroups[temple];
+      try {
+        setSavingTimings(true);
+        const timingsArray = heats[selectedHeat].map(participant => ({
+          registration_id: participant.id,
+          heat_time: timings[participant.id] || ''
+        }));
         
-        // If adding this temple would exceed lane capacity, start new heat
-        if (currentHeat.participants.length + templeParticipants.length > lanes) {
-          if (currentHeat.participants.length > 0) {
-            heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
-            currentHeat = { id: heats.length + 1, participants: [], laneCount: 0 };
-          }
+        console.log(`Saving timings for Heat ${selectedHeat}:`, timingsArray);
+        
+        await eventAPI.saveTimings(eventId, selectedHeat, timingsArray);
+        console.log('Timings saved successfully');
+        
+        // Refresh heats to get updated data
+        await fetchHeats();
+        
+        // Clear the local timings state since data is now saved
+        setTimings({});
+        
+        alert(`Timings for Heat ${selectedHeat} saved successfully!`);
+      } catch (error) {
+        console.error('Error saving timings:', error);
+        alert('Failed to save timings. Please try again.');
+      } finally {
+        setSavingTimings(false);
+      }
+    };
+
+    // Fetch heats from backend
+    const fetchHeats = async () => {
+      if (!isHeatEvent()) return;
+      
+      try {
+        setLoadingHeats(true);
+        const heatsData = await eventAPI.getHeats(eventId);
+        setHeats(heatsData);
+        
+        // Set first heat as selected if available
+        const heatNumbers = Object.keys(heatsData).map(Number).sort((a, b) => a - b);
+        if (heatNumbers.length > 0) {
+          setSelectedHeat(heatNumbers[0]);
         }
-
-        // Add temple participants to current heat
-        templeParticipants.forEach(participant => {
-          if (currentHeat.participants.length < lanes) {
-            currentHeat.participants.push(participant);
-            currentHeat.laneCount++;
-          } else {
-            // If current heat is full, start new heat
-            heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
-            currentHeat = { id: heats.length + 1, participants: [participant], laneCount: 1 };
-          }
-        });
-
-        templeIndex++;
+      } catch (error) {
+        console.error('Error fetching heats:', error);
+      } finally {
+        setLoadingHeats(false);
       }
-
-      // Add the last heat if it has participants
-      if (currentHeat.participants.length > 0) {
-        heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
-      }
-
-      return heats;
     };
 
     // Convert timing string to seconds for comparison
     const parseTiming = (timing) => {
-      if (!timing || timing === '') return Infinity;
+      if (!timing || timing === '' || timing === null || timing === undefined) {
+        console.log('Invalid timing input:', timing);
+        return Infinity;
+      }
       
-      // Handle formats like "12.34", "1:23.45", "00:12.34"
-      const parts = timing.split(':');
-      if (parts.length === 2) {
+      // Clean the timing string (remove extra spaces, etc.)
+      const cleanTiming = timing.toString().trim();
+      
+      // Handle formats like "12.34", "1:23.45", "00:12.34", "1:23:45.67"
+      const parts = cleanTiming.split(':');
+      
+      if (parts.length === 3) {
+        // Format: HH:MM:SS.ss
+        const hours = parseInt(parts[0]) || 0;
+        const minutes = parseInt(parts[1]) || 0;
+        const seconds = parseFloat(parts[2]) || 0;
+        const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+        console.log(`Parsed ${cleanTiming} as ${totalSeconds}s (${hours}h ${minutes}m ${seconds}s)`);
+        return totalSeconds;
+      } else if (parts.length === 2) {
         // Format: MM:SS.ss
         const minutes = parseInt(parts[0]) || 0;
         const seconds = parseFloat(parts[1]) || 0;
-        return minutes * 60 + seconds;
+        const totalSeconds = minutes * 60 + seconds;
+        console.log(`Parsed ${cleanTiming} as ${totalSeconds}s (${minutes}m ${seconds}s)`);
+        return totalSeconds;
       } else {
         // Format: SS.ss
-        return parseFloat(timing) || Infinity;
+        const seconds = parseFloat(cleanTiming);
+        if (isNaN(seconds)) {
+          console.log(`Could not parse timing: ${cleanTiming}`);
+          return Infinity;
+        }
+        console.log(`Parsed ${cleanTiming} as ${seconds}s`);
+        return seconds;
       }
     };
 
     // Get all participants with timings from all heats
     const getAllParticipantsWithTimings = () => {
+      console.log('Getting all participants with timings...');
+      console.log('Current heats:', heats);
+      console.log('Current timings state:', timings);
+      
       const allParticipants = [];
       
-      heats.forEach(heat => {
-        heat.participants.forEach(participant => {
-          const timing = timings[participant.id];
-          if (timing && timing !== '') {
+      // Iterate through each heat
+      Object.entries(heats).forEach(([heatNumber, heatParticipants]) => {
+        console.log(`Processing Heat ${heatNumber} with ${heatParticipants.length} participants`);
+        
+        heatParticipants.forEach(participant => {
+          // Priority: saved heat_time from database > current timings state
+          const timing = participant.heat_time || timings[participant.id];
+          const timingSeconds = parseTiming(timing);
+          
+          console.log(`Heat ${heatNumber} - Participant ${participant.id} (${participant.participant_name}):`, {
+            heat_time: participant.heat_time,
+            timings_state: timings[participant.id],
+            final_timing: timing,
+            timing_seconds: timingSeconds,
+            temple: participant.temple_name
+          });
+          
+          if (timing && timing !== '' && timingSeconds !== Infinity) {
             allParticipants.push({
               ...participant,
               timing: timing,
-              timingSeconds: parseTiming(timing)
+              timingSeconds: timingSeconds,
+              heatNumber: parseInt(heatNumber)
             });
           }
         });
       });
       
+      console.log(`Found ${allParticipants.length} participants with valid timings:`, allParticipants);
       return allParticipants;
     };
 
     // Generate final heat with top 8 participants
     const generateFinalHeat = () => {
-      const participantsWithTimings = getAllParticipantsWithTimings();
-      
-      // Sort by timing (fastest first)
-      const sortedParticipants = participantsWithTimings.sort((a, b) => a.timingSeconds - b.timingSeconds);
-      
-      // Take top 8
-      const top8 = sortedParticipants.slice(0, 8);
-      setFinalHeatParticipants(top8);
-      setShowFinalHeat(true);
+      try {
+        console.log('Generating final heat...');
+        const participantsWithTimings = getAllParticipantsWithTimings();
+        
+        if (participantsWithTimings.length === 0) {
+          console.log('No participants with timings found');
+          alert('No participants with timings found. Please enter timings for at least one heat first.');
+          return;
+        }
+        
+        // Sort by timing (fastest first)
+        const sortedParticipants = participantsWithTimings.sort((a, b) => a.timingSeconds - b.timingSeconds);
+        
+        console.log('=== FINAL HEAT GENERATION ===');
+        console.log(`Total participants with timings: ${participantsWithTimings.length}`);
+        console.log('All participants sorted by time:');
+        sortedParticipants.forEach((participant, index) => {
+          console.log(`${index + 1}. ${participant.participant_name} (${participant.temple_name}) - Heat ${participant.heatNumber} - ${participant.timing} (${participant.timingSeconds}s)`);
+        });
+        
+        // Take top 8
+        const top8 = sortedParticipants.slice(0, 8);
+        
+        console.log('\n=== TOP 8 FOR FINAL HEAT ===');
+        top8.forEach((participant, index) => {
+          console.log(`${index + 1}. ${participant.participant_name} (${participant.temple_name}) - Heat ${participant.heatNumber} - ${participant.timing} (${participant.timingSeconds}s)`);
+        });
+        
+        // Show heat distribution
+        const heatDistribution = {};
+        top8.forEach(participant => {
+          const heat = participant.heatNumber;
+          heatDistribution[heat] = (heatDistribution[heat] || 0) + 1;
+        });
+        console.log('Heat distribution in final:', heatDistribution);
+        
+        setFinalHeatParticipants(top8);
+        setShowFinalHeat(true);
+        
+        // Show success message with details
+        const heatCounts = Object.entries(heatDistribution).map(([heat, count]) => `Heat ${heat}: ${count}`).join(', ');
+        alert(`Final heat generated successfully!\n\nTop 8 participants selected from all heats:\n${heatCounts}\n\nCheck the console for detailed timing comparison.`);
+        
+      } catch (error) {
+        console.error('Error generating final heat:', error);
+        alert('Error generating final heat. Please try again.');
+      }
     };
 
     // Handle final heat participant selection
     const handleFinalHeatSelection = (participantId, isSelected) => {
       if (isSelected) {
         // Add to final heat if not already there
-        const participant = eventParticipants.find(p => p.id === participantId);
+        let participant = null;
+        
+        // Find participant in heats data
+        Object.values(heats).forEach(heatParticipants => {
+          const found = heatParticipants.find(p => p.id === participantId);
+          if (found) {
+            participant = found;
+          }
+        });
+        
+        // Fallback to eventParticipants if not found in heats
+        if (!participant) {
+          participant = eventParticipants.find(p => p.id === participantId);
+        }
+        
         if (participant && !finalHeatParticipants.find(p => p.id === participantId)) {
           setFinalHeatParticipants(prev => [...prev, {
             ...participant,
-            timing: timings[participantId] || '',
-            timingSeconds: parseTiming(timings[participantId])
+            timing: participant.heat_time || timings[participantId] || '',
+            timingSeconds: parseTiming(participant.heat_time || timings[participantId])
           }]);
         }
       } else {
@@ -567,8 +777,8 @@ const StaffPanel = () => {
           participantsToPrint = finalHeatParticipants;
           printTitle = `${title} - Final Heat`;
         } else if (selectedHeat) {
-          participantsToPrint = selectedHeat.participants;
-          printTitle = `${title} - Heat ${selectedHeat.id}`;
+          participantsToPrint = heats[selectedHeat] || [];
+          printTitle = `${title} - Heat ${selectedHeat}`;
         }
       }
       
@@ -618,9 +828,9 @@ const StaffPanel = () => {
             </div>
           ` : isHeatEvent() && selectedHeat ? `
             <div class="heat-info">
-              <strong>Heat ${selectedHeat.id} Information:</strong><br>
-              Participants: ${selectedHeat.participants.length} | Lane Count: ${laneCount}<br>
-              Temples: ${[...new Set(selectedHeat.participants.map(p => p.temple_name))].join(', ')}
+              <strong>Heat ${selectedHeat} Information:</strong><br>
+              Participants: ${heats[selectedHeat]?.length || 0}<br>
+              Temples: ${[...new Set((heats[selectedHeat] || []).map(p => p.temple_name))].join(', ')}
             </div>
           ` : ''}
           <table>
@@ -641,9 +851,7 @@ const StaffPanel = () => {
             </thead>
             <tbody>
               ${participantsToPrint.map((participant, index) => {
-                const participantName = participant.registration_type === 'INDIVIDUAL' 
-                  ? participant.participant_name 
-                  : participant.team_name;
+                const participantName = participant.participant_name || participant.team_name;
                 const resultDisplay = participant.result?.rank 
                   ? `<span class="result-badge ${participant.result.rank.toLowerCase()}">${
                       participant.result.rank === 'FIRST' ? '🥇 1st' :
@@ -655,7 +863,7 @@ const StaffPanel = () => {
                 const trial1 = trialMeasurements[`${participant.id}_1`] || '';
                 const trial2 = trialMeasurements[`${participant.id}_2`] || '';
                 const trial3 = trialMeasurements[`${participant.id}_3`] || '';
-                const timing = participant.timing || timings[participant.id] || '';
+                const timing = participant.heat_time || participant.timing || timings[participant.id] || '';
                 const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
                 
                 return `
@@ -697,13 +905,9 @@ const StaffPanel = () => {
         const data = await eventAPI.getEventParticipants(eventId);
         setEventParticipants(data);
         
-        // Generate heats for running events
-        if (isHeatEvent() && data.length > 0) {
-          const generatedHeats = generateHeats(data, laneCount);
-          setHeats(generatedHeats);
-          if (generatedHeats.length > 0) {
-            setSelectedHeat(generatedHeats[0]);
-          }
+        // Fetch heats for running events
+        if (isHeatEvent()) {
+          await fetchHeats();
         }
     } catch (err) {
         console.error('Error fetching event participants:', err);
@@ -762,73 +966,67 @@ const StaffPanel = () => {
             ) : eventParticipants.length > 0 ? (
               <div className="space-y-4">
                 {/* Heat Selection for Running Events */}
-                {isHeatEvent() && heats.length > 0 && (
+                {isHeatEvent() && Object.keys(heats).length > 0 ? (
                   <div className="bg-[#F8DFBE] p-4 rounded-lg">
                     <div className="flex flex-wrap items-center gap-4 mb-4">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-[#2A2A2A]">Lane Count:</label>
-                        <select
-                          value={laneCount}
-                          onChange={(e) => {
-                            const newLaneCount = parseInt(e.target.value);
-                            setLaneCount(newLaneCount);
-                            const newHeats = generateHeats(eventParticipants, newLaneCount);
-                            setHeats(newHeats);
-                            if (newHeats.length > 0) {
-                              setSelectedHeat(newHeats[0]);
-                            }
-                          }}
-                          className="px-2 py-1 border border-gray-300 rounded text-sm"
-                        >
-                          <option value={6}>6 Lanes</option>
-                          <option value={7}>7 Lanes</option>
-                          <option value={8}>8 Lanes</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center gap-2">
                         <label className="text-sm font-medium text-[#2A2A2A]">Select Heat:</label>
                         <div className="flex gap-2 flex-wrap">
-                          {heats.map((heat) => (
+                          {Object.keys(heats).map((heatNumber) => (
                             <button
-                              key={heat.id}
+                              key={heatNumber}
                               onClick={() => {
-                                setSelectedHeat(heat);
+                                setSelectedHeat(parseInt(heatNumber));
                                 setShowFinalHeat(false);
                               }}
                               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                                selectedHeat?.id === heat.id && !showFinalHeat
+                                selectedHeat === parseInt(heatNumber) && !showFinalHeat
                                   ? 'bg-[#D35D38] text-white'
                                   : 'bg-white text-[#2A2A2A] hover:bg-gray-100'
                               }`}
                             >
-                              Heat {heat.id} ({heat.laneCount} participants)
+                              Heat {heatNumber} ({heats[heatNumber].length} participants)
                             </button>
                           ))}
-                          <button
-                            onClick={() => {
-                              setShowFinalHeat(true);
-                              setSelectedHeat(null);
-                              if (finalHeatParticipants.length === 0) {
-                                generateFinalHeat();
-                              }
-                            }}
-                            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                              showFinalHeat
-                                ? 'bg-green-600 text-white'
-                                : 'bg-green-100 text-green-800 hover:bg-green-200'
-                            }`}
-                          >
-                            🏁 Final Heat ({finalHeatParticipants.length}/8)
-                          </button>
+                          {Object.keys(heats).length > 0 && (
+                            <button
+                              onClick={() => {
+                                console.log('Final Heat button clicked');
+                                console.log('Current heats:', heats);
+                                console.log('All participants with timings:', getAllParticipantsWithTimings());
+                                setShowFinalHeat(true);
+                                setSelectedHeat(null);
+                                if (finalHeatParticipants.length === 0) {
+                                  generateFinalHeat();
+                                }
+                              }}
+                              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                                showFinalHeat
+                                  ? 'bg-green-600 text-white'
+                                  : 'bg-green-100 text-green-800 hover:bg-green-200'
+                              }`}
+                            >
+                              🏁 Final Heat ({finalHeatParticipants.length}/8)
+                            </button>
+                          )}
                         </div>
                       </div>
+                      {selectedHeat && (
+                        <button
+                          onClick={saveHeatTimings}
+                          disabled={savingTimings}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          {savingTimings ? 'Saving...' : 'Save Timings'}
+                        </button>
+                      )}
                     </div>
                     {selectedHeat && (
                       <div className="text-sm text-[#5A5A5A]">
-                        <strong>Heat {selectedHeat.id}:</strong> {selectedHeat.participants.length} participants
-                        {selectedHeat.participants.length > 0 && (
+                        <strong>Heat {selectedHeat}:</strong> {heats[selectedHeat]?.length || 0} participants
+                        {heats[selectedHeat]?.length > 0 && (
                           <span className="ml-2">
-                            (Temples: {[...new Set(selectedHeat.participants.map(p => p.temple_name))].join(', ')})
+                            (Temples: {[...new Set(heats[selectedHeat].map(p => p.temple_name))].join(', ')})
                           </span>
                         )}
                       </div>
@@ -844,10 +1042,16 @@ const StaffPanel = () => {
                       </div>
                     )}
                   </div>
+                ) : isHeatEvent() && (
+                  <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                    <p className="text-yellow-800 text-sm">
+                      ⚠️ Heats have not been generated for this event yet. Please contact the admin to generate heats.
+                    </p>
+                  </div>
                 )}
 
                 {/* Final Heat Management */}
-                {isHeatEvent() && showFinalHeat && (
+                {isHeatEvent() && showFinalHeat && Object.keys(heats).length > 0 && (
                   <div className="bg-[#E8F5E8] p-4 rounded-lg border-2 border-green-300">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
@@ -865,14 +1069,15 @@ const StaffPanel = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
                           {finalHeatParticipants.map((participant, index) => (
                             <div key={participant.id} className="bg-green-50 p-2 rounded border flex justify-between items-center">
-                              <div>
+                              <div className="flex-1">
                                 <div className="font-medium text-sm">{participant.participant_name || participant.team_name}</div>
                                 <div className="text-xs text-gray-600">{participant.temple_name}</div>
                                 <div className="text-xs font-bold text-green-600">{participant.timing}</div>
+                                <div className="text-xs text-blue-600 font-medium">Heat {participant.heatNumber}</div>
                               </div>
                               <button
                                 onClick={() => handleFinalHeatSelection(participant.id, false)}
-                                className="text-red-600 hover:text-red-800 text-sm"
+                                className="text-red-600 hover:text-red-800 text-sm ml-2"
                               >
                                 ✕
                               </button>
@@ -899,9 +1104,14 @@ const StaffPanel = () => {
                                 .sort((a, b) => a.timingSeconds - b.timingSeconds)
                                 .map((participant, index) => {
                                   const isSelected = finalHeatParticipants.find(p => p.id === participant.id);
-                                  const heatNumber = heats.findIndex(heat => 
-                                    heat.participants.find(p => p.id === participant.id)
-                                  ) + 1;
+                                  
+                                  // Find which heat this participant belongs to
+                                  let heatNumber = 0;
+                                  Object.entries(heats).forEach(([heatNum, heatParticipants]) => {
+                                    if (heatParticipants.find(p => p.id === participant.id)) {
+                                      heatNumber = parseInt(heatNum);
+                                    }
+                                  });
                                   
                                   return (
                                     <tr key={participant.id} className="border-b">
@@ -953,16 +1163,14 @@ const StaffPanel = () => {
                     </thead>
                   <tbody className="bg-white divide-y divide-[#F8DFBE]">
                     {(isHeatEvent() && showFinalHeat ? finalHeatParticipants : 
-                      isHeatEvent() && selectedHeat ? selectedHeat.participants : 
+                      isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] : 
                       eventParticipants).map((participant, index) => (
                         <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
                             {index + 1}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
-                            {participant.registration_type === 'INDIVIDUAL' 
-                              ? participant.participant_name 
-                              : participant.team_name}
+                            {participant.participant_name || participant.team_name}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
                             {participant.temple_name}
@@ -1010,7 +1218,7 @@ const StaffPanel = () => {
                                 type="text"
                                 placeholder="00:00.00"
                                 className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                value={timings[participant.id] || ''}
+                                value={participant.heat_time || timings[participant.id] || ''}
                                 onChange={(e) => handleTimingInput(participant.id, e.target.value)}
                               />
                             </td>
@@ -1413,6 +1621,16 @@ const StaffPanel = () => {
                                           Update
                                         </button>
                                       </div>
+                                      <button 
+                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+                                        onClick={() => printTeamParticipants(
+                                          temple, 
+                                          teamEvent.event_type?.name || teamEvent.name || 'Team Event',
+                                          temple.registration_ids || []
+                                        )}
+                                      >
+                                        🖨️ Print Team
+                                      </button>
                                       {temple.result?.rank && (
                                         <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs rounded-full">
                                           {temple.result.rank === 'FIRST' ? '🥇 1st' :
@@ -1526,6 +1744,16 @@ const StaffPanel = () => {
                                           Update
                                         </button>
                                       </div>
+                                      <button 
+                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+                                        onClick={() => printTeamParticipants(
+                                          temple, 
+                                          teamEvent.event_type?.name || teamEvent.name || 'Team Event',
+                                          temple.registration_ids || []
+                                        )}
+                                      >
+                                        🖨️ Print Team
+                                      </button>
                                       {temple.result?.rank && (
                                         <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs rounded-full">
                                           {temple.result.rank === 'FIRST' ? '🥇 1st' :
@@ -1639,6 +1867,16 @@ const StaffPanel = () => {
                                           Update
                                         </button>
                                       </div>
+                                      <button 
+                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+                                        onClick={() => printTeamParticipants(
+                                          temple, 
+                                          teamEvent.event_type?.name || teamEvent.name || 'Team Event',
+                                          temple.registration_ids || []
+                                        )}
+                                      >
+                                        🖨️ Print Team
+                                      </button>
                                       {temple.result?.rank && (
                                         <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs rounded-full">
                                           {temple.result.rank === 'FIRST' ? '🥇 1st' :

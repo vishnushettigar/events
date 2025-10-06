@@ -7,6 +7,7 @@ import { TEMPLES } from '../constants.js';
 import { PrismaClient } from '@prisma/client';
 import { Gender } from '@prisma/client';
 import { authLimiter, registrationLimiter } from '../middleware/rateLimiter.js';
+import { calculateAge, getAgeCategory } from '../utils/ageUtils.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -117,6 +118,120 @@ router.post('/register', /* registrationLimiter, */ [
       });
     }
     res.status(500).json({ error: 'Failed to register user' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/check-aadhaar:
+ *   post:
+ *     tags: [Users]
+ *     summary: Check if Aadhaar number exists
+ *     description: Check if the provided Aadhaar number is already registered
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - aadhaar
+ *             properties:
+ *               aadhaar:
+ *                 type: string
+ *                 description: Aadhaar number to check
+ *     responses:
+ *       200:
+ *         description: Check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ *                   description: Whether the Aadhaar number exists
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/check-aadhaar', async (req, res) => {
+  try {
+    const { aadhaar } = req.body;
+    
+    if (!aadhaar) {
+      return res.status(400).json({ error: 'Aadhaar number is required' });
+    }
+
+    const existingUser = await prisma.profile.findFirst({
+      where: {
+        aadhar_number: aadhaar,
+        is_deleted: false
+      }
+    });
+
+    res.json({ exists: !!existingUser });
+  } catch (error) {
+    console.error('Error checking Aadhaar:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/check-email:
+ *   post:
+ *     tags: [Users]
+ *     summary: Check if email exists
+ *     description: Check if the provided email address is already registered
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email address to check
+ *     responses:
+ *       200:
+ *         description: Check result
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exists:
+ *                   type: boolean
+ *                   description: Whether the email exists
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+router.post('/check-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        email: email
+      }
+    });
+
+    res.json({ exists: !!existingUser });
+  } catch (error) {
+    console.error('Error checking email:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -280,14 +395,8 @@ router.get('/profile', authenticate, async (req, res) => {
             return res.status(404).json({ error: 'Profile not found' });
         }
 
-        // Calculate age
-        const today = new Date();
-        const birthDate = new Date(user.profile.dob);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
+        // Calculate age using December 1st cutoff
+        const age = calculateAge(user.profile.dob);
 
         // Get all age categories and find matching one
         const ageCategories = await prisma.mst_age_category.findMany({
@@ -364,14 +473,8 @@ router.get('/available-events', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User profile not found' });
     }
 
-    // Calculate user's age
-    const today = new Date();
-    const birthDate = new Date(userProfile.dob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
+    // Calculate user's age using December 1st cutoff
+    const age = calculateAge(userProfile.dob);
 
     // Get all age categories
     const ageCategories = await prisma.mst_age_category.findMany({
@@ -405,7 +508,8 @@ router.get('/available-events', authenticate, async (req, res) => {
         registrations: {
           where: {
             user_id: userProfile.id,
-            is_deleted: false
+            is_deleted: false,
+            year: new Date().getFullYear()  // Only show current year registrations
           }
         }
       }
@@ -559,28 +663,10 @@ router.get('/templeusers', authenticate, async (req, res) => {
             }
         });
 
-        // Calculate age category for each participant
+        // Calculate age category for each participant using December 1st cutoff
         const participantsWithAgeCategory = participants.map(participant => {
-            const today = new Date();
-            const birthDate = new Date(participant.dob);
-            let age = today.getFullYear() - birthDate.getFullYear();
-            const monthDiff = today.getMonth() - birthDate.getMonth();
-            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                age--;
-            }
-
-            // Determine age category based on age
-            let ageCategory = '';
-            if (age >= 0 && age <= 5) ageCategory = '0-5';
-            else if (age >= 6 && age <= 10) ageCategory = '6-10';
-            else if (age >= 11 && age <= 14) ageCategory = '11-14';
-            else if (age >= 15 && age <= 18) ageCategory = '15-18';
-            else if (age >= 19 && age <= 24) ageCategory = '19-24';
-            else if (age >= 25 && age <= 35) ageCategory = '25-35';
-            else if (age >= 36 && age <= 48) ageCategory = '36-48';
-            else if (age >= 49 && age <= 60) ageCategory = '49-60';
-            else if (age >= 61 && age <= 90) ageCategory = '61-90';
-            else ageCategory = '90+';
+            const age = calculateAge(participant.dob);
+            const ageCategory = getAgeCategory(age);
 
             return {
                 id: participant.id,

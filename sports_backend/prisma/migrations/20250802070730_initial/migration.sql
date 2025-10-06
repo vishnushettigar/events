@@ -13,6 +13,7 @@ CREATE TABLE `Champion` (
 -- CreateTable
 CREATE TABLE `Ind_event_registration` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `year` INTEGER NOT NULL DEFAULT (YEAR(CURDATE())),
     `event_id` INTEGER NOT NULL,
     `user_id` INTEGER NOT NULL,
     `event_result_id` INTEGER NULL,
@@ -21,6 +22,7 @@ CREATE TABLE `Ind_event_registration` (
     `is_deleted` BOOLEAN NOT NULL DEFAULT false,
     `status` ENUM('PENDING', 'ACCEPTED', 'DECLINED') NOT NULL DEFAULT 'PENDING',
 
+    INDEX `Ind_event_registration_year_idx`(`year`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -132,6 +134,7 @@ CREATE TABLE `Settings` (
 -- CreateTable
 CREATE TABLE `Team_event_registration` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `year` INTEGER NOT NULL DEFAULT (YEAR(CURDATE())),
     `temple_id` INTEGER NOT NULL,
     `event_result_id` INTEGER NULL,
     `member_user_ids` VARCHAR(191) NULL,
@@ -141,6 +144,7 @@ CREATE TABLE `Team_event_registration` (
     `event_id` INTEGER NOT NULL,
     `status` ENUM('PENDING', 'ACCEPTED', 'DECLINED') NOT NULL DEFAULT 'PENDING',
 
+    INDEX `Team_event_registration_year_idx`(`year`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -195,6 +199,25 @@ CREATE TABLE `event_schedule` (
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- CreateTable
+CREATE TABLE `event_performance` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `year` INTEGER NOT NULL DEFAULT (YEAR(CURDATE())),
+    `registration_id` INTEGER NOT NULL,
+    `event_id` INTEGER NOT NULL,
+    `heat_number` INTEGER NULL,
+    `heat_time` DECIMAL(8,3) NULL,
+    `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updated_at` DATETIME(3) NOT NULL,
+
+    INDEX `event_performance_year_idx`(`year`),
+    INDEX `event_performance_registration_id_idx`(`registration_id`),
+    INDEX `event_performance_event_id_idx`(`event_id`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+
+
 -- AddForeignKey
 ALTER TABLE `Champion` ADD CONSTRAINT `Champion_temple_id_fkey` FOREIGN KEY (`temple_id`) REFERENCES `Mst_temple`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -245,3 +268,9 @@ ALTER TABLE `User_role` ADD CONSTRAINT `User_role_role_id_fkey` FOREIGN KEY (`ro
 
 -- AddForeignKey
 ALTER TABLE `event_schedule` ADD CONSTRAINT `event_schedule_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_performance` ADD CONSTRAINT `event_performance_registration_id_fkey` FOREIGN KEY (`registration_id`) REFERENCES `Ind_event_registration`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `event_performance` ADD CONSTRAINT `event_performance_event_id_fkey` FOREIGN KEY (`event_id`) REFERENCES `Mst_event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

@@ -299,7 +299,7 @@ export const sportsHistory = [
   { year: 1996, place: "Bantwal" },
   { year: 1997, place: "Puttur" },
   { year: 1998, place: "Sullia" },
-  { year: 1999, place: "Belthangady" },
+  { year: 1999, place: "Salikeri" },
   { year: 2000, place: "Mangaluru" },
   { year: 2001, place: "Udupi" },
   { year: 2002, place: "Karkala" },
@@ -320,11 +320,11 @@ export const sportsHistory = [
   { year: 2017, place: "Udupi" },
   { year: 2018, place: "Karkala" },
   { year: 2019, place: "Kundapura" },
-  { year: 2020, place: "Bantwal" },
-  { year: 2021, place: "Puttur" },
-  { year: 2022, place: "Sullia" },
-  { year: 2023, place: "Belthangady" },
-  { year: 2024, place: "Mangaluru" },
+  { year: 2020, place: "Siddakatte" },
+  { year: 2021, place: "Udupi" },
+  { year: 2022, place: "Salikeri" },
+  { year: 2023, place: "HALEYANGADI" },
+  { year: 2024, place: "Manjeshwara" },
 ];
 
 // Legacy events array for backward compatibility

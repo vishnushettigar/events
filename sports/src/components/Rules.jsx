@@ -27,7 +27,7 @@ const Rules = () => {
                                     <div className="text-base mt-1 md:text-lg text-[#5A5A5A] md:text-[#2A2A2A] leading-relaxed mb-4">
                                         {rule.split('<table')[0].trim()}
                                     </div>
-                                    <div className="overflow-x-auto">
+                                    <div className="overflow-x-auto rounded-2xl">
                                         <table className="w-full border-collapse border border-gray-400 bg-white rounded-lg shadow-sm">
                                             <thead>
                                                 <tr className="bg-[#D35D38] text-white">

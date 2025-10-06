@@ -24,7 +24,7 @@ const Myevents = () => {
         setUserRole(data.role_id);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching user info:', err);
+        // console.error('Error fetching user info:', err);
         if (err.message.includes('401') || err.message.includes('Unauthorized')) {
           localStorage.removeItem('token');
           navigate('/login');

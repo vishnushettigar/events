@@ -525,10 +525,7 @@ const UserManagement = () => {
         ...(filters.temple && { temple: filters.temple })
       };
 
-      console.log('Fetching users with params:', params);
-
       const data = await userAPI.getAllUsers(params);
-      console.log('Users data received:', data);
       
       setUsers(data.users);
       setPagination(prev => ({
@@ -947,14 +944,11 @@ const ParticipantsManagement = () => {
           throw new Error('No authentication token found');
         }
 
-        console.log('Fetching participant data with filters:', { selectedAge, selectedGender });
-
         // Fetch participant data
         const data = await eventAPI.getParticipantData({
           ageCategory: selectedAge,
           gender: selectedGender
         });
-        console.log('Participant data received:', data);
         
         // Filter out the 'All' option from age groups
         const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
@@ -1010,7 +1004,6 @@ const ParticipantsManagement = () => {
       }
 
       const eventIds = getAllEventIds();
-      console.log('Event IDs for participants fetch:', eventIds);
       
       if (eventIds.length === 0) return;
 
@@ -1022,14 +1015,11 @@ const ParticipantsManagement = () => {
         params.append('temple_id', selectedTemple);
       }
 
-      console.log('Fetching participants with params:', params.toString());
-
       const data = await participantAPI.getAllParticipants({
         event_ids: eventIds.join(','),
         status: 'ACCEPTED', // Only show approved participants
         ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
       });
-      console.log('Participants data received:', data);
       setAllParticipants(data);
     } catch (err) {
       console.error('Error fetching participants:', err);
@@ -1209,15 +1199,12 @@ const TeamsManagement = () => {
       // First try to fetch as user IDs
       let data = await userAPI.getUserDetails(userIds.join(','));
       if (data.users && data.users.length > 0) {
-        console.log('Found users by user IDs:', data.users.length);
         return data.users;
       }
 
       // If no users found, try as profile IDs
-      console.log('No users found, trying as profile IDs...');
       data = await userAPI.getProfileDetails(userIds.join(','));
       if (data.profiles && data.profiles.length > 0) {
-        console.log('Found profiles by profile IDs:', data.profiles.length);
         // Convert profiles to user-like format for consistency
         return data.profiles.map(profile => ({
           id: profile.id,
@@ -1231,8 +1218,6 @@ const TeamsManagement = () => {
           }
         }));
       }
-
-      console.log('No users or profiles found for IDs:', userIds);
       return [];
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -1486,7 +1471,7 @@ const TeamsManagement = () => {
                                       <div className="flex space-x-2">
                                         <button 
                                           onClick={() => {
-                                            console.log('View teams for temple:', temple.temple_name, temple.teams);
+                                            // TODO: Implement view teams functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-semibold text-xs"
                                         >
@@ -1494,7 +1479,7 @@ const TeamsManagement = () => {
                                         </button>
                                         <button 
                                           onClick={() => {
-                                            console.log('View temple details:', temple);
+                                            // TODO: Implement temple details functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                                         >
@@ -1599,7 +1584,7 @@ const TeamsManagement = () => {
                                       <div className="flex space-x-2">
                                         <button 
                                           onClick={() => {
-                                            console.log('View teams for temple:', temple.temple_name, temple.teams);
+                                            // TODO: Implement view teams functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-pink-600 text-white rounded-lg shadow hover:bg-pink-700 transition font-semibold text-xs"
                                         >
@@ -1607,7 +1592,7 @@ const TeamsManagement = () => {
                                         </button>
                                         <button 
                                           onClick={() => {
-                                            console.log('View temple details:', temple);
+                                            // TODO: Implement temple details functionality
                                           }}
                                           className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
                                         >
@@ -1847,7 +1832,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
         <div className="flex space-x-2">
           <button 
             onClick={() => {
-              console.log('View team details:', team, members);
+              // TODO: Implement view team details functionality
             }}
             className="inline-block px-3 py-1 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition font-semibold text-xs"
           >
@@ -1855,7 +1840,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
           </button>
           <button 
             onClick={() => {
-              console.log('Edit team:', team);
+              // TODO: Implement edit team functionality
             }}
             className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
           >
@@ -2730,7 +2715,6 @@ const SystemSettings = () => {
     try {
       // Here you would typically save to backend
       // await settingsAPI.updateSettings(settings);
-      console.log('Saving settings:', settings);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

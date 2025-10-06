@@ -108,6 +108,8 @@ export const authAPI = {
   getDashboardStats: () => apiService.get('/admin/dashboard-stats'),
   verifyViewerAccess: () => apiService.get('/viewer/verify-access'),
   getViewerDashboardStats: () => apiService.get('/viewer/dashboard-stats'),
+  checkAadhaar: (aadhaar) => apiService.post('/users/check-aadhaar', { aadhaar }),
+  checkEmail: (email) => apiService.post('/users/check-email', { email }),
 };
 
 export const userAPI = {
@@ -143,6 +145,12 @@ export const eventAPI = {
   registerTeam: (data) => apiService.post('/events/register-team', data),
   updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
   getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
+  getTeamParticipants: (registrationId) => apiService.get(`/events/team-participants/${registrationId}`),
+  
+  // Heat management
+  generateHeats: (eventId, laneCount) => apiService.post('/events/generate-heats', { event_id: eventId, lane_count: laneCount }),
+  getHeats: (eventId) => apiService.get(`/events/heats/${eventId}`),
+  saveTimings: (eventId, heatNumber, timings) => apiService.post('/events/save-timings', { event_id: eventId, heat_number: heatNumber, timings }),
 };
 
 export const participantAPI = {

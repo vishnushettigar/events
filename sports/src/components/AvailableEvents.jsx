@@ -27,7 +27,6 @@ const AvailableEvents = () => {
 
         // First fetch user profile
         const profileData = await userAPI.getProfile();
-        console.log('User profile loaded:', profileData);
         
         if (!profileData.temple_id) {
           throw new Error('User temple information not found. Please contact support.');
@@ -37,7 +36,6 @@ const AvailableEvents = () => {
 
         // Then fetch available events
         const eventsData = await eventAPI.getAvailableEvents();
-        console.log('Events loaded:', eventsData);
         setEvents(eventsData.events);
         setLoading(false);
       } catch (err) {
@@ -72,10 +70,8 @@ const AvailableEvents = () => {
           user_id: parseInt(userInfo.id),
           event_id: parseInt(selectedEvent.id)
         };
-        console.log('Sending registration request with:', requestBody);
 
         const responseData = await eventAPI.registerParticipant(requestBody);
-        console.log('Server response:', responseData);
 
         // Update the event's registration status with the status from the backend
         setEvents(prevEvents => 
@@ -89,11 +85,7 @@ const AvailableEvents = () => {
         setShowModal(false);
         setSelectedEvent(null);
       } catch (error) {
-        console.error('Registration error details:', {
-          error: error.message,
-          userInfo: userInfo,
-          selectedEvent: selectedEvent
-        });
+        console.error('Registration error:', error.message);
         
         // Handle specific error cases
         if (error.message.includes('403')) {
@@ -317,16 +309,16 @@ const AvailableEvents = () => {
                 </p>
               </div> */}
               {event.is_registered ? (
-                <div className="flex flex-col gap-2">
-                  <div className={`px-4 py-2 rounded ${statusDisplay.className}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`px-3 py-2 rounded text-sm flex-1 text-center ${statusDisplay.className}`}>
                     {statusDisplay.text}
                   </div>
                   {event.registration_status !== 'DECLINED' && (
                     <button
                       onClick={() => handleUnregister(event)}
-                      className="w-full px-4 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors text-sm"
+                      className="px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors text-sm whitespace-nowrap"
                     >
-                      Cancel Registration
+                      Cancel 
                     </button>
                   )}
                 </div>

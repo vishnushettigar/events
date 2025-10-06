@@ -33,32 +33,48 @@ const SportsHistoryHome = () => {
   const infiniteData = [...sportsHistory, ...sportsHistory, ...sportsHistory];
 
   const handleYearClick = (year) => {
-    setSelectedYear(year);
-    // Center the selected year in the scroll view
-    centerYearInView(year);
+    centerYearInView(year, () => {
+      setSelectedYear(year);
+    });
   };
+  
+  
 
-  const centerYearInView = (year) => {
+  const centerYearInView = (year, callback) => {
     if (scrollContainerRef.current) {
       const container = scrollContainerRef.current;
       const yearCards = container.querySelectorAll('.year-card');
-      const selectedCard = Array.from(yearCards).find(card => 
-        parseInt(card.querySelector('.year-number').textContent) === year
-      );
-      
-      if (selectedCard) {
-        const containerWidth = container.clientWidth;
-        const cardLeft = selectedCard.offsetLeft;
-        const cardWidth = selectedCard.offsetWidth;
-        const scrollLeft = cardLeft - (containerWidth / 2) + (cardWidth / 2);
-        
-        container.scrollTo({
-          left: scrollLeft,
-          behavior: 'smooth'
+      const matchingCards = Array.from(yearCards).filter(card => {
+        const cardYear = parseInt(card.querySelector('.year-number').textContent);
+        return cardYear === year;
+      });
+  
+      if (matchingCards.length > 0) {
+        const containerCenter = container.scrollLeft + container.clientWidth / 2;
+        const closestCard = matchingCards.reduce((prev, curr) => {
+          const prevCenter = prev.offsetLeft + prev.offsetWidth / 2;
+          const currCenter = curr.offsetLeft + curr.offsetWidth / 2;
+          return Math.abs(currCenter - containerCenter) < Math.abs(prevCenter - containerCenter)
+            ? curr
+            : prev;
         });
+  
+        const containerWidth = container.clientWidth;
+        const cardLeft = closestCard.offsetLeft;
+        const cardWidth = closestCard.offsetWidth;
+        const scrollLeft = cardLeft - (containerWidth / 2) + (cardWidth / 2);
+  
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+  
+        // Run callback after scroll animation
+        if (callback) {
+          setTimeout(callback, 300);
+        }
       }
     }
   };
+  
+  
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -77,7 +93,8 @@ const SportsHistoryHome = () => {
         let minDistance = Infinity;
         
         yearCards.forEach(card => {
-          const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+          const cardLeft = card.offsetLeft;
+          const cardCenter = cardLeft + (card.offsetWidth / 2);
           const distance = Math.abs(centerPosition - cardCenter);
           
           if (distance < minDistance) {
@@ -111,7 +128,8 @@ const SportsHistoryHome = () => {
         let minDistance = Infinity;
         
         yearCards.forEach(card => {
-          const cardCenter = card.offsetLeft + (card.offsetWidth / 2);
+          const cardLeft = card.offsetLeft;
+          const cardCenter = cardLeft + (card.offsetWidth / 2);
           const distance = Math.abs(centerPosition - cardCenter);
           
           if (distance < minDistance) {
@@ -145,14 +163,13 @@ const SportsHistoryHome = () => {
       setScrollPosition(scrollLeft);
       
       // Find the year card that is closest to the center
-      const centerPosition = scrollLeft + (clientWidth / 2);
+      const centerPosition = container.scrollLeft + (container.clientWidth / 2);
       const yearCards = container.querySelectorAll('.year-card');
       let closestCard = null;
       let minDistance = Infinity;
       
       yearCards.forEach(card => {
         const cardLeft = card.offsetLeft;
-        const cardRight = cardLeft + card.offsetWidth;
         const cardCenter = cardLeft + (card.offsetWidth / 2);
         const distance = Math.abs(centerPosition - cardCenter);
         
@@ -174,79 +191,74 @@ const SportsHistoryHome = () => {
   const selectedEvent = sportsHistory.find(event => event.year === selectedYear);
 
   return (
-    <div className="sports-history-container">
-      <div className="sports-history-header">
-        <h2>Sports History</h2>
-        <p>Explore 32 years of Padmashali Sports Meet</p>
+    <section className="w-[90%] mx-auto my-10">
+      {/* Header outside the main container - similar to Rules component */}
+      <div className="text-left md:text-center mb-8">
+        <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2">
+          Sports History
+        </h2>
+        <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">
+          Explore 32 years of Padmashali Sports Meet
+        </p>
       </div>
 
-      <div className="year-scroll-container">
-        {!isMobile && (
-          <button 
-            className="scroll-arrow scroll-arrow-left"
-            onClick={scrollLeft}
-            aria-label="Scroll left"
+      {/* Main container with similar styling to Rules component */}
+      <div className="bg-[#E0E0E0] rounded-2xl p-4 md:p-8">
+        <div className="year-scroll-container">
+          {!isMobile && (
+            <button 
+              className="scroll-arrow scroll-arrow-left"
+              onClick={scrollLeft}
+              aria-label="Scroll left"
+            >
+              ‹
+            </button>
+          )}
+          
+          <div 
+            className="year-scroll-wrapper"
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
           >
-            ‹
-          </button>
-        )}
-        
-        <div 
-          className="year-scroll-wrapper"
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-        >
-          <div className="year-scroll-content">
-            {infiniteData.map((event, index) => (
-              <div
-                key={`${event.year}-${index}`}
-                className={`year-card ${selectedYear === event.year ? 'selected' : ''}`}
-                onClick={() => handleYearClick(event.year)}
-              >
-                <div className="year-number">{event.year}</div>
-                {/* <div className="year-place">{event.place}</div> */}
-              </div>
-            ))}
+            <div className="year-scroll-content">
+              {infiniteData.map((event, index) => (
+                <div
+                  key={`${event.year}-${index}`}
+                  className={`year-card ${selectedYear === event.year ? 'selected' : ''}`}
+                  onClick={() => handleYearClick(event.year)}
+                >
+                  <div className="year-number">{event.year}</div>
+                </div>
+              ))}
+            </div>
           </div>
+
+          {!isMobile && (
+            <button 
+              className="scroll-arrow scroll-arrow-right"
+              onClick={scrollRight}
+              aria-label="Scroll right"
+            >
+              ›
+            </button>
+          )}
         </div>
 
-        {!isMobile && (
-          <button 
-            className="scroll-arrow scroll-arrow-right"
-            onClick={scrollRight}
-            aria-label="Scroll right"
-          >
-            ›
-          </button>
+        {selectedEvent && (
+          <div className="selected-event-card mt-6">
+            <div className="event-card-header">
+              <h3 className="text-xl font-semibold text-[#2A2A2A] mb-2">{selectedEvent.year}</h3>
+              <div className="event-card-place text-lg font-medium text-[#D35D38] mb-4">{selectedEvent.place}</div>
+            </div>
+            <div className="event-card-content">
+              <p className="text-base text-[#5A5A5A] leading-relaxed">
+                Padmashali Sports Meet was held in <strong className="text-[#2A2A2A]">{selectedEvent.place}</strong> in the year <strong className="text-[#2A2A2A]">{selectedEvent.year}</strong>.
+              </p>
+            </div>
+          </div>
         )}
       </div>
-
-      {selectedEvent && (
-        <div className="selected-event-card">
-          <div className="event-card-header">
-            <h3>{selectedEvent.year}</h3>
-            <div className="event-card-place">{selectedEvent.place}</div>
-          </div>
-          <div className="event-card-content">
-            <p>Padmashali Sports Meet was held in <strong>{selectedEvent.place}</strong> in the year <strong>{selectedEvent.year}</strong>.</p>
-            {/* <div className="event-card-details">
-              <div className="detail-item">
-                <span className="detail-label">Venue:</span>
-                <span className="detail-value">{selectedEvent.place}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Year:</span>
-                <span className="detail-value">{selectedEvent.year}</span>
-              </div>
-              <div className="detail-item">
-                <span className="detail-label">Status:</span>
-                <span className="detail-value">Completed</span>
-              </div>
-            </div> */}
-          </div>
-        </div>
-      )}
-    </div>
+    </section>
   );
 };
 

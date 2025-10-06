@@ -301,7 +301,8 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
         // Always filter for status = 'ACCEPTED'
         const where = {
           is_deleted: false,
-          status: 'ACCEPTED'
+          status: 'ACCEPTED',
+          year: new Date().getFullYear()  // Only show current year data
         };
 
         // Add event filter
@@ -406,7 +407,9 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
     const offset = (page - 1) * limit;
 
-    let whereClause = {};
+    let whereClause = {
+      year: new Date().getFullYear()  // Only show current year data
+    };
     
     if (temple_id) whereClause.temple_id = parseInt(temple_id);
     if (event_id) whereClause.event_id = parseInt(event_id);
@@ -1039,28 +1042,32 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
             prisma.ind_event_registration.count({
               where: {
                 user: { temple_id: temple.id },
-                is_deleted: false
+                is_deleted: false,
+                year: new Date().getFullYear()  // Only count current year data
               }
             }),
             prisma.ind_event_registration.count({
               where: {
                 user: { temple_id: temple.id },
                 status: 'ACCEPTED',
-                is_deleted: false
+                is_deleted: false,
+                year: new Date().getFullYear()  // Only count current year data
               }
             }),
             prisma.ind_event_registration.count({
               where: {
                 user: { temple_id: temple.id },
                 status: 'PENDING',
-                is_deleted: false
+                is_deleted: false,
+                year: new Date().getFullYear()  // Only count current year data
               }
             }),
             prisma.ind_event_registration.count({
               where: {
                 user: { temple_id: temple.id },
                 status: 'DECLINED',
-                is_deleted: false
+                is_deleted: false,
+                year: new Date().getFullYear()  // Only count current year data
               }
             })
           ]);
@@ -1073,6 +1080,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
               user: { temple_id: temple.id },
               status: 'ACCEPTED',
               is_deleted: false,
+              year: new Date().getFullYear(),  // Only count current year data
               event_result: {
                 isNot: null
               }
