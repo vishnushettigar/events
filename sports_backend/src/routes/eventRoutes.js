@@ -2,6 +2,7 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { dataFetchLimiter, sensitiveOperationLimiter, staffDataFetchLimiter } from '../middleware/rateLimiter.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -237,7 +238,7 @@ router.get('/temple-teams', authenticate, requireRole(2), async (req, res) => {
 });
 
 // Generate temple report
-router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+router.get('/temple-report', staffDataFetchLimiter, authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
   try {
     const report = await eventService.generateTempleReport(req.user.temple_id);
     res.json(report);
@@ -325,7 +326,7 @@ router.get('/participant-data', authenticate, async (req, res) => {
 });
 
 // Get team events
-router.get('/team-events', authenticate, async (req, res) => {
+router.get('/team-events', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const events = await eventService.getTeamEvents();
     res.json(events);
@@ -363,7 +364,7 @@ router.put('/update-team/:registrationId', authenticate, requireRole('TEMPLE_ADM
 });
 
 // Get temple's registered teams
-router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+router.get('/temple-teams', staffDataFetchLimiter, authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
   try {
     const teams = await eventService.getTempleTeams(req.user.temple_id);
     res.json(teams);
@@ -450,7 +451,7 @@ router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (re
  *         description: Server error
  */
 // Get participants for a specific event
-router.get('/event-participants/:eventId', authenticate, async (req, res) => {
+router.get('/event-participants/:eventId', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
     
@@ -551,7 +552,7 @@ router.get('/team-participants/:registrationId', authenticate, async (req, res) 
  *       500:
  *         description: Server error
  */
-router.get('/all-events', authenticate, async (req, res) => {
+router.get('/all-events', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },

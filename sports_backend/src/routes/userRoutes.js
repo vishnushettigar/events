@@ -6,7 +6,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { PrismaClient } from '@prisma/client';
 import { Gender } from '@prisma/client';
-import { authLimiter, registrationLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, registrationLimiter, dataFetchLimiter, staffDataFetchLimiter } from '../middleware/rateLimiter.js';
 import { calculateAge, getAgeCategory } from '../utils/ageUtils.js';
 
 const prisma = new PrismaClient();
@@ -77,7 +77,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/register', /* registrationLimiter, */ [
+router.post('/register', registrationLimiter, [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('email').isEmail().withMessage('Valid email is required'),
@@ -277,7 +277,7 @@ router.post('/check-email', async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/login', /* authLimiter, */ [
+router.post('/login', authLimiter, [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
@@ -370,7 +370,7 @@ router.put('/update-role', authenticate, requireRole('ADMIN'), [
  *       500:
  *         description: Server error
  */
-router.get('/profile', authenticate, async (req, res) => {
+router.get('/profile', dataFetchLimiter, authenticate, async (req, res) => {
     try {
         console.log('Fetching profile for user ID:', req.user.id);
         const user = await prisma.user.findUnique({
@@ -459,7 +459,7 @@ router.get('/profile', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/available-events', authenticate, async (req, res) => {
+router.get('/available-events', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     // Get user's profile
     const userProfile = await prisma.profile.findUnique({
@@ -631,7 +631,7 @@ router.get('/search-by-aadhar', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/templeusers', authenticate, async (req, res) => {
+router.get('/templeusers', staffDataFetchLimiter, authenticate, async (req, res) => {
     try {
         // Get the authenticated user's profile to determine their temple
         const userProfile = await prisma.profile.findUnique({
@@ -932,7 +932,7 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
  *       500:
  *         description: Server error
  */
-router.get('/champions', authenticate, async (req, res) => {
+router.get('/champions', dataFetchLimiter, authenticate, async (req, res) => {
     try {
         // Get all individual events with results
         const individualRegistrations = await prisma.ind_event_registration.findMany({
@@ -1071,7 +1071,7 @@ router.get('/champions', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/all-results', authenticate, async (req, res) => {
+router.get('/all-results', dataFetchLimiter, authenticate, async (req, res) => {
     try {
         // Get all individual events with results
         const individualRegistrations = await prisma.ind_event_registration.findMany({

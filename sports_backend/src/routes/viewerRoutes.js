@@ -1,5 +1,6 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { dataFetchLimiter, staffDataFetchLimiter } from '../middleware/rateLimiter.js';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -80,7 +81,7 @@ router.get('/verify-access', authenticate, requireRole('VIEWER'), (req, res) => 
  *       500:
  *         description: Server error
  */
-router.get('/dashboard-stats', authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/dashboard-stats', staffDataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
     // Get actual statistics from database
     const [totalEvents, totalUsers, totalTemples, activeRegistrations] = await Promise.all([
@@ -294,7 +295,7 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
  *       500:
  *         description: Server error
  */
-router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/participants', staffDataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
     try {
         const { event_ids, temple_id } = req.query;
 
@@ -402,7 +403,7 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
  *       500:
  *         description: Server error
  */
-router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/teams', staffDataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
     const offset = (page - 1) * limit;

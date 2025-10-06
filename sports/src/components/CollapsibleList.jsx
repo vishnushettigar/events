@@ -11,17 +11,21 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
   const [generatingHeats, setGeneratingHeats] = useState(false);
   const [heatsGenerated, setHeatsGenerated] = useState(false);
   const [heatError, setHeatError] = useState(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Update local participants when props change
   useEffect(() => {
     setLocalParticipants(participants);
   }, [participants]);
 
-  // Set initial open state based on pending participants
+  // Set initial open state based on pending participants only once
   useEffect(() => {
-    const hasPendingParticipants = participants.some(p => p.status === 'PENDING');
-    setIsOpen(hasPendingParticipants);
-  }, [participants]);
+    if (!hasInitialized) {
+      const hasPendingParticipants = participants.some(p => p.status === 'PENDING');
+      setIsOpen(hasPendingParticipants);
+      setHasInitialized(true);
+    }
+  }, [participants, hasInitialized]);
 
   // Calculate the number of accepted participants for this event
   const acceptedCount = localParticipants.filter(p => p.status === 'ACCEPTED').length;

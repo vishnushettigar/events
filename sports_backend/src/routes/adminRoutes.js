@@ -5,7 +5,7 @@ import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { PrismaClient } from '@prisma/client';
-import { sensitiveOperationLimiter } from '../middleware/rateLimiter.js';
+import { sensitiveOperationLimiter, dataFetchLimiter, staffDataFetchLimiter } from '../middleware/rateLimiter.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -85,7 +85,7 @@ router.get('/verify-access', authenticate, requireRole('ADMIN'), (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/dashboard-stats', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/dashboard-stats', staffDataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     // Get actual statistics from database
     const [totalEvents, totalUsers, totalTemples, activeRegistrations] = await Promise.all([
@@ -365,7 +365,7 @@ router.get('/users/details', authenticate, requireRole('ADMIN'), async (req, res
  *       500:
  *         description: Server error
  */
-router.get('/users', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/users', staffDataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Admin users request query params:', req.query);
     
@@ -988,7 +988,7 @@ router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req,
  *       500:
  *         description: Server error
  */
-router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/participants', staffDataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { event_ids, status, temple_id } = req.query;
     
@@ -1198,7 +1198,7 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
  *       500:
  *         description: Server error
  */
-router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/teams', staffDataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
     const offset = (page - 1) * limit;

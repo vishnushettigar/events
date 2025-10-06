@@ -41,7 +41,7 @@ export const authLimiter = rateLimit({
 // Rate limiter for registration endpoint
 export const registrationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 registration attempts per hour
+  max: 20, // Limit each IP to 20 registration attempts per hour (increased from 3)
   message: {
     error: 'Too many registration attempts from this IP, please try again later.',
     retryAfter: '1 hour'
@@ -60,7 +60,7 @@ export const registrationLimiter = rateLimit({
 // Rate limiter for sensitive operations (admin/staff endpoints)
 export const sensitiveOperationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 50, // Limit each IP to 50 requests per windowMs
+  max: 200, // Limit each IP to 200 requests per windowMs (increased from 50)
   message: {
     error: 'Too many requests for sensitive operations, please try again later.',
     retryAfter: '15 minutes'
@@ -76,10 +76,29 @@ export const sensitiveOperationLimiter = rateLimit({
   }
 });
 
+// Lenient rate limiter for staff/admin/viewer data fetching (tab switching)
+export const staffDataFetchLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1000, // Limit each IP to 1000 requests per minute (extremely generous for tab switching)
+  message: {
+    error: 'Too many data requests from this IP, please try again later.',
+    retryAfter: '1 minute'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    console.log(`Staff data fetch rate limit exceeded for IP: ${req.ip} on path: ${req.path}`);
+    res.status(429).json({
+      error: 'Too many data requests from this IP, please try again later.',
+      retryAfter: '1 minute'
+    });
+  }
+});
+
 // Rate limiter for data fetching endpoints
 export const dataFetchLimiter = rateLimit({
   windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 200, // Limit each IP to 200 requests per windowMs
+  max: 500, // Limit each IP to 500 requests per windowMs (increased from 200)
   message: {
     error: 'Too many data requests from this IP, please try again later.',
     retryAfter: '5 minutes'

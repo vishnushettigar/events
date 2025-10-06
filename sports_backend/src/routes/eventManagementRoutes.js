@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import * as eventManagementService from '../services/eventManagementService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { PrismaClient } from '@prisma/client';
-import { dataFetchLimiter } from '../middleware/rateLimiter.js';
+import { dataFetchLimiter, sensitiveOperationLimiter } from '../middleware/rateLimiter.js';
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -51,7 +51,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/event-types', dataFetchLimiter, authenticate, requireRole('ADMIN'), [
+router.post('/event-types', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Event type name is required'),
   body('type').isIn(['TEAM', 'INDIVIDUAL']).withMessage('Invalid event type'),
   body('participant_count').isInt({ min: 1 }).withMessage('Participant count must be at least 1')
@@ -73,7 +73,7 @@ router.post('/event-types', dataFetchLimiter, authenticate, requireRole('ADMIN')
   }
 });
 
-router.put('/event-types/:id', authenticate, requireRole('ADMIN'), [
+router.put('/event-types/:id', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), [
   body('name').optional().notEmpty().withMessage('Event type name cannot be empty'),
   body('type').optional().isIn(['TEAM', 'INDIVIDUAL']).withMessage('Invalid event type'),
   body('participant_count').optional().isInt({ min: 1 }).withMessage('Participant count must be at least 1')
@@ -91,7 +91,7 @@ router.put('/event-types/:id', authenticate, requireRole('ADMIN'), [
   }
 });
 
-router.delete('/event-types/:id', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.delete('/event-types/:id', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const eventType = await eventManagementService.deleteEventType(parseInt(req.params.id));
     res.json(eventType);
