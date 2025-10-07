@@ -1,5 +1,6 @@
-# Database
-DATABASE_URL="file:./dev.db"
+# Database - Turso Configuration
+DATABASE_URL="libsql://your-database-name.turso.io"
+DATABASE_AUTH_TOKEN="your-turso-auth-token-here"
 
 # Server
 PORT=4000

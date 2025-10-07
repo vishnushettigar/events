@@ -4,10 +4,11 @@
 generator client {
   provider = "prisma-client-js"
   binaryTargets = ["native", "linux-arm64-openssl-1.1.x", "linux-musl-arm64-openssl-3.0.x"]
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -199,8 +200,8 @@ model Audit_log {
   action      String
   table_name  String
   record_id   Int?
-  old_value   String?  @db.Text
-  new_value   String?  @db.Text
+  old_value   String?
+  new_value   String?
   created_at  DateTime @default(now())
 }
 
@@ -226,7 +227,7 @@ model event_performance {
   event           Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
   event_id        Int
   heat_number     Int?     // e.g., Heat 1, Heat 2
-  heat_time       Decimal? @db.Decimal(8, 3) // Only store heat timing for qualifying rounds
+  heat_time       Float? // Only store heat timing for qualifying rounds
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 }
