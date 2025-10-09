@@ -21,35 +21,35 @@ services:
       context: ./sports_backend
       dockerfile: Dockerfile
     container_name: shettigarevents-backend
+    # command: ["tail" , "-f", "/dev/null"]
     ports:
       - "4000:4000"
     volumes:
       - ./sports_backend:/app
-      # - /app/node_modules
+      - /app/node_modules
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=mysql://root:root@mysql:3306/sportsdb
+      - DATABASE_URL=libsql://testingevents-jeevanpadmashali.aws-ap-south-1.turso.io
+      - DATABASE_AUTH_TOKEN=eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTk5MDgxODYsImlkIjoiZWViZDU3MTktMWE4OS00ZWMxLWFiYzgtYmQ3NGYwMWQ3ZDdiIiwicmlkIjoiMzNiYjMwZWYtNGMzOS00NjQxLTlkZjctMTQ0ZjUyOWJlNjI5In0.OTGh0LsynN5b_S_l1WTihrbmpcS8ibU8UreaPL382R2fGnHJzHJeHw-aYr2pjcFWPqnIOouRsHSa7avCWHeOCw
       - PORT=4000
-    depends_on:
-      - mysql
     networks:
       - shettigarevents-network
 
   # Database - MySQL
-  mysql:
-    image: mysql:latest
-    container_name: shettigarevents-db
-    environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=sportsdb
-      - MYSQL_USER=events_user
-      - MYSQL_PASSWORD=root
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - shettigarevents-network
+  # mysql:
+  #   image: mysql:latest
+  #   container_name: shettigarevents-db
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=root
+  #     - MYSQL_DATABASE=sportsdb
+  #     - MYSQL_USER=events_user
+  #     - MYSQL_PASSWORD=root
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   networks:
+  #     - shettigarevents-network
 
   # Nginx - Reverse Proxy
   nginx:
