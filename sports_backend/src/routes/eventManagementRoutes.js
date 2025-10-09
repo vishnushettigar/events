@@ -2,10 +2,9 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as eventManagementService from '../services/eventManagementService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
 import { dataFetchLimiter } from '../middleware/rateLimiter.js';
+import prisma from '../utils/prismaClient.js';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 /**

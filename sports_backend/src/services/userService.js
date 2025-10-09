@@ -1,8 +1,6 @@
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prismaClient.js';
 
 async function register(username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id) {
   try {

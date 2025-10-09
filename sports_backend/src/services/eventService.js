@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { calculateAge, getAgeCategory, isExcludedAgeCategory } from '../utils/ageUtils.js';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prismaClient.js';
 
 async function registerParticipant(user_id, event_id) {
   try {

@@ -4,10 +4,9 @@ import * as userService from '../services/userService.js';
 import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
-import { PrismaClient } from '@prisma/client';
 import { sensitiveOperationLimiter } from '../middleware/rateLimiter.js';
+import prisma from '../utils/prismaClient.js';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 /**

@@ -1,33 +1,8 @@
-import { PrismaClient } from '@prisma/client';
-import { PrismaLibSQL } from '@prisma/adapter-libsql';
-import { createClient } from '@libsql/client';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import prisma from './src/utils/prismaClient.js';
 
 console.log('Environment variables:');
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 console.log('DATABASE_AUTH_TOKEN:', process.env.DATABASE_AUTH_TOKEN ? 'Present' : 'Missing');
-
-// Create Prisma client based on URL type
-let prisma;
-
-if (process.env.DATABASE_URL?.startsWith('libsql://')) {
-  console.log('Using libsql adapter for Turso...');
-  console.log('Creating libsql client with:');
-  console.log('URL:', process.env.DATABASE_URL);
-  console.log('AuthToken length:', process.env.DATABASE_AUTH_TOKEN?.length || 0);
-
-  const adapter = new PrismaLibSQL({
-    url: process.env.DATABASE_URL,
-    authToken: process.env.DATABASE_AUTH_TOKEN,
-  })
-  prisma = new PrismaClient({ adapter })
-
-} else {
-  console.log('Using standard PrismaClient for local database...');
-  prisma = new PrismaClient();
-}
 
 async function checkData() {
   try {

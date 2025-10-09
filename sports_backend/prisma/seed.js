@@ -7,7 +7,9 @@ dotenv.config();
 console.log('Environment variables:');
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
 console.log('DATABASE_AUTH_TOKEN:', process.env.DATABASE_AUTH_TOKEN ? 'Present' : 'Missing');
-
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
+console.log('DATABASE_AUTH_TOKEN:', process.env.DATABASE_AUTH_TOKEN) ;
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
 // Create Prisma client based on URL type
 let prisma;
 
@@ -30,30 +32,30 @@ if (process.env.DATABASE_URL?.startsWith('libsql://')) {
 }
 
 async function main() {
-  // Seed temples
+  // Seed temples with specific IDs to match frontend constants
   const temples = [
-    { code: 'SALIKERI', name: 'SALIKERI' },
-    { code: 'BARKUR', name: 'BARKUR' },
-    { code: 'HOSADURGA', name: 'HOSADURGA' },
-    { code: 'MANJESHWARA', name: 'MANJESHWARA' },
-    { code: 'ULLALA', name: 'ULLALA' },
-    { code: 'SURATHKAL', name: 'SURATHKAL' },
-    { code: 'HALEYANGADI', name: 'HALEYANGADI' },
-    { code: 'MULKI', name: 'MULKI' },
-    { code: 'PADUBIDRI', name: 'PADUBIDRI' },
-    { code: 'YERMAL', name: 'YERMAL' },
-    { code: 'KAPU', name: 'KAPU' },
-    { code: 'KINNIMULKI', name: 'KINNIMULKI' },
-    { code: 'KALYANPURA', name: 'KALYANPURA' },
-    { code: 'KARKALA', name: 'KARKALA' },
-    { code: 'SIDDAKATTE', name: 'SIDDAKATTE' },
-    { code: 'MANGALORE', name: 'MANGALORE' }
+    { id: 1, code: 'SALIKERI', name: 'SALIKERI' },
+    { id: 2, code: 'BARKUR', name: 'BARKUR' },
+    { id: 3, code: 'HOSADURGA', name: 'HOSADURGA' },
+    { id: 4, code: 'MANJESHWARA', name: 'MANJESHWARA' },
+    { id: 5, code: 'ULLALA', name: 'ULLALA' },
+    { id: 6, code: 'SURATHKAL', name: 'SURATHKAL' },
+    { id: 7, code: 'HALEYANGADI', name: 'HALEYANGADI' },
+    { id: 8, code: 'MULKI', name: 'MULKI' },
+    { id: 9, code: 'PADUBIDRI', name: 'PADUBIDRI' },
+    { id: 10, code: 'YERMAL', name: 'YERMAL' },
+    { id: 11, code: 'KAPU', name: 'KAPU' },
+    { id: 12, code: 'KINNIMULKI', name: 'KINNIMULKI' },
+    { id: 13, code: 'KALYANPURA', name: 'KALYANPURA' },
+    { id: 14, code: 'KARKALA', name: 'KARKALA' },
+    { id: 15, code: 'SIDDAKATTE', name: 'SIDDAKATTE' },
+    { id: 16, code: 'MANGALORE', name: 'MANGALORE' }
   ];
 
   for (const temple of temples) {
     await prisma.mst_temple.upsert({
-      where: { code: temple.code },
-      update: {},
+      where: { id: temple.id },
+      update: temple,
       create: temple
     });
   }

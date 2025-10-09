@@ -1,11 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import prisma from '../utils/prismaClient.js';
 
 const execPromise = promisify(exec);
-const prisma = new PrismaClient();
 
 // System Settings Management
 async function getSystemSettings() {

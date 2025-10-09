@@ -2,9 +2,8 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { PrismaClient } from '@prisma/client';
+import prisma from '../utils/prismaClient.js';
 
-const prisma = new PrismaClient();
 const router = express.Router();
 
 // Test route to verify middleware is working

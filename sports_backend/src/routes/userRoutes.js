@@ -4,12 +4,10 @@ import * as userService from '../services/userService.js';
 import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
-import { PrismaClient } from '@prisma/client';
 import { Gender } from '@prisma/client';
 import { authLimiter, registrationLimiter } from '../middleware/rateLimiter.js';
 import { calculateAge, getAgeCategory } from '../utils/ageUtils.js';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prismaClient.js';
 const router = express.Router();
 
 /**
@@ -710,7 +708,7 @@ router.get('/templeusers', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/temple/:templeId', authenticate, async (req, res) => {
+router.get('/temple/:templeId', async (req, res) => {
     try {
         const { templeId } = req.params;
         
