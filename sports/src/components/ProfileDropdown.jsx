@@ -103,7 +103,7 @@ const ProfileDropdown = () => {
         />
       </button>
 
-      {isOpen && (
+      {/* {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
           {isLoggedIn ? (
             <>
@@ -185,7 +185,7 @@ const ProfileDropdown = () => {
             </>
           )}
         </div>
-      )}
+      )} */}
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
