@@ -91,7 +91,7 @@ const Home = () => {
                     {isEnglish ? "Register" : "ನೋಂದಣಿ"}
                   </a> */}
                   <a
-                    href="/register"
+                    href="/"
                     className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[360px] flex items-center justify-center"
                   >
                     {isEnglish ? "Register will start soon" : "ನೋಂದಣಿ ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"}
