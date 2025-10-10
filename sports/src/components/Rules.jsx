@@ -18,12 +18,12 @@ const Rules = () => {
                 <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">{isEnglish ? "Rules for the competitions" : "ಸ್ಪರ್ಧೆಗಳಿಗಾಗಿ ಪಾಲಿಸಬೇಕಾದ ಮುಖ್ಯ ನಿಯಮಗಳು"}</p>
             </div>
             <div className="bg-[#E0E0E0] rounded-2xl  p-4 md:p-8">
-                <ol className="space-y-6 list-decimal list-inside">
+                <div className="space-y-6">
                     {rulesToDisplay.map((rule, idx) => {
                         // Check if the rule contains table HTML
                         if (typeof rule === 'string' && rule.includes('<table')) {
                             return (
-                                <li key={idx} className="mb-6">
+                                <div key={idx} className="mb-6">
                                     <div className="text-base mt-1 md:text-lg text-[#5A5A5A] md:text-[#2A2A2A] leading-relaxed mb-4">
                                         {rule.split('<table')[0].trim()}
                                     </div>
@@ -77,19 +77,19 @@ const Rules = () => {
                                             </tbody>
                                         </table>
                                     </div>
-                                </li>
+                                </div>
                             );
                         }
                         
                         // Regular rule display
                         return (
-                            <li key={idx} className="flex items-start gap-2 mb-3">
+                            <div key={idx} className="flex items-start gap-2 mb-3">
                                 <span className="inline-block mt-0 text-[#2A2A2A] text-2xl">•</span>
                                 <span className="text-base mt-1 md:text-lg text-[#5A5A5A] md:text-[#2A2A2A] leading-relaxed">{rule}</span>
-                            </li>
+                            </div>
                         );
                     })}
-                </ol>
+                </div>
             </div>
         </section>
     )

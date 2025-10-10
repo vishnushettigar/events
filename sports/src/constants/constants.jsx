@@ -31,7 +31,7 @@ export const rules = [
   "The team with the highest overall points will receive a rolling trophy.",
   "The top five temples will be honored with permanent trophies.",
   "During the procession and inauguration, prizes will be given for discipline, uniforms, and temple participation numbers (1st, 2nd, and 3rd). These points will not be added to the main scoring.",
-  `Points system for events:
+  `
   <table border="1" cellpadding="6" cellspacing="0">
     <thead>
       <tr>

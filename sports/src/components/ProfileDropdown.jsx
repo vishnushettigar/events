@@ -103,7 +103,7 @@ const ProfileDropdown = () => {
         />
       </button>
 
-      {/* {isOpen && (
+      {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
           {isLoggedIn ? (
             <>
@@ -118,7 +118,7 @@ const ProfileDropdown = () => {
                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => setIsOpen(false)}
               >
-                My Profile
+                My events
               </Link>
               {userInfo?.role_id === 5 && (
                 <Link
@@ -185,7 +185,7 @@ const ProfileDropdown = () => {
             </>
           )}
         </div>
-      )} */}
+      )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
