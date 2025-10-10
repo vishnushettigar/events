@@ -15,7 +15,7 @@ const Templeparticipants = () => {
     const [allParticipants, setAllParticipants] = useState([]);
 
     // Age categories that should always show mixed gender
-    const mixedGenderAgeCategories = ['0-5', '6-10', '61-90'];
+    const mixedGenderAgeCategories = ['61-90'];
 
     // Check if current age category should show mixed gender only
     const shouldShowMixedGenderOnly = mixedGenderAgeCategories.includes(selectedAge);

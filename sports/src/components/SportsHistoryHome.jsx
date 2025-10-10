@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { sportsHistory } from '../constants/constants';
+import { sportsHistoryKannada } from '../constants/constants';
+import { useLanguage } from '../contexts/LanguageContext';
 import './styles.css';
 
 const SportsHistoryHome = () => {
@@ -7,7 +9,8 @@ const SportsHistoryHome = () => {
   const [scrollPosition, setScrollPosition] = useState(0);
   const scrollContainerRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
-
+  const { isEnglish } = useLanguage();
+  const sportsHistoryToDisplay = isEnglish ? sportsHistory : sportsHistoryKannada;
   // Check if screen is mobile
   useEffect(() => {
     const checkMobile = () => {
@@ -30,7 +33,7 @@ const SportsHistoryHome = () => {
   }, []);
 
   // Create infinite scroll data (duplicate the array for seamless scrolling)
-  const infiniteData = [...sportsHistory, ...sportsHistory, ...sportsHistory];
+  const infiniteData = [...sportsHistoryToDisplay, ...sportsHistoryToDisplay, ...sportsHistoryToDisplay];
 
   const handleYearClick = (year) => {
     centerYearInView(year, () => {
@@ -51,7 +54,7 @@ const SportsHistoryHome = () => {
   
       if (matchingCards.length > 0) {
         const containerCenter = container.scrollLeft + container.clientWidth / 2;
-        const closestCard = matchingCards.reduce((prev, curr) => {
+        const closestCard = matchingCards.reduce((prev, curr) => {  
           const prevCenter = prev.offsetLeft + prev.offsetWidth / 2;
           const currCenter = curr.offsetLeft + curr.offsetWidth / 2;
           return Math.abs(currCenter - containerCenter) < Math.abs(prevCenter - containerCenter)
@@ -195,10 +198,10 @@ const SportsHistoryHome = () => {
       {/* Header outside the main container - similar to Rules component */}
       <div className="text-left md:text-center mb-8">
         <h2 className="text-2xl text-left md:text-center md:text-4xl font-bold text-[#2A2A2A] mb-2">
-          Sports History
+          {isEnglish ? "Sports History" : "ಕ್ರೀಡಾ ಇತಿಹಾಸ"}
         </h2>
         <p className="text-base text-left md:text-center md:text-lg text-[#5A5A5A]">
-          Explore 32 years of Padmashali Sports Meet
+          {isEnglish ? "Explore 32 years of Padmashali Sports Meet" : "ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವದ 32 ವರ್ಷದ ಇತಿಹಾಸ"}
         </p>
       </div>
 

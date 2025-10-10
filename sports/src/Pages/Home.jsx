@@ -78,7 +78,7 @@ const Home = () => {
                 </button>
               ) : (
                 <>
-                  <a
+                  {/* <a
                     href="/login"
                     className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center text-[#D35D38] border-[1.5px] border-[#D35D38] font-medium text-md hover:bg-[#e0e0e0] transition w-[140px] flex items-center justify-center"
                   >
@@ -89,6 +89,12 @@ const Home = () => {
                     className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[140px] flex items-center justify-center"
                   >
                     {isEnglish ? "Register" : "ನೋಂದಣಿ"}
+                  </a> */}
+                  <a
+                    href="/register"
+                    className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[360px] flex items-center justify-center"
+                  >
+                    {isEnglish ? "Register will start soon" : "ನೋಂದಣಿ ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"}
                   </a>
                 </>
               )}

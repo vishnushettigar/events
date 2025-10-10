@@ -607,10 +607,10 @@ const TeamEvents = () => {
                             <input
                                 type="text"
                                 placeholder="Name"
-                                    className={`w-1/2 p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''}`}
+                                    className={`w-1/2 p-2 border rounded ${!editMode && registeredTeams.length > 0 ? 'bg-gray-100' : ''} ${player.profileId ? 'bg-gray-50' : ''}`}
                                 value={player.name}
                                 onChange={(e) => handlePlayerChange(i, 'name', e.target.value)}
-                                    readOnly={(!editMode && registeredTeams.length > 0 && !isMixedGender) || loadingPlayers[i]}
+                                    readOnly={(!editMode && registeredTeams.length > 0 && !isMixedGender) || loadingPlayers[i] || player.profileId}
                             />
                         </div>
                     ))}

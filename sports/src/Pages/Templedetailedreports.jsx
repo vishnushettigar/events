@@ -46,8 +46,8 @@ const Templedetailedreports = () => {
     return (
       <div className="max-w-5xl mx-auto py-10 px-4">
         <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-blue-800">Loading temple detailed report...</span>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
+          <span className="ml-3 text-[#D35D38]">Loading temple detailed report...</span>
         </div>
       </div>
     );
@@ -70,17 +70,17 @@ const Templedetailedreports = () => {
       {/* Temple Header */}
       {templeInfo && (
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold text-blue-800 mb-2">{templeInfo.name} - Detailed Report</h1>
+          <h1 className="text-4xl font-extrabold text-[#D35D38] mb-2">{templeInfo.name} - Detailed Report</h1>
           <p className="text-lg text-gray-600">Temple Code: {templeInfo.code}</p>
         </div>
       )}
 
       {/* Individual Events */}
       <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-blue-800 mb-4">Individual Events</h2>
+        <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Individual Events</h2>
         <div className="overflow-x-auto rounded-xl shadow bg-white">
-          <table className="min-w-full divide-y divide-blue-200">
-            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <table className="min-w-full divide-y divide-orange-200">
+            <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
               <tr>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Event</th>
@@ -92,18 +92,18 @@ const Templedetailedreports = () => {
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Points</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-blue-100">
+            <tbody className="bg-white divide-y divide-orange-100">
               {individualEvents.length > 0 ? (
                 individualEvents.map((row, idx) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
-                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
+                <tr key={idx} className="hover:bg-orange-50 transition">
+                  <td className="px-4 py-2 font-semibold text-[#D35D38]">{idx + 1}</td>
                   <td className="px-4 py-2">{row.event}</td>
                   <td className="px-4 py-2">{row.age}</td>
                   <td className="px-4 py-2">{row.gender}</td>
                   <td className="px-4 py-2">{row.first}</td>
                   <td className="px-4 py-2">{row.second}</td>
                   <td className="px-4 py-2">{row.third}</td>
-                  <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+                  <td className="px-4 py-2 font-bold text-[#D35D38]">{row.points}</td>
                 </tr>
                 ))
               ) : (
@@ -120,10 +120,10 @@ const Templedetailedreports = () => {
 
       {/* Team Events */}
       <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-blue-800 mb-4">Team Events</h2>
+        <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Team Events</h2>
         <div className="overflow-x-auto rounded-xl shadow bg-white">
-          <table className="min-w-full divide-y divide-blue-200">
-            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <table className="min-w-full divide-y divide-orange-200">
+            <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
               <tr>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Event</th>
@@ -132,15 +132,15 @@ const Templedetailedreports = () => {
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Points</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-blue-100">
+            <tbody className="bg-white divide-y divide-orange-100">
               {teamEvents.length > 0 ? (
                 teamEvents.map((row, idx) => (
-                <tr key={idx} className="hover:bg-blue-50 transition">
-                  <td className="px-4 py-2 font-semibold text-blue-900">{idx + 1}</td>
+                <tr key={idx} className="hover:bg-orange-50 transition">
+                  <td className="px-4 py-2 font-semibold text-[#D35D38]">{idx + 1}</td>
                   <td className="px-4 py-2">{row.event}</td>
                   <td className="px-4 py-2">{row.gender}</td>
                   <td className="px-4 py-2">{row.result}</td>
-                  <td className="px-4 py-2 font-bold text-purple-700">{row.points}</td>
+                  <td className="px-4 py-2 font-bold text-[#D35D38]">{row.points}</td>
                 </tr>
                 ))
               ) : (
@@ -157,21 +157,21 @@ const Templedetailedreports = () => {
 
       {/* Total Points */}
       <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-blue-800 mb-4">Total Points</h2>
+        <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Total Points</h2>
         <div className="overflow-x-auto rounded-xl shadow bg-white max-w-md mx-auto">
-          <table className="min-w-full divide-y divide-blue-200">
-            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <table className="min-w-full divide-y divide-orange-200">
+            <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
               <tr>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Individual Event Points</th>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Team Event Points</th>
                 <th className="px-4 py-2 text-xs font-bold text-white uppercase">Total Points</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-blue-100">
+            <tbody className="bg-white divide-y divide-orange-100">
               <tr>
-                <td className="px-4 py-2 font-bold text-blue-700">{totalPoints.individual}</td>
-                <td className="px-4 py-2 font-bold text-purple-700">{totalPoints.team}</td>
-                <td className="px-4 py-2 font-bold text-green-700">{totalPoints.total}</td>
+                <td className="px-4 py-2 font-bold text-[#D35D38]">{totalPoints.individual}</td>
+                <td className="px-4 py-2 font-bold text-[#D35D38]">{totalPoints.team}</td>
+                <td className="px-4 py-2 font-bold text-[#B84A2E]">{totalPoints.total}</td>
               </tr>
             </tbody>
           </table>

@@ -235,7 +235,7 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
     }
 
     // Apply gender filter
-    if (gender && gender !== 'MIXED') {
+    if (gender && gender !== 'ALL') {
       eventFilter.gender = gender;
     }
 
@@ -486,7 +486,7 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
 
 /**
  * @swagger
- * /api/viewer/temples:
+ * /api/viewer/temple-list:
  *   get:
  *     tags: [Viewer]
  *     summary: Get all temples (read-only)
@@ -496,6 +496,19 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
  *     responses:
  *       200:
  *         description: Temples retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   name:
+ *                     type: string
+ *                   location:
+ *                     type: string
  *       401:
  *         description: Unauthorized
  *       403:
@@ -503,25 +516,14 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/temples', authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/temple-list', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
     const temples = await prisma.mst_temple.findMany({
       where: { is_deleted: false },
-      include: {
-        _count: {
-          select: {
-            ind_event_registration: true,
-            team_event_registration: true,
-            user: true
-          }
-        }
-      },
-      orderBy: [
-        { name: 'asc' }
-      ]
+      orderBy: { name: 'asc' }
     });
 
-    res.json({ temples });
+    res.json(temples);
   } catch (error) {
     console.error('Error fetching temples:', error);
     res.status(500).json({ error: 'Failed to fetch temples' });

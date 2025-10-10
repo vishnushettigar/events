@@ -1289,6 +1289,8 @@ const StaffPanel = () => {
       </div>
     );
   };
+   
+  // tabs code start from here 
  
   // Render Temple Reports
   const renderTempleReports = () => {
@@ -1406,8 +1408,6 @@ const StaffPanel = () => {
       </div>
     );
   };
-
-  // tabs code start from here 
 
   // Render Update Individual Results
   const renderUpdateResults = () => {

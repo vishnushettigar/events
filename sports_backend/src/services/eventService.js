@@ -694,7 +694,7 @@ async function getEventsByAgeCategory(ageCategory, gender) {
     }
 
     // Add gender filter if specified
-    if (gender && gender !== 'MIXED') {
+    if (gender && gender !== 'ALL') {
       whereClause.gender = gender;
     }
 

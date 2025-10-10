@@ -98,60 +98,119 @@ const Viewer = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 z-20 bg-black bg-opacity-50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className={`bg-white shadow-lg transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-16'}`}>
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className={`font-bold text-[#2A2A2A] ${sidebarOpen ? 'block' : 'hidden'}`}>
-            Viewer Panel
-          </h2>
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-[#D35D38] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">V</span>
+              </div>
+              <div>
+                <h1 className="text-lg font-bold text-[#2A2A2A]">Viewer Panel</h1>
+                <p className="text-xs text-[#5A5A5A]">Sports Management</p>
+              </div>
+            </div>
             <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600"
             >
-            {sidebarOpen ? '❮' : '❯'}
+              ✕
             </button>
           </div>
 
-        <nav className="mt-4">
+          {/* User Info */}
+          {/* <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-[#D35D38] rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-sm">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'V'}
+                </span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-[#2A2A2A] truncate">
+                  {user?.name || 'Viewer User'}
+                </p>
+                <p className="text-xs text-[#5A5A5A] truncate">
+                  Viewer
+                </p>
+              </div>
+            </div>
+          </div> */}
+
+          {/* Navigation Menu */}
+          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-              className={`w-full flex items-center px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
-                activeTab === item.id ? 'bg-[#D35D38] text-white' : 'text-[#5A5A5A]'
-              }`}
-            >
-              <span className={`text-lg ${activeTab === item.id ? 'text-white' : item.color}`}>
-                {item.icon}
-              </span>
-              {sidebarOpen && (
-                <span className="ml-3 font-medium">{item.label}</span>
-              )}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
+                  activeTab === item.id
+                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                }`}
+              >
+                <span className="text-xl">{item.icon}</span>
+                <span className="font-medium">{item.label}</span>
               </button>
             ))}
           </nav>
 
-        {/* User info and logout */}
-        {/* <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
-          {user && sidebarOpen && (
-            <div className="mb-3">
-              <p className="text-sm font-medium text-[#2A2A2A]">Viewer</p>
-              <p className="text-xs text-[#5A5A5A]">ID: {user.id}</p>
-            </div>
-          )}
+          {/* Logout */}
+          {/* <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-2 bg-[#D35D38] text-white rounded-lg hover:bg-[#B84A2E] transition-colors"
+              className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-red-600 hover:bg-red-50 transition-colors duration-200"
             >
-            <span className="mr-2">🚪</span>
-            {sidebarOpen && 'Logout'}
+              <span className="text-xl">🚪</span>
+              <span className="font-medium">Logout</span>
             </button>
-        </div> */}
+          </div> */}
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto p-6">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Bar */}
+        <div className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              >
+                ☰
+              </button>
+              <h2 className="text-xl font-semibold text-[#2A2A2A]">
+                {menuItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
+              </h2>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-[#5A5A5A]">
+                {new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto p-6">
           {renderContent()}
         </div>
       </div>
@@ -445,7 +504,7 @@ const ParticipantsManagement = () => {
       try {
         setLoading(true);
         // Fetch participant data
-        const data = await viewerAPI.getParticipantData({
+        const data = await eventAPI.getParticipantData({
           ageCategory: selectedAge,
           gender: selectedGender
         });
@@ -470,10 +529,14 @@ const ParticipantsManagement = () => {
   useEffect(() => {
     const fetchTemples = async () => {
       try {
+        console.log('Fetching temples...');
         const data = await viewerAPI.getTemples();
-        setTemples(data.temples || []);
+        console.log('Temple data received:', data); // Debug log
+        setTemples(data || []);
       } catch (error) {
         console.error('Error fetching temples:', error);
+        console.error('Error details:', error.response?.data);
+        setTemples([]);
       }
     };
 
@@ -504,7 +567,6 @@ const ParticipantsManagement = () => {
 
       const data = await viewerAPI.getParticipants({
         event_ids: eventIds.join(','),
-        ...(selectedStatus !== 'ALL' && { status: selectedStatus }),
         ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
       });
       setAllParticipants(data);
@@ -516,7 +578,7 @@ const ParticipantsManagement = () => {
 
   useEffect(() => {
     fetchParticipants();
-  }, [events, selectedStatus, selectedTemple]);
+  }, [events, selectedTemple]);
 
   // Get participants for a specific event
   const getParticipantsForEvent = (eventId) => {
@@ -532,7 +594,7 @@ const ParticipantsManagement = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-[#2A2A2A]">Participants Management</h3>
+        
         <div className="text-sm text-[#5A5A5A]">
           Total Participants: {allParticipants.length}
         </div>
@@ -540,7 +602,8 @@ const ParticipantsManagement = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Age Category Filter */}
           <div className="flex flex-col">
             <label className="mb-2 text-[#2A2A2A] font-medium">Age Category</label>
@@ -552,7 +615,7 @@ const ParticipantsManagement = () => {
               {ageGroups && ageGroups.length > 0 ? (
                 ageGroups.map((group) => (
                   <option key={group.id} value={group.value}>
-                    {group.value}
+                    {group.name}
                   </option>
                 ))
               ) : (
@@ -605,11 +668,16 @@ const ParticipantsManagement = () => {
               onChange={(e) => setSelectedTemple(e.target.value)}
             >
               <option value="ALL">All Temples</option>
-              {temples.map((temple) => (
-                <option key={temple.id} value={temple.id}>
-                  {temple.name}
-                </option>
-              ))}
+              {console.log('Temples array in render:', temples)}
+              {temples && temples.length > 0 ? (
+                temples.map((temple) => (
+                  <option key={temple.id} value={temple.id}>
+                    {temple.name}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Loading temples...</option>
+              )}
             </select>
           </div>
 
@@ -1026,7 +1094,7 @@ const TempleManagement = () => {
         </div>
         <button
           onClick={fetchTempleData}
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+          className="bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
         >
           Refresh
         </button>
@@ -1057,8 +1125,8 @@ const TempleManagement = () => {
       {/* Temple Management Table */}
       {!loading && !error && (
         <div className="overflow-x-auto rounded-2xl shadow-xl bg-white">
-          <table className="min-w-full divide-y divide-blue-200">
-            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <table className="min-w-full divide-y divide-[#F8DFBE]">
+            <thead className="bg-[#D35D38]">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
@@ -1068,20 +1136,20 @@ const TempleManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-blue-100">
+            <tbody className="bg-white divide-y divide-[#F8DFBE]">
               {temples.length > 0 ? (
                 temples.map((temple, idx) => (
-                  <tr key={temple.id} className="hover:bg-blue-50 transition">
-                    <td className="px-6 py-4 font-semibold text-blue-900">{idx + 1}</td>
+                  <tr key={temple.id} className="hover:bg-[#F8DFBE] transition">
+                    <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{idx + 1}</td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-semibold text-purple-800">{temple.name}</div>
+                        <div className="font-semibold text-[#2A2A2A]">{temple.name}</div>
                         {temple.address && (
                           <div className="text-sm text-gray-500">{temple.address}</div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-blue-700 font-bold text-lg">{temple.total_points}</td>
+                    <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">{temple.total_points}</td>
                     <td className="px-6 py-4">
                       <div className="text-center">
                         <div className="font-bold text-lg text-[#2A2A2A]">{temple.total_participants}</div>
@@ -1096,7 +1164,7 @@ const TempleManagement = () => {
                             <div className="text-xs text-gray-500 font-medium">Temple Contact:</div>
                             <div className="text-[#2A2A2A] font-medium">{temple.contact_name}</div>
                             {temple.contact_phone && (
-                              <div className="text-blue-600">{temple.contact_phone}</div>
+                              <div className="text-[#D35D38]">{temple.contact_phone}</div>
                             )}
                           </div>
                         )}
@@ -1107,10 +1175,10 @@ const TempleManagement = () => {
                             <div className="text-xs text-gray-500 font-medium">Temple Admin:</div>
                             <div className="text-[#2A2A2A] font-medium">{temple.temple_admin.name}</div>
                             {temple.temple_admin.email && (
-                              <div className="text-blue-600 text-xs">{temple.temple_admin.email}</div>
+                              <div className="text-[#D35D38] text-xs">{temple.temple_admin.email}</div>
                             )}
                             {temple.temple_admin.phone && (
-                              <div className="text-blue-600 text-xs">{temple.temple_admin.phone}</div>
+                              <div className="text-[#D35D38] text-xs">{temple.temple_admin.phone}</div>
                             )}
                           </div>
                         )}
@@ -1124,18 +1192,14 @@ const TempleManagement = () => {
                     <td className="px-6 py-4">
                       <div className="flex space-x-2">
                         <button 
-                          onClick={() => {
-                            // TODO: Implement view temple points functionality
-                          }}
-                          className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-semibold text-xs"
+                          onClick={() => window.open(`/templedetailedreport/?temple_id=${temple.id}`, '_blank')}
+                          className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                         >
                           View Points
                         </button>
                         <button 
-                          onClick={() => {
-                            // TODO: Implement view temple participants functionality
-                          }}
-                          className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
+                          onClick={() => window.open(`/participantslist/?temple_id=${temple.id}`, '_blank')}
+                          className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                         >
                           View All Participants
                         </button>
@@ -1164,8 +1228,8 @@ const TempleManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Total Temples</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{temples.length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-600 text-xl">🏛️</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">🏛️</span>
               </div>
             </div>
           </div>
@@ -1178,8 +1242,8 @@ const TempleManagement = () => {
                   {temples.reduce((sum, temple) => sum + temple.total_participants, 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600 text-xl">👥</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">👥</span>
               </div>
             </div>
           </div>
@@ -1192,8 +1256,8 @@ const TempleManagement = () => {
                   {temples.reduce((sum, temple) => sum + temple.total_points, 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <span className="text-yellow-600 text-xl">🏆</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">🏆</span>
               </div>
             </div>
           </div>
@@ -1206,8 +1270,8 @@ const TempleManagement = () => {
                   {temples.reduce((sum, temple) => sum + temple.accepted_participants, 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-purple-600 text-xl">✅</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">✅</span>
               </div>
             </div>
           </div>
@@ -1312,7 +1376,7 @@ const ResultsManagement = () => {
         <div className="space-y-8">
           {/* Individual Events Results */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
               <h4 className="text-xl font-bold text-white flex items-center">
                 <span className="mr-2">🏃</span>
                 Individual Events Results ({individualEvents.length})
@@ -1324,9 +1388,9 @@ const ResultsManagement = () => {
                 {individualEventsByAge.map((ageGroup) => (
                   <div key={ageGroup.name} className="space-y-4">
                     {/* Age Category Header */}
-                    <div className="bg-blue-50 border-l-4 border-blue-500 px-4 py-3">
-                      <h5 className="text-lg font-semibold text-blue-800">{ageGroup.name}</h5>
-                      <p className="text-sm text-blue-600">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
+                    <div className="bg-orange-50 border-l-4 border-[#D35D38] px-4 py-3">
+                      <h5 className="text-lg font-semibold text-[#D35D38]">{ageGroup.name}</h5>
+                      <p className="text-sm text-[#B84A2E]">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
                     </div>
 
                     {/* Events in this age category */}
@@ -1368,7 +1432,7 @@ const ResultsManagement = () => {
                                     return (rankOrder[a.event_result?.rank] || 5) - (rankOrder[b.event_result?.rank] || 5);
                                   })
                                   .map((registration, idx) => (
-                                    <tr key={registration.id} className="hover:bg-blue-50 transition">
+                                    <tr key={registration.id} className="hover:bg-orange-50 transition">
                                       <td className="px-4 py-3">
                                         <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                                           registration.event_result?.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
@@ -1392,7 +1456,7 @@ const ResultsManagement = () => {
                                       <td className="px-4 py-3 text-[#5A5A5A]">
                                         {registration.user?.aadhar_number || 'N/A'}
                                       </td>
-                                      <td className="px-4 py-3 font-bold text-blue-600">
+                                      <td className="px-4 py-3 font-bold text-[#D35D38]">
                                         {registration.event_result?.points || 0}
                                       </td>
                                       <td className="px-4 py-3">
@@ -1428,7 +1492,7 @@ const ResultsManagement = () => {
 
           {/* Team Events Results */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-purple-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
               <h4 className="text-xl font-bold text-white flex items-center">
                 <span className="mr-2">🏃‍♂️🏃‍♀️</span>
                 Team Events Results ({teamEvents.length})
@@ -1440,9 +1504,9 @@ const ResultsManagement = () => {
                 {teamEventsByAge.map((ageGroup) => (
                   <div key={ageGroup.name} className="space-y-4">
                     {/* Age Category Header */}
-                    <div className="bg-green-50 border-l-4 border-green-500 px-4 py-3">
-                      <h5 className="text-lg font-semibold text-green-800">{ageGroup.name}</h5>
-                      <p className="text-sm text-green-600">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
+                    <div className="bg-orange-50 border-l-4 border-[#D35D38] px-4 py-3">
+                      <h5 className="text-lg font-semibold text-[#D35D38]">{ageGroup.name}</h5>
+                      <p className="text-sm text-[#B84A2E]">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
                     </div>
 
                     {/* Events in this age category */}
@@ -1484,7 +1548,7 @@ const ResultsManagement = () => {
                                     return (rankOrder[a.event_result?.rank] || 5) - (rankOrder[b.event_result?.rank] || 5);
                                   })
                                   .map((registration, idx) => (
-                                    <tr key={registration.id} className="hover:bg-green-50 transition">
+                                    <tr key={registration.id} className="hover:bg-orange-50 transition">
                                       <td className="px-4 py-3">
                                         <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                                           registration.event_result?.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
@@ -1508,7 +1572,7 @@ const ResultsManagement = () => {
                                       <td className="px-4 py-3 text-[#5A5A5A]">
                                         {registration.member_user_ids ? registration.member_user_ids.split(',').length : 0} members
                                       </td>
-                                      <td className="px-4 py-3 font-bold text-green-600">
+                                      <td className="px-4 py-3 font-bold text-[#D35D38]">
                                         {registration.event_result?.points || 0}
                                       </td>
                                       <td className="px-4 py-3">
@@ -1553,8 +1617,8 @@ const ResultsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Total Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{results.length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-600 text-xl">🏆</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">🏆</span>
               </div>
             </div>
           </div>
@@ -1565,8 +1629,8 @@ const ResultsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Individual Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{individualEvents.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600 text-xl">🏃</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">🏃</span>
               </div>
             </div>
           </div>
@@ -1577,8 +1641,8 @@ const ResultsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Team Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{teamEvents.length}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-purple-600 text-xl">👥</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">👥</span>
               </div>
             </div>
           </div>
@@ -1594,8 +1658,8 @@ const ResultsManagement = () => {
                   )}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <span className="text-yellow-600 text-xl">📊</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">📊</span>
               </div>
             </div>
           </div>

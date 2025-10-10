@@ -1053,11 +1053,11 @@ const ParticipantsManagement = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+        {/* <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
             <span className="font-semibold">Note:</span> Only approved participants are displayed in this view.
           </p>
-        </div>
+        </div> */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Age Category Filter */}
           <div className="flex flex-col">
@@ -1896,7 +1896,7 @@ const TempleManagement = () => {
         </div>
         <button
           onClick={fetchTempleData}
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+          className="bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
         >
           Refresh
         </button>
@@ -1927,8 +1927,8 @@ const TempleManagement = () => {
       {/* Temple Management Table */}
       {!loading && !error && (
         <div className="overflow-x-auto rounded-2xl shadow-xl bg-white">
-          <table className="min-w-full divide-y divide-blue-200">
-            <thead className="bg-gradient-to-r from-blue-600 to-purple-600">
+          <table className="min-w-full divide-y divide-[#F8DFBE]">
+            <thead className="bg-[#D35D38]">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
@@ -1938,20 +1938,20 @@ const TempleManagement = () => {
                 <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-blue-100">
+            <tbody className="bg-white divide-y divide-[#F8DFBE]">
               {temples.length > 0 ? (
                 temples.map((temple, idx) => (
-                  <tr key={temple.id} className="hover:bg-blue-50 transition">
-                    <td className="px-6 py-4 font-semibold text-blue-900">{idx + 1}</td>
+                  <tr key={temple.id} className="hover:bg-[#F8DFBE] transition">
+                    <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{idx + 1}</td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-semibold text-purple-800">{temple.name}</div>
+                        <div className="font-semibold text-[#2A2A2A]">{temple.name}</div>
                         {temple.address && (
                           <div className="text-sm text-gray-500">{temple.address}</div>
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-blue-700 font-bold text-lg">{temple.total_points}</td>
+                    <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">{temple.total_points}</td>
                     <td className="px-6 py-4">
                       <div className="text-center">
                         <div className="font-bold text-lg text-[#2A2A2A]">{temple.total_participants}</div>
@@ -1966,7 +1966,7 @@ const TempleManagement = () => {
                             <div className="text-xs text-gray-500 font-medium">Temple Contact:</div>
                             <div className="text-[#2A2A2A] font-medium">{temple.contact_name}</div>
                             {temple.contact_phone && (
-                              <div className="text-blue-600">{temple.contact_phone}</div>
+                              <div className="text-[#D35D38]">{temple.contact_phone}</div>
                             )}
                           </div>
                         )}
@@ -1977,10 +1977,10 @@ const TempleManagement = () => {
                             <div className="text-xs text-gray-500 font-medium">Temple Admin:</div>
                             <div className="text-[#2A2A2A] font-medium">{temple.temple_admin.name}</div>
                             {temple.temple_admin.email && (
-                              <div className="text-blue-600 text-xs">{temple.temple_admin.email}</div>
+                              <div className="text-[#D35D38] text-xs">{temple.temple_admin.email}</div>
                             )}
                             {temple.temple_admin.phone && (
-                              <div className="text-blue-600 text-xs">{temple.temple_admin.phone}</div>
+                              <div className="text-[#D35D38] text-xs">{temple.temple_admin.phone}</div>
                             )}
                           </div>
                         )}
@@ -1995,13 +1995,13 @@ const TempleManagement = () => {
                       <div className="flex space-x-2">
                         <button 
                           onClick={() => window.open(`/templedetailedreport/?temple_id=${temple.id}`, '_blank')}
-                          className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-semibold text-xs"
+                          className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                         >
                           View Points
                         </button>
                         <button 
                           onClick={() => window.open(`/participantslist/?temple_id=${temple.id}`, '_blank')}
-                          className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
+                          className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                         >
                           View All Participants
                         </button>
@@ -2183,7 +2183,7 @@ const ResultsManagement = () => {
         <div className="space-y-8">
           {/* Individual Events Results */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
               <h4 className="text-xl font-bold text-white flex items-center">
                 <span className="mr-2">🏃</span>
                 Individual Events Results ({individualEvents.length})
@@ -2195,9 +2195,9 @@ const ResultsManagement = () => {
                 {individualEventsByAge.map((ageGroup) => (
                   <div key={ageGroup.name} className="space-y-4">
                     {/* Age Category Header */}
-                    <div className="bg-blue-50 border-l-4 border-blue-500 px-4 py-3">
-                      <h5 className="text-lg font-semibold text-blue-800">{ageGroup.name}</h5>
-                      <p className="text-sm text-blue-600">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
+                    <div className="bg-orange-50 border-l-4 border-[#D35D38] px-4 py-3">
+                      <h5 className="text-lg font-semibold text-[#D35D38]">{ageGroup.name}</h5>
+                      <p className="text-sm text-[#B84A2E]">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
                     </div>
 
                     {/* Events in this age category */}
@@ -2239,7 +2239,7 @@ const ResultsManagement = () => {
                                     return (rankOrder[a.event_result?.rank] || 5) - (rankOrder[b.event_result?.rank] || 5);
                                   })
                                   .map((registration, idx) => (
-                                    <tr key={registration.id} className="hover:bg-blue-50 transition">
+                                    <tr key={registration.id} className="hover:bg-orange-50 transition">
                                       <td className="px-4 py-3">
                                         <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                                           registration.event_result?.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
@@ -2263,7 +2263,7 @@ const ResultsManagement = () => {
                                       <td className="px-4 py-3 text-[#5A5A5A]">
                                         {registration.user?.aadhar_number || 'N/A'}
                                       </td>
-                                      <td className="px-4 py-3 font-bold text-blue-600">
+                                      <td className="px-4 py-3 font-bold text-[#D35D38]">
                                         {registration.event_result?.points || 0}
                                       </td>
                                       <td className="px-4 py-3">
@@ -2299,7 +2299,7 @@ const ResultsManagement = () => {
 
           {/* Team Events Results */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-purple-600 px-6 py-4">
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
               <h4 className="text-xl font-bold text-white flex items-center">
                 <span className="mr-2">🏃‍♂️🏃‍♀️</span>
                 Team Events Results ({teamEvents.length})
@@ -2311,9 +2311,9 @@ const ResultsManagement = () => {
                 {teamEventsByAge.map((ageGroup) => (
                   <div key={ageGroup.name} className="space-y-4">
                     {/* Age Category Header */}
-                    <div className="bg-green-50 border-l-4 border-green-500 px-4 py-3">
-                      <h5 className="text-lg font-semibold text-green-800">{ageGroup.name}</h5>
-                      <p className="text-sm text-green-600">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
+                    <div className="bg-orange-50 border-l-4 border-[#D35D38] px-4 py-3">
+                      <h5 className="text-lg font-semibold text-[#D35D38]">{ageGroup.name}</h5>
+                      <p className="text-sm text-[#B84A2E]">{ageGroup.events.length} event{ageGroup.events.length !== 1 ? 's' : ''}</p>
                     </div>
 
                     {/* Events in this age category */}
@@ -2355,7 +2355,7 @@ const ResultsManagement = () => {
                                     return (rankOrder[a.event_result?.rank] || 5) - (rankOrder[b.event_result?.rank] || 5);
                                   })
                                   .map((registration, idx) => (
-                                    <tr key={registration.id} className="hover:bg-green-50 transition">
+                                    <tr key={registration.id} className="hover:bg-orange-50 transition">
                                       <td className="px-4 py-3">
                                         <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
                                           registration.event_result?.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
@@ -2379,7 +2379,7 @@ const ResultsManagement = () => {
                                       <td className="px-4 py-3 text-[#5A5A5A]">
                                         {registration.member_user_ids ? registration.member_user_ids.split(',').length : 0} members
                                       </td>
-                                      <td className="px-4 py-3 font-bold text-green-600">
+                                      <td className="px-4 py-3 font-bold text-[#D35D38]">
                                         {registration.event_result?.points || 0}
                                       </td>
                                       <td className="px-4 py-3">
@@ -2424,8 +2424,8 @@ const ResultsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Total Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{results.length}</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-600 text-xl">🏆</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">🏆</span>
               </div>
             </div>
           </div>
@@ -2436,8 +2436,8 @@ const ResultsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Individual Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{individualEvents.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600 text-xl">🏃</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">🏃</span>
               </div>
             </div>
           </div>
@@ -2448,8 +2448,8 @@ const ResultsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Team Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{teamEvents.length}</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-purple-600 text-xl">👥</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">👥</span>
               </div>
             </div>
           </div>
@@ -2465,8 +2465,8 @@ const ResultsManagement = () => {
                   )}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <span className="text-yellow-600 text-xl">📊</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-[#D35D38] text-xl">📊</span>
               </div>
             </div>
           </div>

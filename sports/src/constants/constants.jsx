@@ -210,28 +210,28 @@ export const sponsorsKannada = [
 export const mahasabhaContacts = [
   { name: "Ravi Shettigar Karkala", phone: "9845249531" },
   { name: "Sadashiva Golijora", phone: "9449269272" },
-  { name: "Harish Shettigar", phone: "9880091234" },
+  { name: "Venkataraya Shettigar", phone: "9880878991" },
 ];
 
 //mahasabha contacts in Kannada
 export const mahasabhaContactskannada = [
     { name: "ರವಿ ಶೆಟ್ಟಿಗಾರ್ ಕಾರ್ಕಳ ", phone: "9845249531" },
     { name: "ಸದಾಶಿವ ಗೋಳಿಜಾರ", phone: "9449269272" },
-    { name: "Harish Shettigar", phone: "9880091234" },
+    { name: "ವೆಂಕಟರಾಯ ಶೆಟ್ಟಿಗಾರ್", phone: "9880878991" },
 ];
 
 //temple contacts in English
 export const templeContacts = [
     { name: "Purandar Shettigar", phone: " 9845525125" },
     { name: "Rajesh Sanoor", phone: "7301167711" }, 
-    { name: "Harish Shettigar", phone: "9880091234" },
+    { name: "Harish b padmashali", phone: "9880091234" },
 ];
 
 //temple contacts in Kannada
 export const templeContactsKannada = [
     { name: "ಪುರಂದರ ಶೆಟ್ಟಿಗಾರ್", phone: " 9845525125" },
     { name: "ರಾಜೇಶ್ ಸಾಣೂರು", phone: "7301167711" },
-    { name: "ಹರಿಶ್", phone: "9880091234" },
+    { name: "ಹರಿಶ್ ಬಿ ಪದ್ಮಶಾಲಿ", phone: "9880091234" },
 ];
 
 //event highlights in English
@@ -326,6 +326,43 @@ export const sportsHistory = [
   { year: 2023, place: "HALEYANGADI" },
   { year: 2024, place: "Manjeshwara" },
 ];
+
+export const sportsHistoryKannada = [
+  { year: 1992, place: "ಮಂಗಳೂರು" },
+  { year: 1993, place: "ಉಡುಪಿ" },
+  { year: 1994, place: "ಕಾರ್ಕಳ" },
+  { year: 1995, place: "ಕುಂದಾಪುರ" },
+  { year: 1996, place: "ಬಂಟ್ವಾಳ" },
+  { year: 1997, place: "ಪುತ್ತೂರು" },
+  { year: 1998, place: "ಸುಳ್ಯ" },
+  { year: 1999, place: "ಸಾಲಿಕೆರಿ" },
+  { year: 2000, place: "ಮಂಗಳೂರು" },
+  { year: 2001, place: "ಉಡುಪಿ" },
+  { year: 2002, place: "ಕಾರ್ಕಳ" },
+  { year: 2003, place: "ಕುಂದಾಪುರ" },
+  { year: 2004, place: "ಬಂಟ್ವಾಳ" },
+  { year: 2005, place: "ಪುತ್ತೂರು" },
+  { year: 2006, place: "ಸುಳ್ಯ" },
+  { year: 2007, place: "ಬೆಳ್ತಂಗಡಿ" },
+  { year: 2008, place: "ಮಂಗಳೂರು" },
+  { year: 2009, place: "ಉಡುಪಿ" },
+  { year: 2010, place: "ಕಾರ್ಕಳ" },
+  { year: 2011, place: "ಕುಂದಾಪುರ" },
+  { year: 2012, place: "ಬಂಟ್ವಾಳ" },
+  { year: 2013, place: "ಪುತ್ತೂರು" },
+  { year: 2014, place: "ಸುಳ್ಯ" },
+  { year: 2015, place: "ಬೆಳ್ತಂಗಡಿ" },
+  { year: 2016, place: "ಮಂಗಳೂರು" },
+  { year: 2017, place: "ಉಡುಪಿ" },
+  { year: 2018, place: "ಕಾರ್ಕಳ" },
+  { year: 2019, place: "ಕುಂದಾಪುರ" },
+  { year: 2020, place: "ಸಿದ್ದಕಟ್ಟೆ" },
+  { year: 2021, place: "ಉಡುಪಿ" },
+  { year: 2022, place: "ಸಾಲಿಕೆರಿ" },
+  { year: 2023, place: "ಹಳೆಯಂಗಡಿ" },
+  { year: 2024, place: "ಮಂಜೇಶ್ವರ" },
+];
+
 
 // Legacy events array for backward compatibility
 export const events = [

@@ -684,7 +684,7 @@ router.get('/roles', authenticate, requireRole('ADMIN'), async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/temples', authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/temples', authenticate, requireRole('ADMIN',), async (req, res) => {
   try {
     const temples = await prisma.mst_temple.findMany({
       where: { is_deleted: false },
