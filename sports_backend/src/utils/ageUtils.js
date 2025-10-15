@@ -34,7 +34,7 @@ function getAgeCategory(age) {
   else if (age >= 25 && age <= 35) return '25-35';
   else if (age >= 36 && age <= 49) return '36-49';
   else if (age >= 50 && age <= 60) return '50-60';
-  else if (age >= 61 && age <= 99) return '61+';
+  else if (age >= 61 && age <= 99) return '61-90';
   else return 'Unknown';
 }
 
@@ -44,7 +44,7 @@ function getAgeCategory(age) {
  * @returns {boolean} - True if the age category should be excluded from points
  */
 function isExcludedAgeCategory(ageCategory) {
-  const excludedCategories = ['0-5', '6-10', '61+'];
+  const excludedCategories = ['0-5', '6-10', '61-90'];
   return excludedCategories.includes(ageCategory);
 }
 

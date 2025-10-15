@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import CollapsibleList from '../components/CollapsibleList';
 import { authAPI, userAPI, eventAPI, participantAPI, teamAPI, templeAPI, reportAPI } from '../utils/api.js';
+import authManager from '../utils/authManager';
 // Icons temporarily disabled due to import issues
 // import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
 
@@ -41,11 +42,20 @@ const AdminPanel = () => {
     };
 
     verifyAccessAndLoadData();
+
+    // Listen for global logout events
+    const handleAuthLogout = () => {
+      console.log('AdminPanel: Received authLogout event - redirecting to login');
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.href = '/login';
+    console.log('AdminPanel: Handling logout');
+    authManager.logout(true); // Redirect to login for admin panel
   };
 
   const menuItems = [

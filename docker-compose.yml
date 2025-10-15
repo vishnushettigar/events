@@ -11,7 +11,7 @@ services:
       - ./sports:/app
       - /app/node_modules
     environment:
-       - VITE_API_BASE_URL=http://ec2-13-201-3-9.ap-south-1.compute.amazonaws.com
+       - VITE_API_BASE_URL=https://app.shettigarevents.com
     networks:
       - shettigarevents-network
 
@@ -30,7 +30,7 @@ services:
     environment:
       - NODE_ENV=development
       - DATABASE_URL=libsql://testingevents-jeevanpadmashali.aws-ap-south-1.turso.io
-      - DATABASE_AUTH_TOKEN=eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTk5MDgxODYsImlkIjoiZWViZDU3MTktMWE4OS00ZWMxLWFiYzgtYmQ3NGYwMWQ3ZDdiIiwicmlkIjoiMzNiYjMwZWYtNGMzOS00NjQxLTlkZjctMTQ0ZjUyOWJlNjI5In0.KLDxdktu3KwBooep5UVgL0Ecr_iBxLklwR19--RvzBN9K8IQWB9XDny8aqkuSRP1iGCSbcKDdzo5NaEGjovcCA
+      - DATABASE_AUTH_TOKEN=eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3NjAxMDI0MDgsImlkIjoiZWViZDU3MTktMWE4OS00ZWMxLWFiYzgtYmQ3NGYwMWQ3ZDdiIiwicmlkIjoiMzNiYjMwZWYtNGMzOS00NjQxLTlkZjctMTQ0ZjUyOWJlNjI5In0.r9vMJkqEIOjmox35QfR2LMOTKwb68P91Nx7cOf5s_Yiomzkcp06M6s7L1G0-5_3qTk0OFTqMjv3IKFPCs0NOAQ
       - JWT_SECRET=testeststest
       - PORT=4000
     networks:
@@ -62,6 +62,8 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - frontend_dist_prod:/usr/share/nginx/html
+      - /var/www/certbot:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend

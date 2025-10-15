@@ -1,4 +1,6 @@
 import config, { getApiUrl, getAuthHeaders, logDebug, logError } from './config.js';
+import { isTokenExpired, clearAuthData } from './tokenUtils.js';
+import authManager from './authManager.js';
 
 // API utility functions
 class ApiService {
@@ -46,6 +48,14 @@ class ApiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle 401 Unauthorized responses
+        if (response.status === 401) {
+          console.log('API Service: Received 401 Unauthorized response');
+          authManager.handleUnauthorized();
+          throw new Error('Unauthorized - Please login again');
+        }
+        
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -149,8 +159,9 @@ export const eventAPI = {
   
   // Heat management
   generateHeats: (eventId, laneCount) => apiService.post('/events/generate-heats', { event_id: eventId, lane_count: laneCount }),
+  regenerateHeats: (eventId) => apiService.delete(`/events/regenerate-heats/${eventId}`),
   getHeats: (eventId) => apiService.get(`/events/heats/${eventId}`),
-  saveTimings: (eventId, heatNumber, timings) => apiService.post('/events/save-timings', { event_id: eventId, heat_number: heatNumber, timings }),
+  saveTimings: (eventId, heatNumber, timings) => apiService.put('/events/update-timings', { event_id: eventId, heat_number: heatNumber, timings }),
 };
 
 export const participantAPI = {

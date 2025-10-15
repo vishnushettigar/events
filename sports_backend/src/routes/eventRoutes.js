@@ -12,6 +12,7 @@ router.get('/test-auth', authenticate, requireRole('TEMPLE_ADMIN'), (req, res) =
   res.json({ message: 'Authentication and authorization working', user: req.user });
 });
 
+//Individual event registration
 router.post('/register-participant', authenticate, [
   body('user_id').isInt().withMessage('Invalid user ID'),
   body('event_id').isInt().withMessage('Invalid event ID')
@@ -21,12 +22,13 @@ router.post('/register-participant', authenticate, [
     console.error('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
-
+  // TODO : remove user_id, read from req.user
   const { user_id, event_id } = req.body;
-  console.log('Registration attempt:', { user_id, event_id, auth_user: req.user });
+  console.log("user id from req", req.user)
+  console.log('Registration attempt:', { user_id: req.user.id, event_id});
 
   try {
-    const registration = await eventService.registerParticipant(user_id, event_id);
+    const registration = await eventService.registerParticipant(req.user.id, event_id, req.user.temple_id);
     console.log('Registration successful:', registration);
     res.status(201).json(registration);
   } catch (error) {
@@ -711,7 +713,7 @@ router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 
 // Generate heats for running events
 router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
   body('event_id').isInt().withMessage('Invalid event ID'),
-  body('lane_count').isInt({ min: 6, max: 8 }).withMessage('Lane count must be 6 or 8')
+  body('lane_count').isInt({ min: 5, max: 8 }).withMessage('Lane count must be between 5 and 8')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -764,54 +766,137 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
       aadhar_number: reg.user.aadhar_number
     }));
 
-    // Group participants by temple
+    // Group participants by temple (required for separation logic)
     const templeGroups = {};
-    participants.forEach(participant => {
-      const temple = participant.temple_name;
+    participants.forEach(p => {
+      const temple = p.temple_name;
       if (!templeGroups[temple]) {
         templeGroups[temple] = [];
       }
-      templeGroups[temple].push(participant);
+      templeGroups[temple].push(p);
     });
 
-    // Generate heats with temple separation logic
-    const heats = [];
-    const temples = Object.keys(templeGroups);
-    let currentHeat = { id: 1, participants: [], laneCount: 0 };
-    let templeIndex = 0;
+    const totalParticipants = participants.length;
+    let heatSizes = []; // This will store the *target* size of each heat
 
-    // Distribute participants ensuring no same temple in same heat
-    while (templeIndex < temples.length) {
-      const temple = temples[templeIndex];
-      const templeParticipants = templeGroups[temple];
+    // =========================================================================
+    // 1. HEAT SIZE CALCULATION (Your simplified logic)
+    // =========================================================================
+    
+    if (totalParticipants <= 8) {
+      // 8 or fewer participants, create one heat
+      heatSizes.push(totalParticipants);
+    } else {
+      let fullHeats = Math.floor(totalParticipants / 8);
+      let remainder = totalParticipants % 8;
       
-      // If adding this temple would exceed lane capacity, start new heat
-      if (currentHeat.participants.length + templeParticipants.length > lane_count) {
-        if (currentHeat.participants.length > 0) {
-          heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
-          currentHeat = { id: heats.length + 1, participants: [], laneCount: 0 };
+      // LOGIC: If remainder is 1, 2, 3, or 4, borrow 8 from one full heat
+      if (remainder > 0 && remainder <= 4) {
+        // Ensure we don't end up with negative full heats if remainder is 1-4 and fullHeats is 0
+        if (fullHeats > 0) {
+            fullHeats -= 1; // Borrow 8
+            remainder += 8; // Remainder becomes 9, 10, 11, or 12
         }
       }
-
-      // Add temple participants to current heat
-      templeParticipants.forEach(participant => {
-        if (currentHeat.participants.length < lane_count) {
-          currentHeat.participants.push(participant);
-          currentHeat.laneCount++;
+      
+      // Add all the full heats
+      for (let i = 0; i < fullHeats; i++) {
+        heatSizes.push(8);
+      }
+      
+      // Handle remaining participants (R will be 0, 5, 6, 7, 9, 10, 11, 12)
+      if (remainder > 0) {
+        if (remainder <= 8) {
+          // R = 5, 6, 7. One final heat.
+          heatSizes.push(remainder);
         } else {
-          // If current heat is full, start new heat
-          heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
-          currentHeat = { id: heats.length + 1, participants: [participant], laneCount: 1 };
+          // R = 9, 10, 11, 12. Split into two heats as evenly as possible.
+          const firstHeatSize = Math.ceil(remainder / 2);
+          const secondHeatSize = remainder - firstHeatSize;
+          
+          heatSizes.push(firstHeatSize);
+          heatSizes.push(secondHeatSize);
+        }
+      }
+    }
+
+    // Initialize heat containers
+    const heats = heatSizes.map((size, index) => ({
+      id: index + 1,
+      participants: [],
+      laneCount: size // laneCount now reflects the *target* heat size
+    }));
+
+    // =========================================================================
+    // 2. PARTICIPANT DISTRIBUTION (Temple Separation Logic)
+    // =========================================================================
+
+    // Check if we need temple separation (only if more than 1 heat)
+    if (heats.length === 1) {
+      // No temple separation needed - place all participants in single heat
+      heats[0].participants = [...participants];
+    } else {
+      // Apply temple separation logic
+      let remainingParticipants = [...participants];
+      
+      // Get temples with 3+ participants that need separation
+      const templesNeedingSeparation = Object.entries(templeGroups)
+        .filter(([temple, templeParticipants]) => templeParticipants.length >= 3)
+        .map(([temple, templeParticipants]) => ({ temple, participants: templeParticipants }));
+
+      // Sort temples by participant count (descending) for better distribution
+      templesNeedingSeparation.sort((a, b) => b.participants.length - a.participants.length);
+
+      // First, distribute participants from temples that need separation
+      templesNeedingSeparation.forEach(({ temple, participants: templeParticipants }) => {
+        // Remove these participants from remaining list
+        remainingParticipants = remainingParticipants.filter(p => p.temple_name !== temple);
+        
+        if (heats.length === 2) {
+          // 2 heats: Place 2 in heat with more participants, 1 in heat with fewer
+          const heat1Count = heats[0].participants.length;
+          const heat2Count = heats[1].participants.length;
+          
+          // Find which heat has more participants
+          const largerHeatIndex = heat1Count >= heat2Count ? 0 : 1;
+          const smallerHeatIndex = heat1Count >= heat2Count ? 1 : 0;
+          
+          // Distribute: 2 in larger heat, rest in smaller heat
+          templeParticipants.forEach((participant, index) => {
+            if (index < 2) {
+              heats[largerHeatIndex].participants.push(participant);
+            } else {
+              heats[smallerHeatIndex].participants.push(participant);
+            }
+          });
+        } else if (heats.length >= 3) {
+          // 3+ heats: Distribute temple participants across different heats
+          templeParticipants.forEach((participant, index) => {
+            const targetHeatIndex = index % heats.length;
+            heats[targetHeatIndex].participants.push(participant);
+          });
         }
       });
 
-      templeIndex++;
+      // Then, distribute remaining participants (from temples with <3 participants) 
+      // using round-robin to fill heats evenly
+      let currentHeatIndex = 0;
+      remainingParticipants.forEach(participant => {
+        // Find the next heat that's not full
+        while (heats[currentHeatIndex % heats.length].participants.length >= heatSizes[currentHeatIndex % heats.length]) {
+          currentHeatIndex++;
+        }
+        
+        const targetHeatIndex = currentHeatIndex % heats.length;
+        heats[targetHeatIndex].participants.push(participant);
+        currentHeatIndex++;
+      });
     }
 
-    // Add the last heat if it has participants
-    if (currentHeat.participants.length > 0) {
-      heats.push({ ...currentHeat, laneCount: currentHeat.participants.length });
-    }
+    // Set final laneCount based on actual participants
+    heats.forEach(heat => {
+        heat.laneCount = heat.participants.length;
+    });
 
     // Save heats to database
     const heatRecords = [];
@@ -832,7 +917,7 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
     });
 
     res.json({
-      message: 'Heats generated successfully',
+      message: 'Heats generated successfully with temple separation',
       heats: heats.map(heat => ({
         id: heat.id,
         participants: heat.participants.length,
@@ -844,6 +929,42 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
   } catch (error) {
     console.error('Error generating heats:', error);
     res.status(500).json({ error: error.message || 'Failed to generate heats' });
+  }
+});
+
+// Regenerate heats for running events (delete existing and allow regeneration)
+router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    // Check if event exists and is a running event
+    const event = await prisma.mst_event.findUnique({
+      where: { id: parseInt(eventId) },
+      include: { event_type: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const eventName = event.event_type.name.toLowerCase();
+    if (!eventName.includes('running - 100 mts') && !eventName.includes('running - 200 mts')) {
+      return res.status(400).json({ error: 'Heat regeneration is only available for Running 100m and 200m events' });
+    }
+
+    // Delete existing heats for this event
+    await prisma.event_performance.deleteMany({
+      where: { 
+        event_id: parseInt(eventId),
+        year: new Date().getFullYear()
+      }
+    });
+
+    res.json({ message: 'Heats deleted successfully. You can now generate new heats.' });
+
+  } catch (error) {
+    console.error('Error regenerating heats:', error);
+    res.status(500).json({ error: error.message || 'Failed to regenerate heats' });
   }
 });
 
@@ -896,13 +1017,13 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
   }
 });
 
-// Save heat timings
-router.post('/save-timings', authenticate, requireRole('STAFF'), [
+// Update heat timings
+router.put('/update-timings', authenticate, requireRole('STAFF'), [
   body('event_id').isInt().withMessage('Invalid event ID'),
   body('heat_number').isInt().withMessage('Invalid heat number'),
   body('timings').isArray().withMessage('Timings must be an array'),
   body('timings.*.registration_id').isInt().withMessage('Invalid registration ID'),
-  body('timings.*.heat_time').isString().withMessage('Heat time must be a string')
+  body('timings.*.heat_time').optional().isString().withMessage('Heat time must be a string')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -912,23 +1033,38 @@ router.post('/save-timings', authenticate, requireRole('STAFF'), [
   const { event_id, heat_number, timings } = req.body;
 
   try {
-    // Update timings for each participant
-    const updatePromises = timings.map(timing => 
-      prisma.event_performance.updateMany({
-        where: {
-          event_id: event_id,
-          heat_number: heat_number,
-          registration_id: timing.registration_id
-        },
-        data: {
-          heat_time: timing.heat_time
+    // Update timings for each participant - only update if timing has a valid value
+    const updatePromises = timings.map(timing => {
+      // Convert string timing to float, handle empty strings and invalid values
+      let heatTimeValue = null;
+      if (timing.heat_time && timing.heat_time.trim() !== '') {
+        const parsedTime = parseFloat(timing.heat_time);
+        if (!isNaN(parsedTime) && parsedTime > 0) {
+          heatTimeValue = parsedTime;
         }
-      })
-    );
+      }
+
+      // Only update if we have a valid timing value
+      if (heatTimeValue !== null) {
+        return prisma.event_performance.updateMany({
+          where: {
+            event_id: event_id,
+            heat_number: heat_number,
+            registration_id: timing.registration_id
+          },
+          data: {
+            heat_time: heatTimeValue
+          }
+        });
+      } else {
+        // Return a resolved promise for invalid timings (don't update)
+        return Promise.resolve();
+      }
+    });
 
     await Promise.all(updatePromises);
 
-    res.json({ message: 'Timings saved successfully' });
+    res.json({ message: 'Timings updated successfully' });
 
   } catch (error) {
     console.error('Error saving timings:', error);

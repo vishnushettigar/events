@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom';
 import { userAPI } from '../utils/api';
+import authManager from '../utils/authManager';
 
 const Alltemplereports = () => {
     const [report, setReport] = useState([]);
@@ -33,6 +34,15 @@ const Alltemplereports = () => {
         };
 
         fetchTempleReports();
+
+        // Listen for global logout events
+        const handleAuthLogout = () => {
+            console.log('Alltemplereports: Received authLogout event - redirecting to login');
+            window.location.href = '/login';
+        };
+
+        window.addEventListener('authLogout', handleAuthLogout);
+        return () => window.removeEventListener('authLogout', handleAuthLogout);
     }, []);
 
   return (

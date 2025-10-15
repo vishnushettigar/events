@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../utils/api';
+import authManager from '../utils/authManager';
 
 const SignInForm = () => {
     const navigate = useNavigate();
@@ -58,6 +59,9 @@ const SignInForm = () => {
             if (data.user) {
                 localStorage.setItem('user', JSON.stringify(data.user));
             }
+
+            // Notify auth manager of successful login
+            authManager.handleLogin(data.user);
 
             // Dispatch auth change event
             window.dispatchEvent(new Event('authChange'));

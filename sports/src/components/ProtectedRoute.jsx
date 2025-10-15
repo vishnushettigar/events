@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { isAuthenticated, getCurrentUser, clearAuthData } from '../utils/tokenUtils';
 
 const ProtectedRoute = ({ children, requiredRole = null }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -8,18 +9,21 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
 
   useEffect(() => {
     const checkAccess = () => {
-      const token = localStorage.getItem('token');
+      // Check if user is authenticated with valid token
+      const isUserAuthenticated = isAuthenticated();
       
-      if (!token) {
+      if (!isUserAuthenticated) {
+        // Clear any invalid/expired tokens
+        clearAuthData();
         setHasAccess(false);
         setIsLoading(false);
         return;
       }
 
       try {
-        // Decode JWT token to get user info
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser(payload);
+        // Get current user from valid token
+        const user = getCurrentUser();
+        setUser(user);
         
         if (requiredRole) {
           // Check if user has the required role
@@ -33,13 +37,14 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
           };
           
           const requiredRoleId = roleMap[requiredRole];
-          setHasAccess(payload.role === requiredRoleId);
+          setHasAccess(user.role === requiredRoleId);
         } else {
           // If no specific role required, just check if user is authenticated
           setHasAccess(true);
         }
       } catch (error) {
-        console.error('Error decoding token:', error);
+        console.error('Error checking access:', error);
+        clearAuthData();
         setHasAccess(false);
       } finally {
         setIsLoading(false);

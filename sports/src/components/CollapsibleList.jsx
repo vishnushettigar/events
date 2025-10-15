@@ -9,6 +9,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
   const [showHeatGeneration, setShowHeatGeneration] = useState(false);
   const [laneCount, setLaneCount] = useState(8);
   const [generatingHeats, setGeneratingHeats] = useState(false);
+  const [regeneratingHeats, setRegeneratingHeats] = useState(false);
   const [heatsGenerated, setHeatsGenerated] = useState(false);
   const [heatError, setHeatError] = useState(null);
 
@@ -17,10 +18,13 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
     setLocalParticipants(participants);
   }, [participants]);
 
-  // Set initial open state based on pending participants
+  // Set initial open state based on pending participants (only on first load)
   useEffect(() => {
     const hasPendingParticipants = participants.some(p => p.status === 'PENDING');
-    setIsOpen(hasPendingParticipants);
+    // Only auto-open if there are pending participants and the list is not already open
+    if (hasPendingParticipants && !isOpen) {
+      setIsOpen(true);
+    }
   }, [participants]);
 
   // Calculate the number of accepted participants for this event
@@ -69,6 +73,29 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
       setHeatError(error.message || 'Failed to generate heats');
     } finally {
       setGeneratingHeats(false);
+    }
+  };
+
+  // Handle heat regeneration
+  const handleRegenerateHeats = async () => {
+    try {
+      setRegeneratingHeats(true);
+      setHeatError(null);
+      
+      await eventAPI.regenerateHeats(eventId);
+      
+      setHeatsGenerated(false);
+      setShowHeatGeneration(true);
+      
+      // Notify parent component to refresh data
+      if (onParticipantsUpdate) {
+        onParticipantsUpdate();
+      }
+    } catch (error) {
+      console.error('Error regenerating heats:', error);
+      setHeatError(error.message || 'Failed to regenerate heats');
+    } finally {
+      setRegeneratingHeats(false);
     }
   };
 
@@ -183,19 +210,31 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
             <div className="bg-blue-50 border-b border-blue-200 p-4">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="text-lg font-semibold text-blue-800">🏃‍♂️ Heat Management</h4>
-                {!heatsGenerated && (
-                  <button
-                    onClick={() => setShowHeatGeneration(!showHeatGeneration)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    {showHeatGeneration ? 'Cancel' : 'Generate Heats'}
-                  </button>
-                )}
-                {heatsGenerated && (
-                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
-                    ✅ Heats Generated
-                  </span>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* generating heat and regenrating heat if the heat is already generated */}
+                  {!heatsGenerated && (
+                    <button
+                      onClick={() => setShowHeatGeneration(!showHeatGeneration)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                    >
+                      {showHeatGeneration ? 'Cancel' : 'Generate Heats'}
+                    </button>
+                  )}
+                  {heatsGenerated && (
+                    <>
+                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                        ✅ Heats Generated
+                      </span>
+                      <button
+                        onClick={handleRegenerateHeats}
+                        disabled={regeneratingHeats}
+                        className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                      >
+                        {regeneratingHeats ? 'Regenerating...' : 'Regenerate Heats'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               
               {showHeatGeneration && !heatsGenerated && (
@@ -207,6 +246,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
                       onChange={(e) => setLaneCount(parseInt(e.target.value))}
                       className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
+                      <option value={5}>5 Lanes</option>
                       <option value={6}>6 Lanes</option>
                       <option value={7}>7 Lanes</option>
                       <option value={8}>8 Lanes</option>
@@ -227,9 +267,41 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
                   )}
                   
                   {acceptedCount > 0 && (
-                    <p className="text-sm text-gray-600">
-                      📊 {acceptedCount} accepted participants will be distributed across heats with temple separation logic.
-                    </p>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>📊 {acceptedCount} accepted participants will be distributed as follows (max 8 per heat):</p>
+                      {acceptedCount <= 8 ? (
+                        <p>• 1 heat with {acceptedCount} participants</p>
+                      ) : (
+                        (() => {
+                          const fullHeats = Math.floor(acceptedCount / 8);
+                          const remainder = acceptedCount % 8;
+                          const adjustedFullHeats = remainder <= 4 && remainder > 0 ? Math.max(0, fullHeats - 1) : fullHeats;
+                          const remainingParticipants = acceptedCount - (adjustedFullHeats * 8);
+                          const totalHeats = adjustedFullHeats + (remainingParticipants > 0 ? (remainingParticipants <= 8 ? 1 : 2) : 0);
+                          
+                          return (
+                            <>
+                              {adjustedFullHeats > 0 && <p>• {adjustedFullHeats} heat(s) with 8 participants each</p>}
+                              {remainingParticipants > 0 && remainingParticipants <= 8 && (
+                                <p>• 1 heat with {remainingParticipants} participants</p>
+                              )}
+                              {remainingParticipants > 8 && (
+                                <>
+                                  <p>• 1 heat with {Math.ceil(remainingParticipants / 2)} participants</p>
+                                  <p>• 1 heat with {Math.floor(remainingParticipants / 2)} participants</p>
+                                </>
+                              )}
+                              {totalHeats >= 2 && (
+                                <p className="text-blue-600 font-medium">🏛️ Temple separation will be applied for fair distribution</p>
+                              )}
+                              {totalHeats === 1 && (
+                                <p className="text-amber-600 font-medium">🏛️ Single heat - temple grouping will be maintained</p>
+                              )}
+                            </>
+                          );
+                        })()
+                      )}
+                    </div>
                   )}
                   
                   {heatError && (

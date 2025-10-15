@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { userAPI, eventAPI, reportAPI } from '../utils/api';
+import authManager from '../utils/authManager';
 
 const StaffPanel = () => {
   const [activeTab, setActiveTab] = useState('update-results');
@@ -39,6 +40,175 @@ const StaffPanel = () => {
   const [scheduleData, setScheduleData] = useState({ individual: [], team: [] });
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState(null);
+
+  // For collapsible event states
+  const [collapsibleStates, setCollapsibleStates] = useState({});
+  
+  // For event participants data
+  const [eventParticipantsData, setEventParticipantsData] = useState({});
+  const [loadingParticipants, setLoadingParticipants] = useState({});
+  const [participantErrors, setParticipantErrors] = useState({});
+  
+  // For tracking rank changes
+  const [rankChanges, setRankChanges] = useState({});
+
+  // Helper functions for collapsible state management
+  const getCollapsibleState = (eventId) => {
+    return collapsibleStates[eventId] || false;
+  };
+
+  const setCollapsibleState = (eventId, isOpen) => {
+    setCollapsibleStates(prev => ({
+      ...prev,
+      [eventId]: isOpen
+    }));
+  };
+
+  // Helper functions for participants data management
+  const getEventParticipants = (eventId) => {
+    return eventParticipantsData[eventId] || [];
+  };
+
+  const setEventParticipants = (eventId, participants) => {
+    setEventParticipantsData(prev => ({
+      ...prev,
+      [eventId]: participants
+    }));
+  };
+
+  const getLoadingParticipants = (eventId) => {
+    return loadingParticipants[eventId] || false;
+  };
+
+  const setLoadingParticipantsState = (eventId, loading) => {
+    setLoadingParticipants(prev => ({
+      ...prev,
+      [eventId]: loading
+    }));
+  };
+
+  const getParticipantError = (eventId) => {
+    return participantErrors[eventId] || null;
+  };
+
+  const setParticipantError = (eventId, error) => {
+    setParticipantErrors(prev => ({
+      ...prev,
+      [eventId]: error
+    }));
+  };
+
+  // Helper functions for rank changes management
+  const getRankChanges = (eventId) => {
+    return rankChanges[eventId] || {};
+  };
+
+  const setRankChange = (eventId, participantId, rank) => {
+    setRankChanges(prev => ({
+      ...prev,
+      [eventId]: {
+        ...prev[eventId],
+        [participantId]: rank
+      }
+    }));
+  };
+
+  const clearRankChanges = (eventId) => {
+    setRankChanges(prev => ({
+      ...prev,
+      [eventId]: {}
+    }));
+  };
+
+  // Handle bulk result updates
+  const handleBulkResultUpdate = async (eventId, eventName, ageCategory) => {
+    const changes = getRankChanges(eventId);
+    const changeEntries = Object.entries(changes);
+    
+    if (changeEntries.length === 0) {
+      showInfoModal('No Changes', 'No rank changes to update.');
+      return;
+    }
+
+    try {
+      // Show confirmation modal with all changes
+      const changesList = changeEntries.map(([participantId, rank]) => {
+        const participant = getEventParticipants(eventId).find(p => p.id === participantId);
+        return {
+          name: participant?.participant_name || participant?.team_name || 'Unknown',
+          temple: participant?.temple_name || 'Unknown',
+          rank: rank
+        };
+      });
+
+      showConfirmModal(
+        'Confirm Result Update',
+        `Are you sure you want to update ${changeEntries.length} participant(s)?`,
+        {
+          changes: changesList,
+          count: changeEntries.length
+        },
+        {
+          eventId,
+          eventName,
+          ageCategory,
+          changes: changes
+        }
+      );
+    } catch (error) {
+      console.error('Error preparing bulk update:', error);
+      showErrorModal('Error', 'Failed to prepare bulk update.');
+    }
+  };
+
+  // Execute bulk result updates
+  const executeBulkResultUpdate = async () => {
+    if (!pendingUpdate || !pendingUpdate.eventId) return;
+
+    const { eventId, eventName, ageCategory, changes } = pendingUpdate;
+    const changeEntries = Object.entries(changes);
+    
+    try {
+      // Update each participant
+      for (const [participantId, rank] of changeEntries) {
+        await eventAPI.updateIndividualResult(participantId, rank);
+      }
+
+      // Clear the rank changes
+      clearRankChanges(eventId);
+      
+      // Refresh the participants data
+      const updatedData = await eventAPI.getEventParticipants(eventId);
+      setEventParticipants(eventId, updatedData);
+      
+      // Close the confirmation modal and show success modal
+      closeModal();
+      
+      // Use setTimeout to ensure the confirmation modal closes before showing success
+      setTimeout(() => {
+        showSuccessModal(
+          'Result Update Successful',
+          `Successfully updated ${changeEntries.length} participant(s).`,
+          {
+            'Age Category': ageCategory,
+            'Event Name': eventName
+          }
+        );
+      }, 100);
+      
+      console.log('Bulk result update successful');
+    } catch (error) {
+      console.error('Error updating bulk results:', error);
+      showErrorModal(
+        'Bulk Update Failed',
+        'Failed to update some or all participants.',
+        {
+          count: changeEntries.length,
+          error: error.message
+        }
+      );
+    }
+  };
 
   const tabs = [
     { id: 'update-results', name: 'Individual', endpoint: '/api/events/participant-data' },
@@ -149,6 +319,17 @@ const StaffPanel = () => {
     fetchData();
     }
   }, [activeTab, selectedAge, selectedGender]);
+
+  // Listen for global logout events
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      console.log('StaffPanel: Received authLogout event - redirecting to login');
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
+  }, []);
 
   // Fetch data for Update Results section
   const fetchUpdateResultsData = async () => {
@@ -375,6 +556,11 @@ const StaffPanel = () => {
     setModalMessage(message);
     setModalDetails(details);
     setShowModal(true);
+    
+    // Auto-close success modal after 3 seconds
+    setTimeout(() => {
+      closeModal();
+    }, 1000);
   };
 
   const showErrorModal = (title, message, details = null) => {
@@ -412,6 +598,7 @@ const StaffPanel = () => {
 
   // Handle individual result update confirmation
   const handleIndividualResultUpdate = (registrationId, rank, participantName, templeName, eventName, aadharNumber) => {
+    console.log('handleIndividualResultUpdate called with:', { registrationId, rank, participantName, templeName, eventName, aadharNumber });
     showConfirmModal(
       'Confirm Result Update',
       'Are you sure you want to update this participant\'s result?',
@@ -435,14 +622,36 @@ const StaffPanel = () => {
 
   // Execute the actual update after confirmation
   const executeIndividualResultUpdate = async () => {
-    if (!pendingUpdate) return;
+    console.log('executeIndividualResultUpdate called with pendingUpdate:', pendingUpdate);
+    if (!pendingUpdate) {
+      console.log('No pending update found, returning');
+      return;
+    }
 
     try {
+      console.log('Calling API with:', pendingUpdate.registrationId, pendingUpdate.rank);
       await eventAPI.updateIndividualResult(pendingUpdate.registrationId, pendingUpdate.rank);
+      
       // Close the confirmation modal
       closeModal();
-      // Don't refresh all data - let the dropdown stay open
-      // The updated result will be reflected when the user manually refreshes or navigates
+      
+      // Refresh the participants data for the current event
+      // We need to find which event this participant belongs to
+      const eventId = Object.keys(eventParticipantsData).find(id => 
+        eventParticipantsData[id].some(p => p.id === pendingUpdate.registrationId)
+      );
+      
+      if (eventId) {
+        console.log('Refreshing participants data for event:', eventId);
+        try {
+          const updatedData = await eventAPI.getEventParticipants(eventId);
+          setEventParticipants(eventId, updatedData);
+          console.log('Participants data refreshed successfully');
+        } catch (refreshError) {
+          console.error('Error refreshing participants data:', refreshError);
+        }
+      }
+      
       console.log('Result updated successfully');
     } catch (error) {
       console.error('Error updating individual result:', error);
@@ -487,6 +696,8 @@ const StaffPanel = () => {
 
     try {
       await eventAPI.updateTeamResult(pendingUpdate.registrationId, pendingUpdate.rank);
+      // Close the confirmation modal
+      closeModal();
       // Refresh the data
       await fetchTeamEvents();
       // Don't show success modal - just close the confirmation modal
@@ -509,11 +720,28 @@ const StaffPanel = () => {
   };
 
   // Collapsible component for events
-  const CollapsibleEvent = ({ title, eventId, ageCategory, gender }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [eventParticipants, setEventParticipants] = useState([]);
-    const [loadingParticipants, setLoadingParticipants] = useState(false);
-    const [participantError, setParticipantError] = useState(null);
+  const CollapsibleEvent = ({ 
+    title, 
+    eventId, 
+    ageCategory, 
+    gender, 
+    isOpen, 
+    setIsOpen,
+    getEventParticipants,
+    setEventParticipants,
+    getLoadingParticipants,
+    setLoadingParticipantsState,
+    getParticipantError,
+    setParticipantError,
+    getRankChanges,
+    setRankChange,
+    clearRankChanges,
+    handleBulkResultUpdate
+  }) => {
+    // Use parent-managed state
+    const eventParticipants = getEventParticipants(eventId);
+    const loadingParticipants = getLoadingParticipants(eventId);
+    const participantError = getParticipantError(eventId);
     const [trialMeasurements, setTrialMeasurements] = useState({});
     const [heats, setHeats] = useState({});
     const [selectedHeat, setSelectedHeat] = useState(null);
@@ -532,7 +760,9 @@ const StaffPanel = () => {
     // Check if this event requires heats (running events)
     const isHeatEvent = () => {
       const eventName = title.toLowerCase();
-      return eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
+      const isHeat = eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
+      console.log(`Event: "${title}" -> EventName: "${eventName}" -> IsHeatEvent: ${isHeat}`);
+      return isHeat;
     };
 
     // Handle trial measurement input
@@ -545,10 +775,15 @@ const StaffPanel = () => {
 
     // Handle timing input
     const handleTimingInput = (participantId, value) => {
-      setTimings(prev => ({
-        ...prev,
-        [participantId]: value
-      }));
+      console.log('Timing input:', participantId, value);
+      setTimings(prev => {
+        const newTimings = {
+          ...prev,
+          [participantId]: value
+        };
+        console.log('Updated timings:', newTimings);
+        return newTimings;
+      });
     };
 
     // Save timings for current heat
@@ -557,15 +792,28 @@ const StaffPanel = () => {
       
       try {
         setSavingTimings(true);
-        const timingsArray = heats[selectedHeat].map(participant => ({
-          registration_id: participant.id,
-          heat_time: timings[participant.id] || ''
-        }));
         
-        console.log(`Saving timings for Heat ${selectedHeat}:`, timingsArray);
+        // Only include participants that have actual timing values (not empty)
+        const timingsArray = heats[selectedHeat]
+          .filter(participant => {
+            const timing = timings[participant.id];
+            return timing && timing.trim() !== '';
+          })
+          .map(participant => ({
+            registration_id: participant.id,
+            heat_time: timings[participant.id]
+          }));
+        
+        console.log(`Updating timings for Heat ${selectedHeat}:`, timingsArray);
+        console.log(`Only sending ${timingsArray.length} participants with timings out of ${heats[selectedHeat].length} total participants`);
+        
+        if (timingsArray.length === 0) {
+          showInfoModal('No Timings', 'Please enter at least one timing before saving.');
+          return;
+        }
         
         await eventAPI.saveTimings(eventId, selectedHeat, timingsArray);
-        console.log('Timings saved successfully');
+        console.log('Timings updated successfully');
         
         // Refresh heats to get updated data
         await fetchHeats();
@@ -573,10 +821,25 @@ const StaffPanel = () => {
         // Clear the local timings state since data is now saved
         setTimings({});
         
-        alert(`Timings for Heat ${selectedHeat} saved successfully!`);
+        showSuccessModal(
+          'Timings Updated Successfully',
+          `Timings for Heat ${selectedHeat} have been updated successfully!`,
+          {
+            heat: selectedHeat,
+            participants: timingsArray.length,
+            total: heats[selectedHeat]?.length || 0
+          }
+        );
       } catch (error) {
         console.error('Error saving timings:', error);
-        alert('Failed to save timings. Please try again.');
+        showErrorModal(
+          'Update Failed',
+          'Failed to update timings. Please try again.',
+          {
+            heat: selectedHeat,
+            error: error.message
+          }
+        );
       } finally {
         setSavingTimings(false);
       }
@@ -584,20 +847,30 @@ const StaffPanel = () => {
 
     // Fetch heats from backend
     const fetchHeats = async () => {
-      if (!isHeatEvent()) return;
+      if (!isHeatEvent()) {
+        console.log('Not a heat event, skipping heat fetch');
+        return;
+      }
       
       try {
+        console.log(`Fetching heats for eventId: ${eventId}`);
         setLoadingHeats(true);
         const heatsData = await eventAPI.getHeats(eventId);
+        console.log('Heats data received:', heatsData);
         setHeats(heatsData);
         
         // Set first heat as selected if available
         const heatNumbers = Object.keys(heatsData).map(Number).sort((a, b) => a - b);
+        console.log('Heat numbers found:', heatNumbers);
         if (heatNumbers.length > 0) {
           setSelectedHeat(heatNumbers[0]);
+          console.log(`Set selected heat to: ${heatNumbers[0]}`);
+        } else {
+          console.log('No heats found in the data');
         }
       } catch (error) {
         console.error('Error fetching heats:', error);
+        console.error('Error details:', error.message);
       } finally {
         setLoadingHeats(false);
       }
@@ -691,7 +964,6 @@ const StaffPanel = () => {
         
         if (participantsWithTimings.length === 0) {
           console.log('No participants with timings found');
-          alert('No participants with timings found. Please enter timings for at least one heat first.');
           return;
         }
         
@@ -724,13 +996,12 @@ const StaffPanel = () => {
         setFinalHeatParticipants(top8);
         setShowFinalHeat(true);
         
-        // Show success message with details
+        // Success - final heat generated
         const heatCounts = Object.entries(heatDistribution).map(([heat, count]) => `Heat ${heat}: ${count}`).join(', ');
-        alert(`Final heat generated successfully!\n\nTop 8 participants selected from all heats:\n${heatCounts}\n\nCheck the console for detailed timing comparison.`);
+        console.log(`Final heat generated successfully! Top 8 participants selected from all heats: ${heatCounts}`);
         
       } catch (error) {
         console.error('Error generating final heat:', error);
-        alert('Error generating final heat. Please try again.');
       }
     };
 
@@ -873,9 +1144,9 @@ const StaffPanel = () => {
                     <td>${participant.temple_name}</td>
                     <td>${participant.aadhar_number || 'N/A'}</td>
                     ${isTrialEvent() ? `
-                      <td class="trial-data">${trial1 ? trial1 + 'm' : '-'}</td>
-                      <td class="trial-data">${trial2 ? trial2 + 'm' : '-'}</td>
-                      <td class="trial-data">${trial3 ? trial3 + 'm' : '-'}</td>
+                      <td class="trial-data">${trial1 ? trial1 + 'm' : ''}</td>
+                      <td class="trial-data">${trial2 ? trial2 + 'm' : ''}</td>
+                      <td class="trial-data">${trial3 ? trial3 + 'm' : ''}</td>
                     ` : ''}
                     ${isHeatEvent() ? `<td class="${timingClass}">${timing || '-'}</td>` : ''}
                     <td>${resultDisplay}</td>
@@ -900,20 +1171,25 @@ const StaffPanel = () => {
       if (eventParticipants.length > 0) return; // Already loaded
       
       try {
-        setLoadingParticipants(true);
-        setParticipantError(null);
+        console.log(`Fetching participants for event: ${title} (${eventId})`);
+        setLoadingParticipantsState(eventId, true);
+        setParticipantError(eventId, null);
         const data = await eventAPI.getEventParticipants(eventId);
-        setEventParticipants(data);
+        setEventParticipants(eventId, data);
         
         // Fetch heats for running events
+        console.log(`Checking if event is heat event: ${isHeatEvent()}`);
         if (isHeatEvent()) {
+          console.log('Event is heat event, fetching heats...');
           await fetchHeats();
+        } else {
+          console.log('Event is not a heat event, skipping heat fetch');
         }
     } catch (err) {
         console.error('Error fetching event participants:', err);
-        setParticipantError(err.message);
+        setParticipantError(eventId, err.message);
     } finally {
-        setLoadingParticipants(false);
+        setLoadingParticipantsState(eventId, false);
       }
     };
 
@@ -923,6 +1199,14 @@ const StaffPanel = () => {
       }
       setIsOpen(!isOpen);
     };
+
+    // Ensure heats are fetched when component mounts for heat events
+    React.useEffect(() => {
+      if (isOpen && isHeatEvent() && Object.keys(heats).length === 0 && !loadingHeats) {
+        console.log('Component mounted for heat event, fetching heats...');
+        fetchHeats();
+      }
+    }, [isOpen, eventId]);
 
     // Keep dropdown open after updates - don't reset state
     const handleUpdateSuccess = () => {
@@ -971,6 +1255,13 @@ const StaffPanel = () => {
                     <div className="flex flex-wrap items-center gap-4 mb-4">
                       <div className="flex items-center gap-2">
                         <label className="text-sm font-medium text-[#2A2A2A]">Select Heat:</label>
+                        <button
+                          onClick={fetchHeats}
+                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                          title="Refresh heats"
+                        >
+                          🔄 Refresh
+                        </button>
                         <div className="flex gap-2 flex-wrap">
                           {Object.keys(heats).map((heatNumber) => (
                             <button
@@ -1017,7 +1308,7 @@ const StaffPanel = () => {
                           disabled={savingTimings}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                         >
-                          {savingTimings ? 'Saving...' : 'Save Timings'}
+                          {savingTimings ? 'Updating...' : 'Update Timings'}
                         </button>
                       )}
                     </div>
@@ -1047,6 +1338,17 @@ const StaffPanel = () => {
                     <p className="text-yellow-800 text-sm">
                       ⚠️ Heats have not been generated for this event yet. Please contact the admin to generate heats.
                     </p>
+                    <div className="mt-2">
+                      <button
+                        onClick={fetchHeats}
+                        className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                      >
+                        🔄 Try Fetching Heats
+                      </button>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-600">
+                      Debug: EventId: {eventId}, Heats: {JSON.stringify(heats)}, Loading: {loadingHeats ? 'Yes' : 'No'}
+                    </div>
                   </div>
                 )}
 
@@ -1138,7 +1440,7 @@ const StaffPanel = () => {
                     </div>
                   </div>
                 )}
-
+                 {/*  trial event code start from here */}
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-[#F8DFBE] border border-[#F8DFBE]">
                     <thead className="bg-white border-b border-[#F8DFBE]">
@@ -1147,18 +1449,25 @@ const StaffPanel = () => {
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">NAME</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TEMPLE</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">AADHAR NO</th>
-                        {isTrialEvent() && (
-                          <>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 1</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 2</th>
-                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 3</th>
-                          </>
-                        )}
                         {isHeatEvent() && (
                           <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TIMING</th>
                         )}
-                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">RESULTS</th>
-                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">ACTIONS</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                          <div className="flex items-center justify-between">
+                            <span>RESULT</span>
+                            <button
+                              onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
+                              className={`px-3 py-1 rounded text-xs transition-colors ${
+                                Object.keys(getRankChanges(eventId)).length > 0
+                                  ? 'bg-green-600 text-white hover:bg-green-700'
+                                  : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+                              }`}
+                              title={`Update all selected results (${Object.keys(getRankChanges(eventId)).length} pending)`}
+                            >
+                              Update All {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
+                            </button>
+                          </div>
+                        </th>
                       </tr>
                     </thead>
                   <tbody className="bg-white divide-y divide-[#F8DFBE]">
@@ -1178,101 +1487,74 @@ const StaffPanel = () => {
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
                             {participant.aadhar_number || 'N/A'}
                           </td>
-                          {isTrialEvent() && (
-                            <>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={trialMeasurements[`${participant.id}_1`] || ''}
-                                  onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
-                                />
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={trialMeasurements[`${participant.id}_2`] || ''}
-                                  onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
-                                />
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="0.00"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={trialMeasurements[`${participant.id}_3`] || ''}
-                                  onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
-                                />
-                              </td>
-                            </>
-                          )}
                           {isHeatEvent() && (
                             <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
                               <input
                                 type="text"
                                 placeholder="00:00.00"
                                 className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                value={participant.heat_time || timings[participant.id] || ''}
+                                value={(() => {
+                                  const localTiming = timings[participant.id];
+                                  const dbTiming = participant.heat_time;
+                                  const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
+                                  console.log(`Input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
+                                  return finalValue;
+                                })()}
                                 onChange={(e) => handleTimingInput(participant.id, e.target.value)}
                               />
                             </td>
                           )}
-                          <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                            {participant.result?.rank ? (
-                              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                                participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                                participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                {participant.result.rank === 'FIRST' ? '🥇 1st' :
-                                 participant.result.rank === 'SECOND' ? '🥈 2nd' :
-                                 participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 text-xs"></span>
-                            )}
-                          </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <div className="flex gap-2">
-                              <select 
-                                className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
-                                defaultValue={participant.result?.rank || ""}
-                                id={`rank-${participant.id}`}
-                              >
-                                <option value="">Select Rank</option>
-                                <option value="FIRST">🥇 1st Place</option>
-                                <option value="SECOND">🥈 2nd Place</option>
-                                <option value="THIRD">🥉 3rd Place</option>
-                                <option value="CLEAR">Clear Result</option>
-                              </select>
-                              <button 
-                                className="px-3 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
-                                onClick={() => {
-                                  const select = document.getElementById(`rank-${participant.id}`);
-                                  if (select.value) {
-                                    const participantName = participant.registration_type === 'INDIVIDUAL' 
-                                      ? participant.participant_name 
-                                      : participant.team_name;
-                                    handleIndividualResultUpdate(
-                                      participant.id, 
-                                      select.value, 
-                                      participantName, 
-                                      participant.temple_name,
-                                      title, // event name
-                                      participant.aadhar_number || 'N/A'
-                                    );
-                                  }
-                                }}
-                              >
-                                Update
-                              </button>
+                            <div className="flex items-center gap-3">
+                              {/* Current Result Display */}
+                              <div className="flex-shrink-0">
+                                {participant.result?.rank ? (
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                    participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                    participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-green-100 text-green-800'
+                                  }`}>
+                                    {participant.result.rank === 'FIRST' ? '🥇 1st' :
+                                     participant.result.rank === 'SECOND' ? '🥈 2nd' :
+                                     participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">No result</span>
+                                )}
+                              </div>
+                              
+                              {/* Rank Selection */}
+                              <div className="flex-1">
+                                <select 
+                                  className={`w-full px-2 py-1 border rounded text-xs ${
+                                    getRankChanges(eventId)[participant.id] 
+                                      ? 'border-green-500 bg-green-50' 
+                                      : 'border-[#F8DFBE]'
+                                  }`}
+                                  value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
+                                  onChange={(e) => {
+                                    const newRank = e.target.value;
+                                    if (newRank) {
+                                      setRankChange(eventId, participant.id, newRank);
+                                    } else {
+                                      // Remove from changes if cleared
+                                      const currentChanges = getRankChanges(eventId);
+                                      const { [participant.id]: removed, ...rest } = currentChanges;
+                                      setRankChanges(prev => ({
+                                        ...prev,
+                                        [eventId]: rest
+                                      }));
+                                    }
+                                  }}
+                                >
+                                  <option value="">Select Rank</option>
+                                  <option value="FIRST">🥇 1st Place</option>
+                                  <option value="SECOND">🥈 2nd Place</option>
+                                  <option value="THIRD">🥉 3rd Place</option>
+                                  <option value="CLEAR">Clear Result</option>
+                                </select>
+                              </div>
                             </div>
                           </td>
                         </tr>
@@ -1489,6 +1771,18 @@ const StaffPanel = () => {
                         eventId={event.id}
                         ageCategory={ageCategory}
                         gender={gender}
+                        isOpen={getCollapsibleState(event.id)}
+                        setIsOpen={(isOpen) => setCollapsibleState(event.id, isOpen)}
+                        getEventParticipants={getEventParticipants}
+                        setEventParticipants={setEventParticipants}
+                        getLoadingParticipants={getLoadingParticipants}
+                        setLoadingParticipantsState={setLoadingParticipantsState}
+                        getParticipantError={getParticipantError}
+                        setParticipantError={setParticipantError}
+                        getRankChanges={getRankChanges}
+                        setRankChange={setRankChange}
+                        clearRankChanges={clearRankChanges}
+                        handleBulkResultUpdate={handleBulkResultUpdate}
                       />
                     ))}
                   </div>
@@ -3219,31 +3513,49 @@ const StaffPanel = () => {
             </div>
           )}
           
-          <div className="flex justify-end gap-4">
-            <button
-              onClick={closeModal}
-              className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                if (modalType === 'confirm') {
-                  if (pendingUpdate && pendingUpdate.participantName) {
-                    // Individual result update
-                    executeIndividualResultUpdate();
-                  } else if (pendingUpdate && pendingUpdate.templeName) {
-                    // Team result update
-                    executeTeamResultUpdate();
+          {/* Only show buttons for non-success modals */}
+          {modalType !== 'success' && (
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={closeModal}
+                className="bg-gray-200 px-4 py-2 rounded hover:bg-gray-300 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Confirm button clicked, modalType:', modalType, 'pendingUpdate:', pendingUpdate);
+                  if (modalType === 'confirm') {
+                    if (pendingUpdate && pendingUpdate.participantName) {
+                      // Individual result update
+                      console.log('Calling executeIndividualResultUpdate');
+                      executeIndividualResultUpdate();
+                    } else if (pendingUpdate && pendingUpdate.templeName) {
+                      // Team result update
+                      console.log('Calling executeTeamResultUpdate');
+                      executeTeamResultUpdate();
+                    } else if (pendingUpdate && pendingUpdate.eventId) {
+                      // Bulk result update
+                      console.log('Calling executeBulkResultUpdate');
+                      executeBulkResultUpdate();
+                    }
+                  } else {
+                    closeModal();
                   }
-                }
-                closeModal();
-              }}
-              className={`${getModalButtonColor()} text-white px-4 py-2 rounded transition`}
-            >
-              Confirm
-            </button>
-          </div>
+                }}
+                className={`${getModalButtonColor()} text-white px-4 py-2 rounded transition`}
+              >
+                Confirm
+              </button>
+            </div>
+          )}
+          
+          {/* Show auto-close message for success modals */}
+          {modalType === 'success' && (
+            <div className="text-center text-xs text-gray-500 mt-2">
+              This message will close automatically...
+            </div>
+          )}
         </div>
       </div>
     );

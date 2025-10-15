@@ -3,6 +3,11 @@ import React from 'react';
 const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount, isAdmin = false, updatingStatus = false }) => {
     if (!participant) return null;
 
+    // Check if this participant's age category should be excluded from action buttons
+    const excludedAgeCategories = ['0-5', '6-10', '61-90'];
+    const participantAgeCategory = participant.event?.age_category?.name || '';
+    const isExcludedAgeCategory = excludedAgeCategories.includes(participantAgeCategory);
+
     const handleStatusUpdate = (newStatus) => {
         if (onStatusUpdate) {
             onStatusUpdate(newStatus);
@@ -29,6 +34,11 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
     );
 
     const getActionButtons = () => {
+        // Don't show action buttons for excluded age categories
+        if (isExcludedAgeCategory) {
+            return <div className="text-sm text-gray-500 italic">Auto-approved</div>;
+        }
+
         if (updatingStatus) {
             return <div className="text-sm text-gray-500 italic">Updating...</div>;
         }
@@ -85,6 +95,7 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
         if (showTempleAdminButtons) {
             return (
                 <div className="flex gap-2">
+                    {/* Accept button for PENDING participants - only if less than 3 accepted */}
                     {participant.status === 'PENDING' && canAcceptMore && (
                         <button
                             onClick={() => handleStatusUpdate('ACCEPTED')}
@@ -93,7 +104,17 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
                             Accept
                         </button>
                     )}
-                    {(participant.status === 'PENDING' || canRejectApproved) && (
+                    {/* Accept button for REJECTED participants - only if less than 3 accepted */}
+                    {participant.status === 'DECLINED' && canAcceptMore && (
+                        <button
+                            onClick={() => handleStatusUpdate('ACCEPTED')}
+                            className="text-sm bg-green-500 text-white px-3 py-1.5 rounded-md hover:bg-green-600 transition-colors"
+                        >
+                            Accept
+                        </button>
+                    )}
+                    {/* Reject button for PENDING participants */}
+                    {participant.status === 'PENDING' && (
                         <button
                             onClick={() => handleStatusUpdate('DECLINED')}
                             className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors"
@@ -101,9 +122,25 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
                             Reject
                         </button>
                     )}
+                    {/* Reject button for ACCEPTED participants - show when there are 3 accepted (to make room) */}
+                    {participant.status === 'ACCEPTED' && !canAcceptMore && (
+                        <button
+                            onClick={() => handleStatusUpdate('DECLINED')}
+                            className="text-sm bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 transition-colors"
+                        >
+                            Reject
+                        </button>
+                    )}
+                    {/* Show message for PENDING participants when limit is reached */}
                     {participant.status === 'PENDING' && !canAcceptMore && (
                         <div className="text-sm text-gray-500 italic">
-                            
+                            Limit reached (3/3)
+                        </div>
+                    )}
+                    {/* Show message for REJECTED participants when limit is reached */}
+                    {participant.status === 'DECLINED' && !canAcceptMore && (
+                        <div className="text-sm text-gray-500 italic">
+                            Limit reached (3/3)
                         </div>
                     )}
                 </div>

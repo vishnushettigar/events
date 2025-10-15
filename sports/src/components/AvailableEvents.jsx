@@ -14,6 +14,10 @@ const AvailableEvents = () => {
   const [eventToUnregister, setEventToUnregister] = useState(null);
   const [cancelSuccess, setCancelSuccess] = useState(false);
   const [showPointsTable, setShowPointsTable] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingEvent, setPendingEvent] = useState(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipEventId, setTooltipEventId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -84,6 +88,12 @@ const AvailableEvents = () => {
 
         setShowModal(false);
         setSelectedEvent(null);
+
+        // Show pending modal if status is PENDING
+        if (responseData.status === 'PENDING') {
+          setPendingEvent(selectedEvent);
+          setShowPendingModal(true);
+        }
       } catch (error) {
         console.error('Registration error:', error.message);
         
@@ -148,6 +158,21 @@ const AvailableEvents = () => {
   const handleCancel = () => {
     setShowModal(false);
     setSelectedEvent(null);
+  };
+
+  const handlePendingModalClose = () => {
+    setShowPendingModal(false);
+    setPendingEvent(null);
+  };
+
+  const handleTooltipShow = (eventId) => {
+    setTooltipEventId(eventId);
+    setShowTooltip(true);
+  };
+
+  const handleTooltipHide = () => {
+    setShowTooltip(false);
+    setTooltipEventId(null);
   };
 
   const getStatusDisplay = (status) => {
@@ -247,7 +272,7 @@ const AvailableEvents = () => {
               onClick={() => setShowPointsTable(!showPointsTable)}
               className='bg-[#D35D38] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#B84A2A] transition-colors shadow-md flex items-center gap-2'
             >
-              <span>🏛️</span>
+              
               {showPointsTable ? 'Hide Points Table' : 'View Points Table'}
             </button>
           </div>
@@ -269,19 +294,47 @@ const AvailableEvents = () => {
           const eventAgeCategory = event.age_category?.name || '';
           const isExcluded = excludedAgeCategories.includes(eventAgeCategory);
 
-          // Count only ACCEPTED and PENDING registrations toward the limit, excluding the above age categories
+          // Count ALL registrations (ACCEPTED, PENDING, DECLINED) toward the limit, excluding the above age categories
           const activeRegistrations = events.filter(e => 
             !excludedAgeCategories.includes(e.age_category?.name || '') &&
-            e.is_registered && 
-            (e.registration_status === 'ACCEPTED' || e.registration_status === 'PENDING')
+            e.is_registered
           ).length;
           const isMaxRegistrationsReached = activeRegistrations >= 3 && !isExcluded;
           const isDisabled = isMaxRegistrationsReached && !event.is_registered;
           const statusDisplay = getStatusDisplay(event.registration_status);
 
           return (
-            <div key={event.id} className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-semibold mb-2 text-[#2A2A2A]">{event.name}</h3>
+            <div key={event.id} className="bg-white rounded-lg shadow p-6 relative">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xl font-semibold text-[#2A2A2A]">{event.name}</h3>
+                {(event.registration_status === 'PENDING' || event.registration_status === 'DECLINED') && (
+                  <div className="relative">
+                    <button
+                      onMouseEnter={() => handleTooltipShow(event.id)}
+                      onMouseLeave={handleTooltipHide}
+                      onClick={() => {
+                        if (showTooltip && tooltipEventId === event.id) {
+                          handleTooltipHide();
+                        } else {
+                          handleTooltipShow(event.id);
+                        }
+                      }}
+                      className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm font-bold flex items-center justify-center hover:bg-blue-600 transition-colors"
+                    >
+                      i
+                    </button>
+                    {showTooltip && tooltipEventId === event.id && (
+                      <div className="absolute right-0 top-8 w-64 bg-gray-800 text-white text-sm rounded-lg p-3 shadow-lg z-10">
+                        <div className="absolute -top-1 right-3 w-2 h-2 bg-gray-800 transform rotate-45"></div>
+                        {event.registration_status === 'PENDING' 
+                          ? "Three participants already registered for this event. You can wait or contact temple admin for confirming registration."
+                          : "Registration Rejected. Please choose another event or contact temple admin."
+                        }
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               {/* <div className="space-y-2 mb-4">
                 <p className="text-[#5A5A5A]">
                   <span className="font-medium">Type:</span> {event.type}
@@ -301,14 +354,12 @@ const AvailableEvents = () => {
                   <div className={`px-3 py-2 rounded text-sm flex-1 text-center ${statusDisplay.className}`}>
                     {statusDisplay.text}
                   </div>
-                  {event.registration_status !== 'DECLINED' && (
-                    <button
-                      onClick={() => handleUnregister(event)}
-                      className="px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors text-sm whitespace-nowrap"
-                    >
-                      Cancel 
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleUnregister(event)}
+                    className="px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600 transition-colors text-sm whitespace-nowrap"
+                  >
+                    Cancel 
+                  </button>
                 </div>
               ) : (
                 <button
@@ -396,6 +447,41 @@ const AvailableEvents = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Pending Registration Modal */}
+      {showPendingModal && pendingEvent && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-md">
+            <div className="text-center">
+              <div className="text-yellow-500 text-4xl mb-4">⏳</div>
+              <h2 className="text-lg font-semibold mb-4 text-yellow-600">Registration Pending</h2>
+              <p className="text-gray-700 mb-4">
+                Three participants are already registered for <span className="font-bold">{pendingEvent.name}</span>.
+              </p>
+              <p className="text-sm text-gray-600 mb-6">
+                You can wait for temple admin approval or contact your temple admin to confirm your registration.
+              </p>
+              {userInfo && userInfo.temple_admin_name && userInfo.temple_admin_phone && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                  <h3 className="font-semibold text-blue-800 mb-2">Contact Temple Admin:</h3>
+                  <p className="text-blue-700">
+                    <span className="font-medium">{userInfo.temple_admin_name}</span>
+                  </p>
+                  <p className="text-blue-700">
+                    <span className="font-medium">Phone:</span> {userInfo.temple_admin_phone}
+                  </p>
+                </div>
+              )}
+              <button
+                onClick={handlePendingModalClose}
+                className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
+              >
+                Understood
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -37,6 +37,9 @@ model Ind_event_registration {
   is_deleted      Boolean   @default(false)
   status          RegistrationStatus @default(PENDING)
   performances    event_performance[]
+
+  @@unique([user_id, event_id, year], name: "unique_user_event_year")
+  @@index([event_id, status, is_deleted], name: "event_status_index")
 }
 
 enum RegistrationStatus {

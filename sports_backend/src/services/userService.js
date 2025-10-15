@@ -80,7 +80,7 @@ async function login(username, password) {
     temple_id: user.profile.temple_id 
       },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '1m' }
     );
 
     return {

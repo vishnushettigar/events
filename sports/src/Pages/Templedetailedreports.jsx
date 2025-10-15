@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import { userAPI } from '../utils/api';
+import authManager from '../utils/authManager';
 
 const Templedetailedreports = () => {
   const [searchParams] = useSearchParams();
@@ -40,6 +41,15 @@ const Templedetailedreports = () => {
     };
 
     fetchTempleDetailedReport();
+
+    // Listen for global logout events
+    const handleAuthLogout = () => {
+      console.log('Templedetailedreports: Received authLogout event - redirecting to login');
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
   }, [searchParams]);
   // Loading State
   if (loading) {

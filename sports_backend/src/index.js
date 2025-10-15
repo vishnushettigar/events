@@ -29,6 +29,7 @@ const corsOptions = {
     
     const allowedOrigins = [
       'http://localhost',
+      'https://app.shettigarevents.com',
       'http://ec2-13-201-3-9.ap-south-1.compute.amazonaws.com',
       'http://localhost:80',
       'http://localhost:3000',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 
 import Sponsors from "../components/Sponsers";
 import Rules from "../components/Rules";
@@ -14,16 +14,24 @@ import EventDetails from "../components/EventDetails";
 import { useLanguage } from "../contexts/LanguageContext";
 import SportsHistoryMarquee from "../components/SportsHistoryMarquee";
 import SportsHistoryHome from "../components/SportsHistoryHome";
+import { useAuth } from "../hooks/useAuth";
+import authManager from "../utils/authManager";
 
 const Home = () => {
   const { isEnglish } = useLanguage();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
+  
+  // Use custom auth hook with periodic checking enabled
+  const { isLoggedIn } = useAuth(true, 30000);
 
+  // Listen for global logout events to ensure UI updates
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
+    const handleAuthLogout = () => {
+      console.log('Home: Received authLogout event - UI should update');
+    };
+
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
   }, []);
 
   const handleMyEventsClick = () => {
@@ -89,7 +97,7 @@ const Home = () => {
                     className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[140px] flex items-center justify-center"
                   >
                     {isEnglish ? "Register" : "ನೋಂದಣಿ"}
-                  </a>      
+                  </a>
                 </>
               )}
               {/* <button

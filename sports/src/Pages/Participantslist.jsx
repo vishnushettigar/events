@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { getCurrentUserTemple } from '../utils/templeUtils'
 import { userAPI } from '../utils/api'
+import authManager from '../utils/authManager'
 
 const Participantslist = () => {
   const [selectedAgeCategory, setSelectedAgeCategory] = useState('');
@@ -36,6 +37,15 @@ const Participantslist = () => {
 
     fetchTempleName();
     fetchParticipants();
+
+    // Listen for global logout events
+    const handleAuthLogout = () => {
+      console.log('Participantslist: Received authLogout event - redirecting to login');
+      window.location.href = '/login';
+    };
+
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
   }, []);
 
   const filteredParticipants = participants.filter(participant => {

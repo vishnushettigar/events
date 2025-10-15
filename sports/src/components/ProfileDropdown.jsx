@@ -3,14 +3,20 @@ import { Link, useNavigate } from 'react-router-dom';
 // import userIcon from '../assets/user-icon.png';
 import { userAPI } from '../utils/api.js';
 import profile from '../assets/profile.svg';
+import { useAuth } from '../hooks/useAuth';
+import { isAuthenticated } from '../utils/tokenUtils';
+import authManager from '../utils/authManager';
 
 const ProfileDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  
+  // Use custom auth hook with periodic checking enabled
+  const { isLoggedIn, user, logout } = useAuth(true, 30000);
 
   // Add click outside handler
   useEffect(() => {
@@ -26,65 +32,80 @@ const ProfileDropdown = () => {
     };
   }, []);
 
-  // Function to check login status
-  const checkLoginStatus = () => {
-    const token = localStorage.getItem('token');
-    setIsLoggedIn(!!token);
-    if (token) {
+  // Fetch user profile when authenticated
+  useEffect(() => {
+    console.log('ProfileDropdown - isLoggedIn:', isLoggedIn);
+    console.log('ProfileDropdown - user:', user);
+    console.log('ProfileDropdown - userInfo:', userInfo);
+    console.log('ProfileDropdown - isAuthenticated():', isAuthenticated());
+    
+    // Use both useAuth hook and direct token check as fallback
+    const isActuallyLoggedIn = isLoggedIn || isAuthenticated();
+    
+    if (isActuallyLoggedIn) {
+      setIsLoadingProfile(true);
       fetchUserProfile();
     } else {
       setUserInfo(null);
+      setIsLoadingProfile(false);
     }
-  };
+  }, [isLoggedIn, user]);
 
-  // Check login status on mount and when token changes
+  // Add periodic check to ensure dropdown stays in sync
   useEffect(() => {
-    checkLoginStatus();
-    
-    // Add event listener for storage changes
-    const handleStorageChange = (e) => {
-      if (e.key === 'token') {
-        checkLoginStatus();
+    const interval = setInterval(() => {
+      const isActuallyLoggedIn = isLoggedIn || isAuthenticated();
+      if (isActuallyLoggedIn && !userInfo && !isLoadingProfile) {
+        console.log('ProfileDropdown - Periodic check: fetching profile');
+        setIsLoadingProfile(true);
+        fetchUserProfile();
       }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn, userInfo, isLoadingProfile]);
+
+  // Listen for global logout events
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      console.log('ProfileDropdown: Received authLogout event');
+      setUserInfo(null);
+      setIsLoadingProfile(false);
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    
-    // Custom event listener for login/logout
-    const handleAuthChange = () => {
-      checkLoginStatus();
-    };
-
-    window.addEventListener('authChange', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('authChange', handleAuthChange);
-    };
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
   }, []);
 
   const fetchUserProfile = async () => {
     try {
       const data = await userAPI.getProfile();
-        setUserInfo(data);
+      setUserInfo(data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
       if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-        // Token is invalid or expired
-        localStorage.removeItem('token');
-        setIsLoggedIn(false);
+        // Token is invalid or expired - the useAuth hook will handle this
         setUserInfo(null);
       }
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    setIsLoggedIn(false);
+    console.log('ProfileDropdown: Handling logout');
+    // Check if we're on the home page
+    const isOnHomePage = window.location.pathname === '/';
+    
+    if (isOnHomePage) {
+      // Stay on home page, don't redirect
+      authManager.logout(false);
+    } else {
+      // Redirect to login for other pages
+      authManager.logout(true);
+    }
+    
     setUserInfo(null);
-    // Dispatch custom event for auth change
-    window.dispatchEvent(new Event('authChange'));
-    navigate('/');
     setShowLogoutModal(false);
     setIsOpen(false);
   };
@@ -105,66 +126,77 @@ const ProfileDropdown = () => {
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-          {isLoggedIn ? (
+          {(isLoggedIn || isAuthenticated()) ? (
             <>
-              <div className="px-4 py-2 border-b border-gray-200">
-                <p className="text-sm font-semibold text-gray-800">
-                  {userInfo?.first_name} {userInfo?.last_name}
-                </p>
-                <p className="text-xs text-gray-500">{userInfo?.temple}</p>
-              </div>
-              <Link
-                to="/myevents"
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsOpen(false)}
-              >
-                My events
-              </Link>
-              {userInfo?.role_id === 5 && (
-                <Link
-                  to="/admin"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <span className="flex items-center">
-                    <span className="mr-2">👑</span>
-                    Admin Panel
-                  </span>
-                </Link>
+              {isLoadingProfile || !userInfo ? (
+                <div className="px-4 py-2 border-b border-gray-200">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#D35D38]"></div>
+                    <span className="ml-2 text-sm text-gray-600">Loading...</span>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <p className="text-sm font-semibold text-gray-800">
+                      {userInfo?.first_name} {userInfo?.last_name}
+                    </p>
+                    <p className="text-xs text-gray-500">{userInfo?.temple}</p>
+                  </div>
+                  <Link
+                    to="/myevents"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    My events
+                  </Link>
+                  {userInfo?.role_id === 5 && (
+                    <Link
+                      to="/admin"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <span className="flex items-center">
+                        <span className="mr-2">👑</span>
+                        Admin Panel
+                      </span>
+                    </Link>
+                  )}
+                  {userInfo?.role_id === 4 && (
+                    <Link
+                      to="/viewer"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <span className="flex items-center">
+                        <span className="mr-2">🛡️</span>
+                        Viewer 
+                      </span>
+                    </Link>
+                  )}
+                  {userInfo?.role_id === 3 && (
+                    <Link
+                      to="/staffpanel"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <span className="flex items-center">
+                        <span className="mr-2">⚙️</span>
+                        Staff Panel
+                      </span>
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowLogoutModal(true);
+                      setIsOpen(false);
+                    }}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    Logout
+                  </button>
+                </>
               )}
-              {userInfo?.role_id === 4 && (
-                <Link
-                                      to="/viewer"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <span className="flex items-center">
-                    <span className="mr-2">🛡️</span>
-                    Viewer 
-                  </span>
-                </Link>
-              )}
-              {userInfo?.role_id === 3 && (
-                <Link
-                  to="/staffpanel"
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <span className="flex items-center">
-                    <span className="mr-2">⚙️</span>
-                    Staff Panel
-                  </span>
-                </Link>
-              )}
-              <button
-                onClick={() => {
-                  setShowLogoutModal(true);
-                  setIsOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                Logout
-              </button>
             </>
           ) : (
             <>

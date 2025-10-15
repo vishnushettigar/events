@@ -1,10 +1,12 @@
 import { calculateAge, getAgeCategory, isExcludedAgeCategory } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
 
-async function registerParticipant(user_id, event_id) {
-  try {
+// Register participant using SQLite's built-in serialization
+async function registerParticipant(user_id, event_id, temple_id) {
+  // Use SQLite's built-in serialization - all writes are automatically serialized
+  return await prisma.$transaction(async (tx) => {
     // First check if user has already registered for 3 events
-    const existingRegistrations = await prisma.ind_event_registration.findMany({
+    const existingRegistrations = await tx.ind_event_registration.findMany({
       where: {
         user_id: user_id,
         is_deleted: false,
@@ -18,27 +20,30 @@ async function registerParticipant(user_id, event_id) {
       throw new Error('You can only register for a maximum of 3 events. Please cancel one of your existing registrations to register for a new event.');
     }
 
-    // Check if user exists and get temple_id
-  const user = await prisma.profile.findUnique({
-    where: { id: user_id },
-    select: { temple_id: true }
-  });
+     // Check if user exists
+    const user = await tx.profile.findUnique({
+      where: { id: user_id },
+      select: { id: true }
+    });
 
-  if (!user) {
-    throw new Error('User not found');
-  }
+    if (!user) {
+      throw new Error('User not found');
+    }
 
-    // Check if event exists
-  const event = await prisma.mst_event.findUnique({
-      where: { id: event_id }
-  });
+    // Check if event exists and get age category
+    const event = await tx.mst_event.findUnique({
+      where: { id: event_id },
+      include: {
+        age_category: true
+      }
+    });
 
-  if (!event) {
-    throw new Error('Event not found');
-  }
+    if (!event) {
+      throw new Error('Event not found');
+    }
 
-    // Check if already registered
-    const existingRegistration = await prisma.ind_event_registration.findFirst({
+    // Check if already registered for this specific event
+    const existingRegistration = await tx.ind_event_registration.findFirst({
       where: {
         user_id: user_id,
         event_id: event_id,
@@ -50,50 +55,74 @@ async function registerParticipant(user_id, event_id) {
       throw new Error('Already registered for this event');
     }
 
-    // Count temple registrations for this event
-    const templeRegistrations = await prisma.ind_event_registration.findMany({
-      where: {
-        event_id: event_id,
-        is_deleted: false,
-        status: {
-          in: ['PENDING', 'ACCEPTED']
-        },
-        user: {
-          temple_id: user.temple_id
+    // Check if this age category has unlimited participants (0-5, 6-10, 61-90)
+    const ageCategoryName = event.age_category.name;
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '61-90'].includes(ageCategoryName);
+    
+    let registration;
+    
+    if (isUnlimitedAgeCategory) {
+      // For unlimited age categories, create registration directly as ACCEPTED
+      registration = await tx.ind_event_registration.create({
+        data: {
+          year: new Date().getFullYear(),
+          user_id: user_id,
+          event_id: event_id,
+          status: 'ACCEPTED',
+          is_deleted: false
         }
-      }
-    });
+      });
+    } else {
+      // For limited age categories, use the existing 3-participant limit logic
+      // Create registration as PENDING first (this always succeeds)
+      registration = await tx.ind_event_registration.create({
+        data: {
+          year: new Date().getFullYear(),
+          user_id: user_id,
+          event_id: event_id,
+          status: 'PENDING',
+          is_deleted: false
+        }
+      });
 
-    // Determine registration status based on temple registration count
-    const status = templeRegistrations.length < 3 ? 'ACCEPTED' : 'PENDING';
+      // Now atomically try to promote to ACCEPTED using a single query
+      // This query will only update if we have less than 3 ACCEPTED registrations
+      const updateResult = await tx.$executeRaw`
+        UPDATE Ind_event_registration 
+        SET status = 'ACCEPTED'
+        WHERE id = ${registration.id}
+          AND (
+            SELECT COUNT(*) 
+            FROM Ind_event_registration ier2
+            JOIN Profile p2 ON ier2.user_id = p2.id
+            WHERE ier2.event_id = ${event_id}
+              AND ier2.is_deleted = false
+              AND ier2.status = 'ACCEPTED'
+              AND p2.temple_id = ${temple_id}
+          ) < 3
+      `;
 
-    // Create registration
-  const registration = await prisma.ind_event_registration.create({
-    data: {
-        year: new Date().getFullYear(),
-        user_id: user_id,
-        event_id: event_id,
-        status: status,
-        is_deleted: false
+      // Check if the update was successful
+      const status = updateResult > 0 ? 'ACCEPTED' : 'PENDING';
+      registration.status = status;
     }
-  });
 
     // Create audit log
-  await prisma.audit_log.create({
-    data: {
+    await tx.audit_log.create({
+      data: {
         user_id: user_id,
         action: 'REGISTER_EVENT',
         table_name: 'Ind_event_registration',
         record_id: registration.id,
         new_value: JSON.stringify(registration)
-    }
-  });
+      }
+    });
 
-  return registration;
-  } catch (error) {
-    console.error('Error in registerParticipant:', error);
-    throw error;
-  }
+    return registration;
+  }, {
+    isolationLevel: 'Serializable',
+    timeout: 10000 // 10 second timeout
+  });
 }
 
 async function unregisterParticipant(user_id, event_id) {
@@ -259,70 +288,122 @@ async function updateEventResult(event_id, result_id, staff_user_id) {
 }
 
 async function updateRegistrationStatus(registration_id, status, temple_admin_id) {
-  // Verify the temple admin exists and has the correct role
-  const admin = await prisma.profile.findUnique({
-    where: { user_id: temple_admin_id },
-    select: { role_id: true, temple_id: true }
-  });
+  // Use transaction to ensure atomicity and prevent race conditions
+  return await prisma.$transaction(async (tx) => {
+    // Verify the temple admin exists and has the correct role
+    const admin = await tx.profile.findUnique({
+      where: { user_id: temple_admin_id },
+      select: { role_id: true, temple_id: true }
+    });
 
-  if (!admin || admin.role_id !== 2) { // Assuming 2 is TEMPLE_ADMIN role_id
-    throw new Error('Unauthorized: Only temple admins can update registration status');
-  }
+    if (!admin || admin.role_id !== 2) { // Assuming 2 is TEMPLE_ADMIN role_id
+      throw new Error('Unauthorized: Only temple admins can update registration status');
+    }
 
-  // Get the registration details
-  const registration = await prisma.ind_event_registration.findUnique({
-    where: { id: registration_id },
-    include: {
-      user: {
-        select: { temple_id: true }
+    // Get the registration details
+    const registration = await tx.ind_event_registration.findUnique({
+      where: { id: registration_id },
+      include: {
+        user: {
+          select: { temple_id: true }
+        },
+        event: {
+          select: { id: true }
+        }
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Registration not found');
+    }
+
+    // Verify the temple admin belongs to the same temple as the user
+    if (admin.temple_id !== registration.user.temple_id) {
+      throw new Error('Unauthorized: Cannot manage registrations from other temples');
+    }
+
+    // Map the status to the correct enum value
+    let mappedStatus;
+    switch (status.toUpperCase()) {
+      case 'APPROVED':
+        mappedStatus = 'ACCEPTED';
+        break;
+      case 'REJECTED':
+        mappedStatus = 'DECLINED';
+        break;
+      case 'PENDING':
+        mappedStatus = 'PENDING';
+        break;
+      default:
+        throw new Error('Invalid status. Must be one of: PENDING, APPROVED, REJECTED');
+    }
+
+    // If trying to set status to ACCEPTED, check the temple limit
+    if (mappedStatus === 'ACCEPTED') {
+      // Get the event's age category to check if it has unlimited participants
+      const eventWithAgeCategory = await tx.mst_event.findUnique({
+        where: { id: registration.event.id },
+        include: {
+          age_category: true
+        }
+      });
+
+      if (!eventWithAgeCategory) {
+        throw new Error('Event not found');
+      }
+
+      const ageCategoryName = eventWithAgeCategory.age_category.name;
+      const isUnlimitedAgeCategory = ['0-5', '6-10', '61-90'].includes(ageCategoryName);
+
+      // Only apply the 3-participant limit for non-unlimited age categories
+      if (!isUnlimitedAgeCategory) {
+        // Count current ACCEPTED registrations for this temple and event
+        const acceptedCount = await tx.ind_event_registration.count({
+          where: {
+            event_id: registration.event.id,
+            is_deleted: false,
+            status: 'ACCEPTED',
+            user: {
+              temple_id: registration.user.temple_id
+            }
+          }
+        });
+
+        // If the current registration is already ACCEPTED, we can keep it as ACCEPTED
+        const isCurrentlyAccepted = registration.status === 'ACCEPTED';
+        
+        // If we already have 3 ACCEPTED registrations and this one isn't currently ACCEPTED, reject the update
+        if (acceptedCount >= 3 && !isCurrentlyAccepted) {
+          throw new Error('Cannot approve registration: Temple already has 3 approved participants for this event');
+        }
       }
     }
+
+    // Update the registration status atomically
+    const updatedRegistration = await tx.ind_event_registration.update({
+      where: { id: registration_id },
+      data: { status: mappedStatus }
+    });
+
+    // Log the action
+    await tx.audit_log.create({
+      data: {
+        user_id: temple_admin_id,
+        action: 'UPDATE_REGISTRATION_STATUS',
+        table_name: 'Ind_event_registration',
+        record_id: registration_id,
+        old_value: JSON.stringify({ status: registration.status }),
+        new_value: JSON.stringify({ status: mappedStatus })
+      }
+    });
+
+    return updatedRegistration;
+  }, {
+    isolationLevel: 'Serializable',
+    timeout: 10000 // 10 second timeout
   });
-
-  if (!registration) {
-    throw new Error('Registration not found');
-  }
-
-  // Verify the temple admin belongs to the same temple as the user
-  if (admin.temple_id !== registration.user.temple_id) {
-    throw new Error('Unauthorized: Cannot manage registrations from other temples');
-  }
-
-  // Map the status to the correct enum value
-  let mappedStatus;
-  switch (status.toUpperCase()) {
-    case 'APPROVED':
-      mappedStatus = 'ACCEPTED';
-      break;
-    case 'REJECTED':
-      mappedStatus = 'DECLINED';
-      break;
-    case 'PENDING':
-      mappedStatus = 'PENDING';
-      break;
-    default:
-      throw new Error('Invalid status. Must be one of: PENDING, APPROVED, REJECTED');
-  }
-
-  const updatedRegistration = await prisma.ind_event_registration.update({
-    where: { id: registration_id },
-    data: { status: mappedStatus }
-  });
-
-  // Log the action
-  await prisma.audit_log.create({
-    data: {
-      user_id: temple_admin_id,
-      action: 'UPDATE_REGISTRATION_STATUS',
-      table_name: 'Ind_event_registration',
-      record_id: registration_id,
-      old_value: JSON.stringify({ status: registration.status }),
-      new_value: JSON.stringify({ status: mappedStatus })
-    }
-  });
-
-  return updatedRegistration;
 }
+
 
 async function getTempleParticipants(temple_id, filters = {}) {
   try {

@@ -6,11 +6,14 @@ import { userAPI } from '../utils/api.js';
 import logo2 from '../assets/pmlogo.jpeg';
 import Toggle from './Toggle';
 import profile from '../assets/profile.svg';
+import { useAuth } from '../hooks/useAuth';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [userInfo, setUserInfo] = useState(null);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    
+    // Use custom auth hook with periodic checking enabled
+    const { isLoggedIn, user } = useAuth(true, 30000);
 
     // Get the current location
     const location = useLocation();
@@ -22,45 +25,27 @@ const Navbar = () => {
         setIsMenuOpen(!isMenuOpen);
     };
 
-    // Check login status and fetch user info
+    // Fetch user profile when authenticated
     useEffect(() => {
-        const checkLoginStatus = () => {
-            const token = localStorage.getItem('token');
-            setIsLoggedIn(!!token);
-            if (token) {
-                fetchUserProfile();
-            } else {
+        if (isLoggedIn && user) {
+            fetchUserProfile();
+        } else {
+            setUserInfo(null);
+        }
+    }, [isLoggedIn, user]);
+
+    const fetchUserProfile = async () => {
+        try {
+            const data = await userAPI.getProfile();
+            setUserInfo(data);
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+            if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                // Token is invalid or expired - the useAuth hook will handle this
                 setUserInfo(null);
             }
-        };
-
-        const fetchUserProfile = async () => {
-            try {
-                const data = await userAPI.getProfile();
-                setUserInfo(data);
-            } catch (error) {
-                // console.error('Error fetching user profile:', error);
-                if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-                    localStorage.removeItem('token');
-                    setIsLoggedIn(false);
-                    setUserInfo(null);
-                }
-            }
-        };
-
-        checkLoginStatus();
-        
-        // Add event listener for auth changes
-        const handleAuthChange = () => {
-            checkLoginStatus();
-        };
-
-        window.addEventListener('authChange', handleAuthChange);
-
-        return () => {
-            window.removeEventListener('authChange', handleAuthChange);
-        };
-    }, []);
+        }
+    };
 
     // Check if user is Temple Admin (role_id = 2)
     const isTempleAdmin = userInfo && userInfo.role_id === 2;

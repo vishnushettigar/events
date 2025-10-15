@@ -753,7 +753,7 @@ router.get('/temple/:templeId', async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/temples', authenticate, async (req, res) => {
+router.get('/temples', async (req, res) => {
     try {
         const temples = await prisma.mst_temple.findMany({
             where: {

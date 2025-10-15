@@ -218,3 +218,9 @@ CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 -- CreateIndex
 CREATE INDEX "event_schedule_event_id_idx" ON "event_schedule"("event_id");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "unique_user_event_year" ON "Ind_event_registration"("user_id", "event_id", "year");
+
+-- CreateIndex
+CREATE INDEX "event_status_index" ON "Ind_event_registration"("event_id", "status", "is_deleted");
+

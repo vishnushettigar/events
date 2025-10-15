@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { userAPI } from '../utils/api.js';
+import { isAuthenticated } from '../utils/tokenUtils';
+import authManager from '../utils/authManager';
 
 const Myevents = () => {
   const [userInfo, setUserInfo] = useState(null);
@@ -13,8 +15,8 @@ const Myevents = () => {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
+        // Check if user is authenticated with valid token
+        if (!isAuthenticated()) {
           navigate('/login');
           return;
         }
@@ -24,9 +26,9 @@ const Myevents = () => {
         setUserRole(data.role_id);
         setLoading(false);
       } catch (err) {
-        // console.error('Error fetching user info:', err);
+        console.error('Error fetching user info:', err);
         if (err.message.includes('401') || err.message.includes('Unauthorized')) {
-          localStorage.removeItem('token');
+          // Token is invalid or expired - redirect to login
           navigate('/login');
           return;
         }
@@ -36,6 +38,15 @@ const Myevents = () => {
     };
 
     fetchUserInfo();
+
+    // Listen for global logout events
+    const handleAuthLogout = () => {
+      console.log('Myevents: Received authLogout event - redirecting to login');
+      navigate('/login');
+    };
+
+    window.addEventListener('authLogout', handleAuthLogout);
+    return () => window.removeEventListener('authLogout', handleAuthLogout);
   }, [navigate]);
 
   if (loading) {
