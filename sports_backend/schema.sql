@@ -109,7 +109,7 @@ CREATE TABLE "Profile" (
 CREATE TABLE "Settings" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "name" TEXT NOT NULL,
-    "value" INTEGER NOT NULL,
+    "value" TEXT NOT NULL,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "modified_at" DATETIME NOT NULL
 );
@@ -211,9 +211,6 @@ CREATE UNIQUE INDEX "Settings_name_key" ON "Settings"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
 CREATE INDEX "event_schedule_event_id_idx" ON "event_schedule"("event_id");

@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as eventService from '../services/eventService.js';
+import * as systemService from '../services/systemService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import prisma from '../utils/prismaClient.js';
 
@@ -529,6 +530,23 @@ router.get('/team-participants/:registrationId', authenticate, async (req, res) 
   }
 });
 
+// Get team registration details including result
+router.get('/team-registration/:registrationId', authenticate, async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    
+    if (!registrationId || isNaN(parseInt(registrationId))) {
+      return res.status(400).json({ error: 'Valid registration ID is required' });
+    }
+
+    const registration = await eventService.getTeamRegistrationDetails(parseInt(registrationId));
+    res.json(registration);
+  } catch (error) {
+    console.error('Error fetching team registration details:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch team registration details' });
+  }
+});
+
 /**
  * @swagger
  * /events/all-events:
@@ -712,15 +730,24 @@ router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 
 
 // Generate heats for running events
 router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
-  body('event_id').isInt().withMessage('Invalid event ID'),
-  body('lane_count').isInt({ min: 5, max: 8 }).withMessage('Lane count must be between 5 and 8')
+  body('event_id').isInt().withMessage('Invalid event ID')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { event_id, lane_count } = req.body;
+  const { event_id } = req.body;
+
+  // Fetch lane count from settings (create with default if not exists)
+  let lane_count;
+  try {
+    const laneCountSetting = await systemService.ensureSystemSetting('lane_count', 8);
+    lane_count = laneCountSetting.value;
+  } catch (error) {
+    console.error('Error fetching lane count setting:', error);
+    return res.status(500).json({ error: 'Failed to fetch lane count setting' });
+  }
 
   try {
     // Check if event is a running event (100m or 200m)
@@ -780,37 +807,37 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
     let heatSizes = []; // This will store the *target* size of each heat
 
     // =========================================================================
-    // 1. HEAT SIZE CALCULATION (Your simplified logic)
+    // 1. HEAT SIZE CALCULATION (Using lane_count from settings)
     // =========================================================================
     
-    if (totalParticipants <= 8) {
-      // 8 or fewer participants, create one heat
+    if (totalParticipants <= lane_count) {
+      // lane_count or fewer participants, create one heat
       heatSizes.push(totalParticipants);
     } else {
-      let fullHeats = Math.floor(totalParticipants / 8);
-      let remainder = totalParticipants % 8;
+      let fullHeats = Math.floor(totalParticipants / lane_count);
+      let remainder = totalParticipants % lane_count;
       
-      // LOGIC: If remainder is 1, 2, 3, or 4, borrow 8 from one full heat
+      // LOGIC: If remainder is 1, 2, 3, or 4, borrow lane_count from one full heat
       if (remainder > 0 && remainder <= 4) {
         // Ensure we don't end up with negative full heats if remainder is 1-4 and fullHeats is 0
         if (fullHeats > 0) {
-            fullHeats -= 1; // Borrow 8
-            remainder += 8; // Remainder becomes 9, 10, 11, or 12
+            fullHeats -= 1; // Borrow lane_count
+            remainder += lane_count; // Remainder becomes lane_count+1, lane_count+2, lane_count+3, or lane_count+4
         }
       }
       
       // Add all the full heats
       for (let i = 0; i < fullHeats; i++) {
-        heatSizes.push(8);
+        heatSizes.push(lane_count);
       }
       
-      // Handle remaining participants (R will be 0, 5, 6, 7, 9, 10, 11, 12)
+      // Handle remaining participants (R will be 0, 5, 6, 7, lane_count+1, lane_count+2, lane_count+3, lane_count+4)
       if (remainder > 0) {
-        if (remainder <= 8) {
-          // R = 5, 6, 7. One final heat.
+        if (remainder <= lane_count) {
+          // R = 5, 6, 7, or lane_count. One final heat.
           heatSizes.push(remainder);
         } else {
-          // R = 9, 10, 11, 12. Split into two heats as evenly as possible.
+          // R = lane_count+1, lane_count+2, lane_count+3, lane_count+4. Split into two heats as evenly as possible.
           const firstHeatSize = Math.ceil(remainder / 2);
           const secondHeatSize = remainder - firstHeatSize;
           

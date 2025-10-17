@@ -407,8 +407,8 @@ router.get('/profile', authenticate, async (req, res) => {
             age >= category.from_age && age <= category.to_age
         );
 
-        // Get temple admin information
-        const templeAdmin = await prisma.profile.findFirst({
+        // Get all temple admin information
+        const templeAdmins = await prisma.profile.findMany({
             where: {
                 temple_id: user.profile.temple_id,
                 role_id: 2, // TEMPLE_ADMIN role
@@ -428,8 +428,10 @@ router.get('/profile', authenticate, async (req, res) => {
             age_category: matchingAgeCategory ? matchingAgeCategory.name : null,
             temple: user.profile.temple.name,
             role: user.profile.role.name,
-            temple_admin_name: templeAdmin ? `${templeAdmin.first_name} ${templeAdmin.last_name}` : null,
-            temple_admin_phone: templeAdmin?.phone || null
+            temple_admins: templeAdmins.map(admin => ({
+                name: `${admin.first_name} ${admin.last_name}`,
+                phone: admin.phone
+            }))
         };
 
         console.log('Profile found:', profileData);
@@ -541,6 +543,93 @@ router.get('/available-events', authenticate, async (req, res) => {
   } catch (error) {
     console.error('Error fetching available events:', error);
     res.status(500).json({ error: 'Failed to fetch available events' });
+  }
+});
+
+// Get user's team registrations
+router.get('/participant-teams', authenticate, async (req, res) => {
+  try {
+    // Get user's profile
+    const userProfile = await prisma.profile.findUnique({
+      where: { user_id: req.user.id },
+      include: {
+        temple: true
+      }
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    // Get team registrations where user is a member
+    const teamRegistrations = await prisma.team_event_registration.findMany({
+      where: {
+        temple_id: userProfile.temple_id,
+        is_deleted: false,
+        member_user_ids: {
+          contains: userProfile.id.toString()
+        }
+      },
+      include: {
+        event: {
+          include: {
+            event_type: true,
+            age_category: true
+          }
+        },
+        temple: true,
+        event_result: true
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    // Filter to only include registrations where the user is actually a member
+    const userTeamRegistrations = teamRegistrations.filter(registration => {
+      const memberIds = registration.member_user_ids 
+        ? registration.member_user_ids.split(',').map(id => parseInt(id.trim()))
+        : [];
+      return memberIds.includes(userProfile.id);
+    });
+
+    // Format response
+    const formattedRegistrations = userTeamRegistrations.map(registration => {
+      const memberIds = registration.member_user_ids 
+        ? registration.member_user_ids.split(',').map(id => parseInt(id.trim()))
+        : [];
+      
+      return {
+        id: registration.id,
+        event: {
+          id: registration.event.id,
+          name: registration.event.event_type.name,
+          type: registration.event.event_type.type,
+          age_category: registration.event.age_category,
+          gender: registration.event.gender,
+          participant_count: registration.event.event_type.participant_count
+        },
+        temple: {
+          id: registration.temple.id,
+          name: registration.temple.name
+        },
+        status: registration.status,
+        member_count: memberIds.length,
+        created_at: registration.created_at,
+        result: registration.event_result ? {
+          rank: registration.event_result.rank,
+          points: registration.event_result.points
+        } : null
+      };
+    });
+
+    res.json({
+      registrations: formattedRegistrations,
+      total: formattedRegistrations.length
+    });
+  } catch (error) {
+    console.error('Error fetching user team registrations:', error);
+    res.status(500).json({ error: 'Failed to fetch team registrations' });
   }
 });
 

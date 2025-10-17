@@ -767,8 +767,8 @@ router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req,
         try {
           console.log(`Processing temple: ${temple.name} (ID: ${temple.id})`);
           
-          // Get temple admin contact information
-          const templeAdmin = await prisma.profile.findFirst({
+          // Get all temple admin contact information
+          const templeAdmins = await prisma.profile.findMany({
             where: {
               temple_id: temple.id,
               role_id: 2, // TEMPLE_ADMIN role
@@ -869,11 +869,11 @@ router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req,
             accepted_participants: acceptedParticipants,
             pending_participants: pendingParticipants,
             declined_participants: declinedParticipants,
-            temple_admin: templeAdmin ? {
-              name: `${templeAdmin.first_name} ${templeAdmin.last_name || ''}`.trim(),
-              email: templeAdmin.email,
-              phone: templeAdmin.phone
-            } : null
+            temple_admins: templeAdmins.map(admin => ({
+              name: `${admin.first_name} ${admin.last_name || ''}`.trim(),
+              email: admin.email,
+              phone: admin.phone
+            }))
           };
         } catch (templeError) {
           console.error(`Error processing temple ${temple.name}:`, templeError);
@@ -885,7 +885,7 @@ router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req,
             accepted_participants: 0,
             pending_participants: 0,
             declined_participants: 0,
-            temple_admin: null
+            temple_admins: []
           };
         }
       })
@@ -1199,6 +1199,7 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
  */
 router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
+    console.log('Teams API called');
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
     const offset = (page - 1) * limit;
 
@@ -1209,6 +1210,8 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
     if (temple_id) whereClause.temple_id = parseInt(temple_id);
     if (event_id) whereClause.event_id = parseInt(event_id);
     if (status) whereClause.status = status;
+
+    console.log('Where clause:', whereClause);
 
     const teams = await prisma.team_event_registration.findMany({
       where: whereClause,
@@ -1221,7 +1224,9 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
           }
         },
         event: {
-          include: {
+          select: {
+            id: true,
+            gender: true,
             event_type: {
               select: {
                 id: true,
@@ -1253,6 +1258,9 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
       }
     });
 
+    console.log('Teams found:', teams.length);
+    console.log('First team sample:', teams[0] || 'No teams found');
+
     // Add member count and fetch member details for each team
     const teamsWithMemberCount = teams.map(team => {
       const memberIds = team.member_user_ids ? team.member_user_ids.split(',').map(id => parseInt(id)) : [];
@@ -1277,7 +1285,15 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching teams:', error);
-    res.status(500).json({ error: 'Failed to fetch teams' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      error: 'Failed to fetch teams',
+      details: error.message 
+    });
   }
 });
 

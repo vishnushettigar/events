@@ -12,9 +12,9 @@ async function getSystemSettings() {
   return settings;
 }
 
-async function updateSystemSetting(id, value) {
+async function updateSystemSetting(name, value) {
   const setting = await prisma.settings.update({
-    where: { id },
+    where: { name },
     data: { value }
   });
 
@@ -25,6 +25,27 @@ async function updateSystemSetting(id, value) {
     }
   });
 
+  return setting;
+}
+
+async function getSystemSetting(name) {
+  const setting = await prisma.settings.findUnique({
+    where: { name }
+  });
+  return setting;
+}
+
+async function ensureSystemSetting(name, defaultValue) {
+  let setting = await prisma.settings.findUnique({
+    where: { name }
+  });
+  
+  if (!setting) {
+    setting = await prisma.settings.create({
+      data: { name, value: defaultValue }
+    });
+  }
+  
   return setting;
 }
 
@@ -120,6 +141,8 @@ async function deleteBackup(backupPath) {
 
 export {
   getSystemSettings,
+  getSystemSetting,
+  ensureSystemSetting,
   updateSystemSetting,
   createBackup,
   listBackups,

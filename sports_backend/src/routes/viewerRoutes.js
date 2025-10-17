@@ -424,7 +424,9 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
           }
         },
         event: {
-          include: {
+          select: {
+            id: true,
+            gender: true,
             event_type: {
               select: {
                 id: true,
@@ -1022,8 +1024,8 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
         try {
           console.log(`Processing temple: ${temple.name} (ID: ${temple.id})`);
           
-          // Get temple admin contact information
-          const templeAdmin = await prisma.profile.findFirst({
+          // Get all temple admin contact information
+          const templeAdmins = await prisma.profile.findMany({
             where: {
               temple_id: temple.id,
               role_id: 2, // TEMPLE_ADMIN role
@@ -1124,11 +1126,11 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
             accepted_participants: acceptedParticipants,
             pending_participants: pendingParticipants,
             declined_participants: declinedParticipants,
-            temple_admin: templeAdmin ? {
-              name: `${templeAdmin.first_name} ${templeAdmin.last_name || ''}`.trim(),
-              email: templeAdmin.email,
-              phone: templeAdmin.phone
-            } : null
+            temple_admins: templeAdmins.map(admin => ({
+              name: `${admin.first_name} ${admin.last_name || ''}`.trim(),
+              email: admin.email,
+              phone: admin.phone
+            }))
           };
         } catch (templeError) {
           console.error(`Error processing temple ${temple.name}:`, templeError);
@@ -1140,7 +1142,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
             accepted_participants: 0,
             pending_participants: 0,
             declined_participants: 0,
-            temple_admin: null
+            temple_admins: []
           };
         }
       })

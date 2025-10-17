@@ -221,14 +221,17 @@ async function main() {
     { event_type_id: 11, age_category_id: 9, gender: 'MIXED', is_deleted: false, is_closed: false },
   
     // Team games category
-    { event_type_id: 12, age_category_id: 10, gender: 'MIXED', is_deleted: false, is_closed: false }, // Couple Relay
-    { event_type_id: 13, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Relay
+    // Couple Relay mixed includes both MALE and FEMALE to participate together .
+    { event_type_id: 12, age_category_id: 10, gender: 'MIXED', is_deleted: false, is_closed: false }, 
+    // Relay for both MALE and FEMALE.
+    { event_type_id: 13, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  
     { event_type_id: 13, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 14, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Volleyball
-    { event_type_id: 14, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 15, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Throwball
+    // Volleyball for MALE only
+    { event_type_id: 14, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  
+     // Throwball for FEMALE only
     { event_type_id: 15, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    { event_type_id: 16, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  // Tug of War
+    // Tug of War for both MALE and FEMALE.
+    { event_type_id: 16, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  
     { event_type_id: 16, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
   ];
   
@@ -326,6 +329,19 @@ async function main() {
         data: result
       });
     }
+
+  // Seed system settings
+  const settings = [
+    { name: 'lane_count', value: 8 }
+  ];
+
+  for (const setting of settings) {
+    await prisma.settings.upsert({
+      where: { name: setting.name },
+      update: { value: setting.value },
+      create: setting
+    });
+  }
 
   console.log('Database has been seeded. 🌱');
 }

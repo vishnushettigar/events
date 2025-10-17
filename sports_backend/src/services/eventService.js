@@ -1417,6 +1417,36 @@ async function getTeamParticipants(registrationId) {
   }
 }
 
+// Get team registration details including result
+async function getTeamRegistrationDetails(registrationId) {
+  try {
+    console.log('Fetching team registration details for:', registrationId);
+
+    const registration = await prisma.team_event_registration.findUnique({
+      where: { id: registrationId },
+      include: {
+        temple: true,
+        event_result: {
+          select: {
+            rank: true,
+            points: true
+          }
+        }
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Team registration not found');
+    }
+
+    console.log('Found team registration details:', registration);
+    return registration;
+  } catch (error) {
+    console.error('Error in getTeamRegistrationDetails:', error);
+    throw error;
+  }
+}
+
 export {
   registerParticipant,
   unregisterParticipant,
@@ -1435,5 +1465,6 @@ export {
   updateTeamEventResult,
   getEventResultId,
   getEventResultIdWithZeroPoints,
-  getTeamParticipants
+  getTeamParticipants,
+  getTeamRegistrationDetails
 }; 
