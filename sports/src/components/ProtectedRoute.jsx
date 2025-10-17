@@ -75,8 +75,8 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
           <h1 className="text-2xl font-bold text-[#2A2A2A] mb-2">Access Denied</h1>
           <p className="text-[#5A5A5A] mb-4">
             {requiredRole 
-              ? `You need ${requiredRole} privileges to access this page.`
-              : 'You need to be logged in to access this page.'
+              ? `You dont have required privileges to access this page.`
+              : 'You dont have required privileges to access this page.'
             }
           </p>
           <div className="space-y-2">

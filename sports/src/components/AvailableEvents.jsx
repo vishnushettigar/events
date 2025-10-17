@@ -18,6 +18,10 @@ const AvailableEvents = () => {
   const [pendingEvent, setPendingEvent] = useState(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipEventId, setTooltipEventId] = useState(null);
+  const [teamRegistrations, setTeamRegistrations] = useState([]);
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [selectedTeamRegistration, setSelectedTeamRegistration] = useState(null);
+  const [teamParticipants, setTeamParticipants] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +45,17 @@ const AvailableEvents = () => {
         // Then fetch available events
         const eventsData = await eventAPI.getAvailableEvents();
         setEvents(eventsData.events);
+
+        // Fetch user's team registrations
+        try {
+          const teamData = await userAPI.getTeamRegistrations();
+          setTeamRegistrations(teamData.registrations);
+        } catch (teamError) {
+          console.error('Error fetching team registrations:', teamError);
+          // Don't fail the entire component if team registrations fail
+          setTeamRegistrations([]);
+        }
+
         setLoading(false);
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -175,6 +190,25 @@ const AvailableEvents = () => {
     setTooltipEventId(null);
   };
 
+  const handleViewTeam = async (teamRegistration) => {
+    setSelectedTeamRegistration(teamRegistration);
+    setShowTeamModal(true);
+    
+    try {
+      const participants = await eventAPI.getTeamParticipants(teamRegistration.id);
+      setTeamParticipants(participants);
+    } catch (error) {
+      console.error('Error fetching team participants:', error);
+      setTeamParticipants([]);
+    }
+  };
+
+  const handleCloseTeamModal = () => {
+    setShowTeamModal(false);
+    setSelectedTeamRegistration(null);
+    setTeamParticipants([]);
+  };
+
   const getStatusDisplay = (status) => {
     switch (status) {
       case 'ACCEPTED':
@@ -226,14 +260,23 @@ const AvailableEvents = () => {
             
             
             {userInfo && (
-              <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 pt-6'>
-                <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center'>
-                  <h2 className='text-sm sm:text-base font-semibold'>Point of contact for {userInfo.temple}:</h2>
-                  <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
-                    <span className='font-medium'>{userInfo.temple_admin_name || 'Not available'}</span>
-                    <span className='font-medium'>{userInfo.temple_admin_phone || 'Not available'}</span>
+              <div className='flex flex-col gap-2 sm:gap-4 pt-6'>
+                <h2 className='text-sm sm:text-base font-semibold'>Point of contact for {userInfo.temple}:</h2>
+                {userInfo.temple_admins && userInfo.temple_admins.length > 0 ? (
+                  <div className='flex flex-col gap-2'>
+                    {userInfo.temple_admins.map((admin, index) => (
+                      <div key={index} className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
+                        <span className='font-medium'>{admin.name || 'Not available'}</span>
+                        <span className='font-medium'>{admin.phone || 'Not available'}</span>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                ) : (
+                  <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
+                    <span className='font-medium'>Not available</span>
+                    <span className='font-medium'>Not available</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -335,20 +378,6 @@ const AvailableEvents = () => {
                   </div>
                 )}
               </div>
-              {/* <div className="space-y-2 mb-4">
-                <p className="text-[#5A5A5A]">
-                  <span className="font-medium">Type:</span> {event.type}
-                </p>
-                <p className="text-[#5A5A5A]">
-                  <span className="font-medium">Age Category:</span> {event.age_category.name}
-                </p>
-                <p className="text-[#5A5A5A]">
-                  <span className="font-medium">Gender:</span> {event.gender}
-                </p>
-                <p className="text-[#5A5A5A]">
-                  <span className="font-medium">Participants:</span> {event.participant_count}
-                </p>
-              </div> */}
               {event.is_registered ? (
                 <div className="flex items-center gap-2">
                   <div className={`px-3 py-2 rounded text-sm flex-1 text-center ${statusDisplay.className}`}>
@@ -379,6 +408,106 @@ const AvailableEvents = () => {
           );
         })}
       </div>
+
+      {/* Team Events Section */}
+      {teamRegistrations && teamRegistrations.length > 0 && (
+        <div className="mb-8 mt-12">
+          <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">My Team Events</h2>
+          <div className="space-y-4">
+            {teamRegistrations.map((registration) => {
+              const statusDisplay = getStatusDisplay(registration.status);
+              return (
+                <div key={registration.id} className="bg-white rounded-lg shadow p-4 sm:p-6">
+                  {/* Mobile Layout */}
+                  <div className="block sm:hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-[#2A2A2A]">{registration.event.name}</h3>
+                      <div className={`px-2 py-1 rounded text-xs ${statusDisplay.className}`}>
+                        {statusDisplay.text}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-[#5A5A5A]">Gender:</span>
+                        <span className="font-medium">
+                          {registration.event.gender === 'M' ? 'Male' : 
+                           registration.event.gender === 'F' ? 'Female' : 
+                           registration.event.gender}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-[#5A5A5A]">Team Size:</span>
+                        <span className="font-medium">{registration.member_count} members</span>
+                      </div>
+                      {registration.result && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-[#5A5A5A]">Result:</span>
+                          <span className="font-medium">
+                            Rank: {registration.result.rank} 
+                            {registration.result.points && ` (${registration.result.points} pts)`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <button
+                      onClick={() => handleViewTeam(registration)}
+                      className="w-full px-4 py-2 bg-[#D35D38] text-white rounded hover:bg-[#B84A2E] transition-colors text-sm"
+                    >
+                      View Team Members
+                    </button>
+                  </div>
+
+                  {/* Desktop Layout */}
+                  <div className="hidden sm:block">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-semibold text-[#2A2A2A] mb-2">{registration.event.name}</h3>
+                        <div className="flex flex-wrap gap-6 text-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#5A5A5A]">Gender:</span>
+                            <span className="font-medium">
+                              {registration.event.gender === 'M' ? 'Male' : 
+                               registration.event.gender === 'F' ? 'Female' : 
+                               registration.event.gender}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[#5A5A5A]">Team Size:</span>
+                            <span className="font-medium">{registration.member_count} members</span>
+                          </div>
+                          {registration.result && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#5A5A5A]">Result:</span>
+                              <span className="font-medium">
+                                Rank: {registration.result.rank} 
+                                {registration.result.points && ` (${registration.result.points} pts)`}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className={`px-3 py-1 rounded text-sm ${statusDisplay.className}`}>
+                          {statusDisplay.text}
+                        </div>
+                        <button
+                          onClick={() => handleViewTeam(registration)}
+                          className="px-6 py-2 bg-[#D35D38] text-white rounded hover:bg-[#B84A2E] transition-colors whitespace-nowrap"
+                        >
+                          View Team Members
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Registration Confirmation Modal */}
       {showModal && selectedEvent && (
@@ -464,15 +593,19 @@ const AvailableEvents = () => {
               <p className="text-sm text-gray-600 mb-6">
                 You can wait for temple admin approval or contact your temple admin to confirm your registration.
               </p>
-              {userInfo && userInfo.temple_admin_name && userInfo.temple_admin_phone && (
+              {userInfo && userInfo.temple_admins && userInfo.temple_admins.length > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                  <h3 className="font-semibold text-blue-800 mb-2">Contact Temple Admin:</h3>
-                  <p className="text-blue-700">
-                    <span className="font-medium">{userInfo.temple_admin_name}</span>
-                  </p>
-                  <p className="text-blue-700">
-                    <span className="font-medium">Phone:</span> {userInfo.temple_admin_phone}
-                  </p>
+                  <h3 className="font-semibold text-blue-800 mb-2">Contact Temple Admin{userInfo.temple_admins.length > 1 ? 's' : ''}:</h3>
+                  {userInfo.temple_admins.map((admin, index) => (
+                    <div key={index} className="mb-2 last:mb-0">
+                      <p className="text-blue-700">
+                        <span className="font-medium">{admin.name}</span>
+                      </p>
+                      <p className="text-blue-700">
+                        <span className="font-medium">Phone:</span> {admin.phone || 'Not available'}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               )}
               <button
@@ -480,6 +613,101 @@ const AvailableEvents = () => {
                 className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
               >
                 Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Members Modal */}
+      {showTeamModal && selectedTeamRegistration && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[400px] max-w-2xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#2A2A2A]">
+                Team Members - {selectedTeamRegistration.event.name}
+              </h2>
+              <button
+                onClick={handleCloseTeamModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Age Category:</span>
+                  <span className="ml-2">{selectedTeamRegistration.event.age_category.name}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Gender:</span>
+                  <span className="ml-2">
+                    {selectedTeamRegistration.event.gender === 'M' ? 'Male' : 
+                     selectedTeamRegistration.event.gender === 'F' ? 'Female' : 
+                     selectedTeamRegistration.event.gender}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Status:</span>
+                  <span className={`ml-2 px-2 py-1 rounded text-xs ${getStatusDisplay(selectedTeamRegistration.status).className}`}>
+                    {getStatusDisplay(selectedTeamRegistration.status).text}
+                  </span>
+                </div>
+                {selectedTeamRegistration.result && (
+                  <div>
+                    <span className="font-medium text-[#5A5A5A]">Result:</span>
+                    <span className="ml-2">
+                      Rank: {selectedTeamRegistration.result.rank}
+                      {selectedTeamRegistration.result.points && ` (${selectedTeamRegistration.result.points} pts)`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="font-semibold text-[#2A2A2A] mb-3">Team Members ({teamParticipants.length})</h3>
+              {teamParticipants.length > 0 ? (
+                <div className="space-y-3">
+                  {teamParticipants.map((participant, index) => (
+                    <div key={participant.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-[#D35D38] text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#2A2A2A]">
+                            {participant.first_name} {participant.last_name}
+                          </p>
+                          <p className="text-sm text-[#5A5A5A]">
+                            {participant.phone && `Phone: ${participant.phone}`}
+                            {participant.email && ` • Email: ${participant.email}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-sm text-[#5A5A5A]">
+                        {participant.gender === 'M' ? 'Male' : 
+                         participant.gender === 'F' ? 'Female' : 
+                         participant.gender}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[#5A5A5A]">
+                  <p>No team members found.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleCloseTeamModal}
+                className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
+              >
+                Close
               </button>
             </div>
           </div>

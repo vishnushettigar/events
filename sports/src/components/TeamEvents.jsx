@@ -140,8 +140,8 @@ const TeamEvents = () => {
                 eventTypeName === searchName.replace('4x100', '100 x 4') ||
                 eventTypeName === searchName.replace('100 x 4', '4x100');
             
-            // Handle gender matching - ALL gender events should match any gender
-            const genderMatches = e.gender === gender || e.gender === 'ALL';
+            // Handle gender matching - ALL gender events should match MIXED gender events
+            const genderMatches = e.gender === gender || (gender === 'ALL' && e.gender === 'MIXED');
             
             return matches && genderMatches;
         });
@@ -229,19 +229,29 @@ const TeamEvents = () => {
         }, [playerCount]);
 
         // Fetch temple users for autocomplete
-        const fetchTempleUsers = async (searchTerm) => {
+        const fetchTempleUsers = async (searchTerm, playerIndex) => {
             try {
                 setLoadingSuggestions(true);
                 const response = await userAPI.getTempleUsers();
                 
                 const templeUsers = response;
                 
-                // Filter users whose Aadhaar number starts with the search term
+                // Filter users whose Aadhaar number starts with the search term and match gender
                 const filteredUsers = templeUsers.filter(user => {
                     if (!user.aadhar_number) return false;
                     const aadharStr = user.aadhar_number.toString();
                     const searchStr = searchTerm.toString();
-                    return aadharStr.startsWith(searchStr);
+                    const aadharMatches = aadharStr.startsWith(searchStr);
+                    
+                    // For mixed gender events (ALL), filter by position
+                    if (gender === 'ALL') {
+                        // First player (index 0) should be MALE, second player (index 1) should be FEMALE
+                        const expectedGender = playerIndex === 0 ? 'MALE' : 'FEMALE';
+                        return aadharMatches && user.gender === expectedGender;
+                    }
+                    
+                    // For specific gender events, filter by gender
+                    return aadharMatches && user.gender === gender;
                 });
                 
                 setSuggestions(filteredUsers);
@@ -254,9 +264,9 @@ const TeamEvents = () => {
         };
 
         // Debounced search for suggestions
-        const debouncedFetchSuggestions = useDebounce((searchTerm) => {
+        const debouncedFetchSuggestions = useDebounce((searchTerm, playerIndex) => {
             if (searchTerm.length >= 1) {
-                fetchTempleUsers(searchTerm);
+                fetchTempleUsers(searchTerm, playerIndex);
             } else {
                 setSuggestions([]);
             }
@@ -278,6 +288,27 @@ const TeamEvents = () => {
                     setErrors(prev => {
                         const newState = [...prev];
                         newState[index] = 'User belongs to a different temple';
+                        return newState;
+                    });
+                    return;
+                }
+
+                // For mixed gender events, validate gender based on position
+                if (gender === 'ALL') {
+                    const expectedGender = index === 0 ? 'MALE' : 'FEMALE';
+                    if (user.gender !== expectedGender) {
+                        setErrors(prev => {
+                            const newState = [...prev];
+                            newState[index] = `Position ${index + 1} must be ${expectedGender}`;
+                            return newState;
+                        });
+                        return;
+                    }
+                } else if (user.gender !== gender) {
+                    // For specific gender events, validate gender matches
+                    setErrors(prev => {
+                        const newState = [...prev];
+                        newState[index] = `This event is for ${gender} participants only`;
                         return newState;
                     });
                     return;
@@ -360,7 +391,7 @@ const TeamEvents = () => {
                 });
 
                 // Fetch suggestions
-                debouncedFetchSuggestions(value);
+                debouncedFetchSuggestions(value, index);
 
                 // Only search for exact match if Aadhaar number is 12 digits
                 if (value.length === 12) {
@@ -384,6 +415,27 @@ const TeamEvents = () => {
                     return newState;
                 });
                 return; // Don't set the suggestion if duplicate
+            }
+
+            // For mixed gender events, validate gender based on position
+            if (gender === 'ALL') {
+                const expectedGender = index === 0 ? 'MALE' : 'FEMALE';
+                if (suggestion.gender !== expectedGender) {
+                    setErrors(prev => {
+                        const newState = [...prev];
+                        newState[index] = `Position ${index + 1} must be ${expectedGender}`;
+                        return newState;
+                    });
+                    return; // Don't set the suggestion if gender doesn't match position
+                }
+            } else if (suggestion.gender !== gender) {
+                // For specific gender events, validate gender matches
+                setErrors(prev => {
+                    const newState = [...prev];
+                    newState[index] = `This event is for ${gender} participants only`;
+                    return newState;
+                });
+                return; // Don't set the suggestion if gender doesn't match
             }
 
             setPlayers(prev => {
@@ -487,14 +539,36 @@ const TeamEvents = () => {
 
         const handleEditTeam = (team) => {
             // Set the team data for editing
-            const teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
-                const member = team.members[index];
-                return member ? {
-                    name: `${member.first_name} ${member.last_name || ''}`.trim(),
-                    aadharNumber: member.aadhar_number || '',
-                    profileId: member.id
-                } : { name: '', aadharNumber: '', profileId: '' };
-            });
+            let teamPlayers;
+            
+            if (isMixedGender) {
+                // For mixed gender events, sort members by gender: MALE first, then FEMALE
+                const sortedMembers = team.members.sort((a, b) => {
+                    if (a.gender === 'MALE' && b.gender === 'FEMALE') return -1;
+                    if (a.gender === 'FEMALE' && b.gender === 'MALE') return 1;
+                    return 0;
+                });
+                
+                teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
+                    const member = sortedMembers[index];
+                    return member ? {
+                        name: `${member.first_name} ${member.last_name || ''}`.trim(),
+                        aadharNumber: member.aadhar_number || '',
+                        profileId: member.id
+                    } : { name: '', aadharNumber: '', profileId: '' };
+                });
+            } else {
+                // For single gender events, use original order
+                teamPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' }).map((_, index) => {
+                    const member = team.members[index];
+                    return member ? {
+                        name: `${member.first_name} ${member.last_name || ''}`.trim(),
+                        aadharNumber: member.aadhar_number || '',
+                        profileId: member.id
+                    } : { name: '', aadharNumber: '', profileId: '' };
+                });
+            }
+            
             setPlayers(teamPlayers);
             setEditingTeamId(team.id);
             setEditMode(true);
@@ -532,10 +606,17 @@ const TeamEvents = () => {
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                        {team.members.map((member, memberIndex) => (
+                                        {team.members
+                                            .sort((a, b) => {
+                                                // Sort members: MALE first, then FEMALE
+                                                if (a.gender === 'MALE' && b.gender === 'FEMALE') return -1;
+                                                if (a.gender === 'FEMALE' && b.gender === 'MALE') return 1;
+                                                return 0;
+                                            })
+                                            .map((member, memberIndex) => (
                                             <div key={member.id} className="text-sm">
                                                 <span className="font-medium text-[#D35D38]">
-                                                    {memberIndex === 0 ? 'MALE' : 'FEMALE'}:
+                                                    {member.gender}:
                                                 </span>
                                                 <span className="ml-2 text-[#2A2A2A]">
                                                     {member.first_name} {member.last_name || ''} ({member.aadhar_number})

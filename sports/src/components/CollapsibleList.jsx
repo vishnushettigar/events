@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Playerscard from './Playerscard';
-import { participantAPI, eventAPI } from '../utils/api.js';
+import AdminHeatViewer from './AdminHeatViewer';
+import { participantAPI, eventAPI, systemAPI } from '../utils/api.js';
 
-const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false }) => {
+const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false, ageCategory = "Admin View", gender = "All" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localParticipants, setLocalParticipants] = useState(participants);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -12,6 +13,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
   const [regeneratingHeats, setRegeneratingHeats] = useState(false);
   const [heatsGenerated, setHeatsGenerated] = useState(false);
   const [heatError, setHeatError] = useState(null);
+  const [loadingLaneCount, setLoadingLaneCount] = useState(false);
 
   // Update local participants when props change
   useEffect(() => {
@@ -38,6 +40,27 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
     return eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
   };
 
+  // Fetch lane count from settings
+  useEffect(() => {
+    const fetchLaneCount = async () => {
+      if (isRunningEvent() && isAdmin) {
+        try {
+          setLoadingLaneCount(true);
+          const setting = await systemAPI.getSetting('lane_count');
+          if (setting && setting.value) {
+            setLaneCount(setting.value);
+          }
+        } catch (error) {
+          console.error('Error fetching lane count setting:', error);
+          // Keep default value of 8 if fetch fails
+        } finally {
+          setLoadingLaneCount(false);
+        }
+      }
+    };
+    fetchLaneCount();
+  }, [isAdmin, title]);
+
   // Check if heats are already generated
   useEffect(() => {
     const checkHeatsGenerated = async () => {
@@ -59,7 +82,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
       setGeneratingHeats(true);
       setHeatError(null);
       
-      const result = await eventAPI.generateHeats(eventId, laneCount);
+      const result = await eventAPI.generateHeats(eventId);
       
       setHeatsGenerated(true);
       setShowHeatGeneration(false);
@@ -240,20 +263,19 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
               {showHeatGeneration && !heatsGenerated && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <label className="text-sm font-medium text-gray-700">Lane Count:</label>
-                    <select
-                      value={laneCount}
-                      onChange={(e) => setLaneCount(parseInt(e.target.value))}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value={5}>5 Lanes</option>
-                      <option value={6}>6 Lanes</option>
-                      <option value={7}>7 Lanes</option>
-                      <option value={8}>8 Lanes</option>
-                    </select>
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700">Lane Count:</label>
+                      {loadingLaneCount ? (
+                        <span className="text-sm text-gray-500">Loading...</span>
+                      ) : (
+                        <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                          {laneCount} Lanes
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={handleGenerateHeats}
-                      disabled={generatingHeats || acceptedCount === 0}
+                      disabled={generatingHeats || acceptedCount === 0 || loadingLaneCount}
                       className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
                     >
                       {generatingHeats ? 'Generating...' : 'Generate Heats'}
@@ -312,6 +334,16 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
                 </div>
               )}
             </div>
+          )}
+
+          {/* Heat Viewer for Admin - Show after heats are generated */}
+          {isRunningEvent() && isAdmin && heatsGenerated && (
+            <AdminHeatViewer 
+              eventId={eventId}
+              eventName={title}
+              ageCategory={ageCategory}
+              gender={gender}
+            />
           )}
           
           {sortedParticipants.length > 0 ? (

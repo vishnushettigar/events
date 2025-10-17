@@ -137,6 +137,7 @@ export const userAPI = {
   getTempleDetailedReport: (templeId) => apiService.get(`/users/temple-detailed-report/${templeId}`),
   getAllTemples: () => apiService.get('/users/temples'),
   getTempleById: (templeId) => apiService.get(`/users/temple/${templeId}`),
+  getTeamRegistrations: () => apiService.get('/users/participant-teams'),
 };
 
 export const eventAPI = {
@@ -156,9 +157,10 @@ export const eventAPI = {
   updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
   getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
   getTeamParticipants: (registrationId) => apiService.get(`/events/team-participants/${registrationId}`),
+  getTeamRegistration: (registrationId) => apiService.get(`/events/team-registration/${registrationId}`),
   
   // Heat management
-  generateHeats: (eventId, laneCount) => apiService.post('/events/generate-heats', { event_id: eventId, lane_count: laneCount }),
+  generateHeats: (eventId) => apiService.post('/events/generate-heats', { event_id: eventId }),
   regenerateHeats: (eventId) => apiService.delete(`/events/regenerate-heats/${eventId}`),
   getHeats: (eventId) => apiService.get(`/events/heats/${eventId}`),
   saveTimings: (eventId, heatNumber, timings) => apiService.put('/events/update-timings', { event_id: eventId, heat_number: heatNumber, timings }),
@@ -201,6 +203,12 @@ export const viewerAPI = {
   getSystemLogs: (limit = 100) => apiService.get('/viewer/system-logs', { limit }),
   createSystemBackup: () => apiService.post('/viewer/system-backup'),
   getRoles: () => apiService.get('/viewer/roles'),
+};
+
+export const systemAPI = {
+  getSettings: () => apiService.get('/system/settings'),
+  getSetting: (name) => apiService.get(`/system/settings/${name}`),
+  updateSetting: (name, value) => apiService.put(`/system/settings/${name}`, { value }),
 };
 
 export default apiService; 

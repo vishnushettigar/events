@@ -1174,6 +1174,8 @@ const ParticipantsManagement = () => {
                       participants={getParticipantsForEvent(event.id)}
                       onParticipantsUpdate={handleParticipantsUpdate}
                       isAdmin={true}
+                      ageCategory={ageCategory}
+                      gender={gender}
                     />
                   ))}
                 </div>
@@ -1277,10 +1279,12 @@ const TeamsManagement = () => {
   const groupTeamsByEvent = () => {
     const grouped = {};
     teams.forEach(team => {
-      const eventKey = `${team.event?.event_type?.name || 'Unknown Event'}`;
+      // Create a unique key that includes gender to separate male/female events
+      const eventKey = `${team.event?.event_type?.name || 'Unknown Event'}_${team.event?.gender || 'UNKNOWN'}_${team.event?.age_category?.id || 'unknown'}`;
+      
       if (!grouped[eventKey]) {
         grouped[eventKey] = {
-          eventName: eventKey,
+          eventName: team.event?.event_type?.name || 'Unknown Event',
           eventType: team.event?.event_type,
           ageCategory: team.event?.age_category,
           gender: team.event?.gender,
@@ -1318,9 +1322,9 @@ const TeamsManagement = () => {
       });
     });
     
-    // Sort events by gender order: MALE first, then FEMALE, then ALL
+    // Sort events by gender order: MALE first, then FEMALE, then MIXED
     const sortedEvents = Object.values(grouped).sort((a, b) => {
-      const genderOrder = { 'MALE': 1, 'FEMALE': 2, 'ALL': 3 };
+      const genderOrder = { 'MALE': 1, 'FEMALE': 2, 'MIXED': 3 };
       const aOrder = genderOrder[a.gender] || 4;
       const bOrder = genderOrder[b.gender] || 4;
       
@@ -1354,7 +1358,7 @@ const TeamsManagement = () => {
         </div>
         <button
           onClick={fetchTeamsData}
-          className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+          className="bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
         >
           Refresh
         </button>
@@ -1375,7 +1379,7 @@ const TeamsManagement = () => {
           <span className="block sm:inline"> {error}</span>
           <button
             onClick={fetchTeamsData}
-            className="mt-2 bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700"
+            className="mt-2 bg-[#D35D38] text-white px-3 py-1 rounded text-sm hover:bg-[#B84A2E]"
           >
             Retry
           </button>
@@ -1390,14 +1394,14 @@ const TeamsManagement = () => {
               // Group events by gender category
               const maleEvents = groupedEvents.filter(event => event.gender === 'MALE');
               const femaleEvents = groupedEvents.filter(event => event.gender === 'FEMALE');
-              const allEvents = groupedEvents.filter(event => event.gender === 'ALL');
+              const mixedEvents = groupedEvents.filter(event => event.gender === 'MIXED');
               
               return (
                 <>
                   {/* Male Events */}
                   {maleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-3 rounded-lg">
+                      <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
                           <span className="mr-2">👨</span>
                           Male Events ({maleEvents.length})
@@ -1406,11 +1410,11 @@ const TeamsManagement = () => {
                       {maleEvents.map((event, eventIndex) => (
                         <div key={`male-${eventIndex}`} className="bg-white rounded-2xl shadow-xl overflow-hidden">
                           {/* Event Header */}
-                          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+                          <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
-                                <div className="flex items-center space-x-4 mt-1 text-blue-100">
+                                <div className="flex items-center space-x-4 mt-1 text-[#F8DFBE]">
                                   <span className="text-sm">
                                     {event.ageCategory?.name || 'All Ages'} • Male
                                   </span>
@@ -1419,7 +1423,7 @@ const TeamsManagement = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-right text-blue-100">
+                              <div className="text-right text-[#F8DFBE]">
                                 <div className="text-2xl font-bold">{event.temples.length}</div>
                                 <div className="text-sm">Temples</div>
                               </div>
@@ -1443,10 +1447,10 @@ const TeamsManagement = () => {
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-100">
                                 {event.temples.map((temple, templeIndex) => (
-                                  <tr key={temple.temple_id} className="hover:bg-blue-50 transition">
-                                    <td className="px-6 py-4 font-semibold text-blue-900">{templeIndex + 1}</td>
+                                  <tr key={temple.temple_id} className="hover:bg-orange-50 transition">
+                                    <td className="px-6 py-4 font-semibold text-[#D35D38]">{templeIndex + 1}</td>
                                     <td className="px-6 py-4">
-                                      <div className="font-semibold text-purple-800">{temple.temple_name}</div>
+                                      <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
                                     </td>
                                     <td className="px-6 py-4 text-gray-600">{temple.temple_code}</td>
                                     <td className="px-6 py-4 text-center">
@@ -1474,7 +1478,7 @@ const TeamsManagement = () => {
                                         )}
                                       </div>
                                     </td>
-                                    <td className="px-6 py-4 text-blue-700 font-bold text-lg">
+                                    <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">
                                       {temple.totalPoints}
                                     </td>
                                     <td className="px-6 py-4">
@@ -1483,7 +1487,7 @@ const TeamsManagement = () => {
                                           onClick={() => {
                                             // TODO: Implement view teams functionality
                                           }}
-                                          className="inline-block px-3 py-1 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition font-semibold text-xs"
+                                          className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                                         >
                                           View Teams
                                         </button>
@@ -1491,7 +1495,7 @@ const TeamsManagement = () => {
                                           onClick={() => {
                                             // TODO: Implement temple details functionality
                                           }}
-                                          className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
+                                          className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
                                         >
                                           Temple Details
                                         </button>
@@ -1510,7 +1514,7 @@ const TeamsManagement = () => {
                   {/* Female Events */}
                   {femaleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-pink-600 to-pink-800 px-6 py-3 rounded-lg">
+                      <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
                           <span className="mr-2">👩</span>
                           Female Events ({femaleEvents.length})
@@ -1519,11 +1523,11 @@ const TeamsManagement = () => {
                       {femaleEvents.map((event, eventIndex) => (
                         <div key={`female-${eventIndex}`} className="bg-white rounded-2xl shadow-xl overflow-hidden">
                           {/* Event Header */}
-                          <div className="bg-gradient-to-r from-pink-600 to-purple-600 px-6 py-4">
+                          <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
-                                <div className="flex items-center space-x-4 mt-1 text-pink-100">
+                                <div className="flex items-center space-x-4 mt-1 text-[#F8DFBE]">
                                   <span className="text-sm">
                                     {event.ageCategory?.name || 'All Ages'} • Female
                                   </span>
@@ -1532,7 +1536,7 @@ const TeamsManagement = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-right text-pink-100">
+                              <div className="text-right text-[#F8DFBE]">
                                 <div className="text-2xl font-bold">{event.temples.length}</div>
                                 <div className="text-sm">Temples</div>
                               </div>
@@ -1556,10 +1560,10 @@ const TeamsManagement = () => {
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-100">
                                 {event.temples.map((temple, templeIndex) => (
-                                  <tr key={temple.temple_id} className="hover:bg-pink-50 transition">
-                                    <td className="px-6 py-4 font-semibold text-blue-900">{templeIndex + 1}</td>
+                                  <tr key={temple.temple_id} className="hover:bg-orange-50 transition">
+                                    <td className="px-6 py-4 font-semibold text-[#D35D38]">{templeIndex + 1}</td>
                                     <td className="px-6 py-4">
-                                      <div className="font-semibold text-purple-800">{temple.temple_name}</div>
+                                      <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
                                     </td>
                                     <td className="px-6 py-4 text-gray-600">{temple.temple_code}</td>
                                     <td className="px-6 py-4 text-center">
@@ -1587,7 +1591,7 @@ const TeamsManagement = () => {
                                         )}
                                       </div>
                                     </td>
-                                    <td className="px-6 py-4 text-blue-700 font-bold text-lg">
+                                    <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">
                                       {temple.totalPoints}
                                     </td>
                                     <td className="px-6 py-4">
@@ -1596,7 +1600,7 @@ const TeamsManagement = () => {
                                           onClick={() => {
                                             // TODO: Implement view teams functionality
                                           }}
-                                          className="inline-block px-3 py-1 bg-pink-600 text-white rounded-lg shadow hover:bg-pink-700 transition font-semibold text-xs"
+                                          className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                                         >
                                           View Teams
                                         </button>
@@ -1604,7 +1608,7 @@ const TeamsManagement = () => {
                                           onClick={() => {
                                             // TODO: Implement temple details functionality
                                           }}
-                                          className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
+                                          className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
                                         >
                                           Temple Details
                                         </button>
@@ -1620,23 +1624,23 @@ const TeamsManagement = () => {
                     </div>
                   )}
 
-                  {/* Mixed/All Gender Events */}
-                  {allEvents.length > 0 && (
+                  {/* Mixed Gender Events */}
+                  {mixedEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-gradient-to-r from-green-600 to-green-800 px-6 py-3 rounded-lg">
+                      <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
                           <span className="mr-2">👥</span>
-                          Mixed Gender Events ({allEvents.length})
+                          Mixed Gender Events ({mixedEvents.length})
                         </h3>
                       </div>
-                      {allEvents.map((event, eventIndex) => (
+                      {mixedEvents.map((event, eventIndex) => (
                         <div key={`all-${eventIndex}`} className="bg-white rounded-2xl shadow-xl overflow-hidden">
                           {/* Event Header */}
-                          <div className="bg-gradient-to-r from-green-600 to-purple-600 px-6 py-4">
+                          <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
                             <div className="flex items-center justify-between">
                               <div>
                                 <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
-                                <div className="flex items-center space-x-4 mt-1 text-green-100">
+                                <div className="flex items-center space-x-4 mt-1 text-[#F8DFBE]">
                                   <span className="text-sm">
                                     {event.ageCategory?.name || 'All Ages'} • Mixed Gender
                                   </span>
@@ -1645,7 +1649,7 @@ const TeamsManagement = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-right text-green-100">
+                              <div className="text-right text-[#F8DFBE]">
                                 <div className="text-2xl font-bold">{event.temples.length}</div>
                                 <div className="text-sm">Temples</div>
                               </div>
@@ -1705,8 +1709,8 @@ const TeamsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Total Events</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{groupedEvents.length}</p>
               </div>
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
-                <span className="text-teal-600 text-xl">🏃</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-orange-600 text-xl">🏃</span>
               </div>
             </div>
           </div>
@@ -1717,8 +1721,8 @@ const TeamsManagement = () => {
                 <p className="text-sm font-medium text-[#5A5A5A]">Total Teams</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">{teams.length}</p>
               </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <span className="text-green-600 text-xl">✅</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-orange-600 text-xl">✅</span>
               </div>
             </div>
           </div>
@@ -1731,8 +1735,8 @@ const TeamsManagement = () => {
                   {teams.reduce((sum, team) => sum + (team.member_count || 0), 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <span className="text-blue-600 text-xl">👥</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-orange-600 text-xl">👥</span>
               </div>
             </div>
           </div>
@@ -1745,8 +1749,8 @@ const TeamsManagement = () => {
                   {teams.reduce((sum, team) => sum + (team.event_result?.points || 0), 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <span className="text-yellow-600 text-xl">🏆</span>
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <span className="text-orange-600 text-xl">🏆</span>
               </div>
             </div>
           </div>
@@ -1777,10 +1781,10 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
   };
 
   return (
-    <tr className="hover:bg-green-50 transition">
-      <td className="px-6 py-4 font-semibold text-blue-900">{index + 1}</td>
+    <tr className="hover:bg-orange-50 transition">
+      <td className="px-6 py-4 font-semibold text-[#D35D38]">{index + 1}</td>
       <td className="px-6 py-4">
-        <div className="font-semibold text-gray-800">{temple.temple_name}</div>
+        <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
         <div className="text-sm text-gray-600">{temple.temple_code}</div>
       </td>
       <td className="px-6 py-4">
@@ -1790,7 +1794,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
           <div className="space-y-1">
             {members.map((member, idx) => (
               <div key={member.id} className="text-sm">
-                <span className="font-medium text-gray-800">
+                <span className="font-medium text-[#2A2A2A]">
                   {member.profile?.first_name} {member.profile?.last_name}
                 </span>
                 <span className="text-gray-500 ml-2">({member.profile?.gender || 'N/A'})</span>
@@ -1835,7 +1839,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
           {team.status || 'PENDING'}
         </span>
       </td>
-      <td className="px-6 py-4 text-blue-700 font-bold text-lg">
+      <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">
         {team.event_result?.points || 0}
       </td>
       <td className="px-6 py-4">
@@ -1844,7 +1848,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
             onClick={() => {
               // TODO: Implement view team details functionality
             }}
-            className="inline-block px-3 py-1 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 transition font-semibold text-xs"
+            className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
           >
             View Details
           </button>
@@ -1852,7 +1856,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
             onClick={() => {
               // TODO: Implement edit team functionality
             }}
-            className="inline-block px-3 py-1 bg-purple-600 text-white rounded-lg shadow hover:bg-purple-700 transition font-semibold text-xs"
+            className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
           >
             Edit Team
           </button>
@@ -1982,21 +1986,25 @@ const TempleManagement = () => {
                         )}
                         
                         {/* Temple Admin Contact Info */}
-                        {temple.temple_admin && (
+                        {temple.temple_admins && temple.temple_admins.length > 0 && (
                           <div>
-                            <div className="text-xs text-gray-500 font-medium">Temple Admin:</div>
-                            <div className="text-[#2A2A2A] font-medium">{temple.temple_admin.name}</div>
-                            {temple.temple_admin.email && (
-                              <div className="text-[#D35D38] text-xs">{temple.temple_admin.email}</div>
-                            )}
-                            {temple.temple_admin.phone && (
-                              <div className="text-[#D35D38] text-xs">{temple.temple_admin.phone}</div>
-                            )}
+                            <div className="text-xs text-gray-500 font-medium">Temple Admin{temple.temple_admins.length > 1 ? 's' : ''}:</div>
+                            {temple.temple_admins.map((admin, index) => (
+                              <div key={index} className="mb-1 last:mb-0">
+                                <div className="text-[#2A2A2A] font-medium">{admin.name}</div>
+                                {admin.email && (
+                                  <div className="text-[#D35D38] text-xs">{admin.email}</div>
+                                )}
+                                {admin.phone && (
+                                  <div className="text-[#D35D38] text-xs">{admin.phone}</div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
                         
                         {/* Show message if no contact info available */}
-                        {!temple.contact_name && !temple.temple_admin && (
+                        {!temple.contact_name && (!temple.temple_admins || temple.temple_admins.length === 0) && (
                           <div className="text-gray-400 text-xs">No contact info available</div>
                         )}
                       </div>

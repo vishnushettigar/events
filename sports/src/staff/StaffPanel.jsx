@@ -51,6 +51,12 @@ const StaffPanel = () => {
   
   // For tracking rank changes
   const [rankChanges, setRankChanges] = useState({});
+  
+  // For tracking team rank changes
+  const [teamRankChanges, setTeamRankChanges] = useState({});
+  
+  // For team participant details
+  const [teamParticipantDetails, setTeamParticipantDetails] = useState({});
 
   // Helper functions for collapsible state management
   const getCollapsibleState = (eventId) => {
@@ -120,7 +126,60 @@ const StaffPanel = () => {
     }));
   };
 
-  // Handle bulk result updates
+  // Helper functions for team rank changes management
+  const getTeamRankChanges = (eventId) => {
+    return teamRankChanges[eventId] || {};
+  };
+
+  const setTeamRankChange = (eventId, registrationId, rank) => {
+    setTeamRankChanges(prev => ({
+      ...prev,
+      [eventId]: {
+        ...prev[eventId],
+        [registrationId]: rank
+      }
+    }));
+  };
+
+  const clearTeamRankChanges = (eventId) => {
+    setTeamRankChanges(prev => ({
+      ...prev,
+      [eventId]: {}
+    }));
+  };
+
+  // Helper functions for team participant details management
+  const getTeamParticipantDetails = (registrationId) => {
+    return teamParticipantDetails[registrationId] || [];
+  };
+
+  const setTeamParticipantDetailsData = (registrationId, participants) => {
+    setTeamParticipantDetails(prev => ({
+      ...prev,
+      [registrationId]: participants
+    }));
+  };
+
+  // Fetch team participant details
+  const fetchTeamParticipantDetails = async (registrationId) => {
+    if (teamParticipantDetails[registrationId]) {
+      console.log('Using cached team participant details for:', registrationId);
+      return teamParticipantDetails[registrationId];
+    }
+
+    try {
+      console.log('Fetching team participant details for registration ID:', registrationId);
+      const data = await eventAPI.getTeamParticipants(registrationId);
+      console.log('API response for team participants:', data);
+      setTeamParticipantDetailsData(registrationId, data);
+      return data;
+    } catch (error) {
+      console.error('Error fetching team participant details:', error);
+      return [];
+    }
+  };
+
+  // Handle bulk result updates individual events
   const handleBulkResultUpdate = async (eventId, eventName, ageCategory) => {
     const changes = getRankChanges(eventId);
     const changeEntries = Object.entries(changes);
@@ -161,7 +220,7 @@ const StaffPanel = () => {
     }
   };
 
-  // Execute bulk result updates
+  // Execute bulk result updates individual events
   const executeBulkResultUpdate = async () => {
     if (!pendingUpdate || !pendingUpdate.eventId) return;
 
@@ -202,6 +261,104 @@ const StaffPanel = () => {
       showErrorModal(
         'Bulk Update Failed',
         'Failed to update some or all participants.',
+        {
+          count: changeEntries.length,
+          error: error.message
+        }
+      );
+    }
+  };
+
+  // Handle bulk Team result updates
+  const handleBulkTeamResultUpdate = async (eventId, eventName, ageCategory) => {
+    const changes = getTeamRankChanges(eventId);
+    const changeEntries = Object.entries(changes);
+    
+    if (changeEntries.length === 0) {
+      showInfoModal('No Changes', 'No rank changes to update.');
+      return;
+    }
+
+    try {
+      // Show confirmation modal with all changes
+      const changesList = changeEntries.map(([registrationId, rank]) => {
+        // Find the temple name from the team events data
+        const teamEvent = data.find(event => 
+          event.registered_temples?.some(temple => 
+            temple.registration_ids?.includes(registrationId)
+          )
+        );
+        const temple = teamEvent?.registered_temples?.find(temple => 
+          temple.registration_ids?.includes(registrationId)
+        );
+        return {
+          name: temple?.temple_name || 'Unknown Temple',
+          temple: temple?.temple_name || 'Unknown Temple',
+          rank: rank
+        };
+      });
+
+      showConfirmModal(
+        'Confirm Team Result Update',
+        `Are you sure you want to update ${changeEntries.length} team(s)?`,
+        {
+          changes: changesList,
+          count: changeEntries.length
+        },
+        {
+          eventId,
+          eventName,
+          ageCategory,
+          changes: changes,
+          isTeamUpdate: true
+        }
+      );
+    } catch (error) {
+      console.error('Error preparing bulk team update:', error);
+      showErrorModal('Error', 'Failed to prepare bulk team update.');
+    }
+  };
+
+  // Execute bulk Team result updates
+  const executeBulkTeamResultUpdate = async () => {
+    if (!pendingUpdate || !pendingUpdate.eventId) return;
+
+    const { eventId, eventName, ageCategory, changes } = pendingUpdate;
+    const changeEntries = Object.entries(changes);
+    
+    try {
+      // Update each team
+      for (const [registrationId, rank] of changeEntries) {
+        await eventAPI.updateTeamResult(registrationId, rank);
+      }
+
+      // Clear the team rank changes
+      clearTeamRankChanges(eventId);
+      
+      // Refresh the team events data
+      await fetchTeamEvents();
+      
+      // Close the confirmation modal and show success modal
+      closeModal();
+      
+      // Use setTimeout to ensure the confirmation modal closes before showing success
+      setTimeout(() => {
+        showSuccessModal(
+          'Team Result Update Successful',
+          `Successfully updated ${changeEntries.length} team(s).`,
+          {
+            'Age Category': ageCategory,
+            'Event Name': eventName
+          }
+        );
+      }, 100);
+      
+      console.log('Bulk team result update successful');
+    } catch (error) {
+      console.error('Error updating bulk team results:', error);
+      showErrorModal(
+        'Bulk Team Update Failed',
+        'Failed to update some or all teams.',
         {
           count: changeEntries.length,
           error: error.message
@@ -384,7 +541,7 @@ const StaffPanel = () => {
     }
   };
 
-  // Print team participants
+  // Print team participants for printing volleyball,throwball,relay,tug of war,couple relay
   const printTeamParticipants = async (temple, eventName, registrationIds) => {
     try {
       const participants = await fetchTeamParticipants(registrationIds);
@@ -415,6 +572,11 @@ const StaffPanel = () => {
               color: #666;
               margin: 10px 0 0 0;
               font-size: 18px;
+            }
+            .place {
+              font-size: 16px;
+              margin: 10px 0;
+              color: #666;
             }
             table {
               width: 100%;
@@ -447,6 +609,7 @@ const StaffPanel = () => {
         <body>
           <div class="header">
             <h1>${eventName}</h1>
+            <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
             <h2>Team: <span class="temple-name">${temple.temple_name}</span></h2>
             <p>Total Members: ${participants.length}</p>
           </div>
@@ -486,6 +649,198 @@ const StaffPanel = () => {
     } catch (error) {
       console.error('Error printing team participants:', error);
       alert('Error loading team participant details for printing');
+    }
+  };
+
+  // Print MALE/FEMALE team events table
+  const printTeamEventTable = async (teamEvent, eventType) => {
+    try {
+      const eventName = teamEvent.event_type?.name || teamEvent.name || 'Team Event';
+      const gender = teamEvent.gender;
+      
+      // Create print content
+      const printContent = `
+        <html>
+          <head>
+            <title>${eventType} Team Events - ${eventName}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .event-name { font-size: 18px; font-weight: bold; color: #D35D38; }
+              .event-details { font-size: 14px; margin-top: 5px; color: #666; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #D35D38; color: white; font-weight: bold; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .result { font-weight: bold; }
+              .first { color: #FFD700; }
+              .second { color: #C0C0C0; }
+              .third { color: #CD7F32; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="event-name">${eventName} - ${gender}</div>
+              <div class="event-details">${teamEvent.age_category} • ${eventType} Team Event</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>SL.NO</th>
+                  <th>Temple Name</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${teamEvent.registered_temples.map((temple, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${temple.temple_name}</td>
+                    <td class="result">
+                      ${temple.result?.rank ? 
+                        (temple.result.rank === 'FIRST' ? '🥇 1st Place' :
+                         temple.result.rank === 'SECOND' ? '🥈 2nd Place' :
+                         temple.result.rank === 'THIRD' ? '🥉 3rd Place' : temple.result.rank) : 
+                        ''
+                      }
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      // Print directly without opening new tab
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = 'none';
+      printFrame.style.left = '-9999px';
+      
+      document.body.appendChild(printFrame);
+      
+      printFrame.contentDocument.write(printContent);
+      printFrame.contentDocument.close();
+      
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      
+      // Clean up after printing
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 1000);
+    } catch (error) {
+      console.error('Error printing team event table:', error);
+    }
+  };
+
+  // Print MIXED team events table
+  const printMixedTeamEventTable = async (teamEvent) => {
+    try {
+      const eventName = teamEvent.event_type?.name || teamEvent.name || 'Team Event';
+      
+      // Fetch all team data for mixed events
+      const allTeamData = [];
+      for (const temple of teamEvent.registered_temples || []) {
+        const registrationIds = temple.registration_ids || [];
+        for (const registrationId of registrationIds) {
+          try {
+            const registrationData = await eventAPI.getTeamRegistration(registrationId);
+            const participants = await eventAPI.getTeamParticipants(registrationId);
+            
+            const maleParticipants = participants.filter(p => p.gender === 'MALE');
+            const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
+            
+            allTeamData.push({
+              templeName: temple.temple_name,
+              maleParticipants: maleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', '),
+              femaleParticipants: femaleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', '),
+              result: registrationData.event_result ? 
+                (registrationData.event_result.rank === 'FIRST' ? '🥇 1st Place' :
+                 registrationData.event_result.rank === 'SECOND' ? '🥈 2nd Place' :
+                 registrationData.event_result.rank === 'THIRD' ? '🥉 3rd Place' : registrationData.event_result.rank) : 
+                ''
+            });
+          } catch (error) {
+            console.error(`Error fetching data for registration ${registrationId}:`, error);
+          }
+        }
+      }
+
+      // Create print content
+      const printContent = `
+        <html>
+          <head>
+            <title>Mixed Team Events - ${eventName}</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .event-name { font-size: 18px; font-weight: bold; color: #D35D38; }
+              .event-details { font-size: 14px; margin-top: 5px; color: #666; }
+              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #D35D38; color: white; font-weight: bold; }
+              tr:nth-child(even) { background-color: #f9f9f9; }
+              .result { font-weight: bold; }
+              .participants { font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="event-name">${eventName} - Mixed</div>
+              <div class="event-details">${teamEvent.age_category} • Mixed Team Event</div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>SL.NO</th>
+                  <th>Temple Name</th>
+                  <th>Male Participants</th>
+                  <th>Female Participants</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allTeamData.map((team, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${team.templeName}</td>
+                    <td class="participants">${team.maleParticipants || 'None'}</td>
+                    <td class="participants">${team.femaleParticipants || 'None'}</td>
+                    <td class="result">${team.result}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+      // Print directly without opening new tab
+      const printFrame = document.createElement('iframe');
+      printFrame.style.position = 'absolute';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = 'none';
+      printFrame.style.left = '-9999px';
+      
+      document.body.appendChild(printFrame);
+      
+      printFrame.contentDocument.write(printContent);
+      printFrame.contentDocument.close();
+      
+      printFrame.contentWindow.focus();
+      printFrame.contentWindow.print();
+      
+      // Clean up after printing
+      setTimeout(() => {
+        document.body.removeChild(printFrame);
+      }, 1000);
+    } catch (error) {
+      console.error('Error printing mixed team event table:', error);
     }
   };
 
@@ -1062,6 +1417,7 @@ const StaffPanel = () => {
             body { font-family: Arial, sans-serif; margin: 20px; }
             .header { text-align: center; margin-bottom: 20px; }
             .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+            .place { font-size: 16px; margin-bottom: 10px; color: #666; }
             .event-details { font-size: 16px; margin-bottom: 20px; }
             .event-details span { margin-right: 20px; }
             .heat-info { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
@@ -1085,6 +1441,7 @@ const StaffPanel = () => {
         <body>
           <div class="header">
             <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+            <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
             <div class="event-details">
               <span><strong>Age Category:</strong> ${ageCategory}</span>
               <span><strong>Gender:</strong> ${gender}</span>
@@ -1452,22 +1809,24 @@ const StaffPanel = () => {
                         {isHeatEvent() && (
                           <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TIMING</th>
                         )}
-                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
-                          <div className="flex items-center justify-between">
-                            <span>RESULT</span>
-                            <button
-                              onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
-                              className={`px-3 py-1 rounded text-xs transition-colors ${
-                                Object.keys(getRankChanges(eventId)).length > 0
-                                  ? 'bg-green-600 text-white hover:bg-green-700'
-                                  : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
-                              }`}
-                              title={`Update all selected results (${Object.keys(getRankChanges(eventId)).length} pending)`}
-                            >
-                              Update All {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
-                            </button>
-                          </div>
-                        </th>
+                        {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                          <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                            <div className="flex items-center justify-between">
+                              <span>RESULT</span>
+                              <button
+                                onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
+                                className={`px-3 py-1 rounded text-xs transition-colors ${
+                                  Object.keys(getRankChanges(eventId)).length > 0
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+                                }`}
+                                title={`Update all selected results (${Object.keys(getRankChanges(eventId)).length} pending)`}
+                              >
+                                Update All {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
+                              </button>
+                            </div>
+                          </th>
+                        )}
                       </tr>
                     </thead>
                   <tbody className="bg-white divide-y divide-[#F8DFBE]">
@@ -1504,59 +1863,61 @@ const StaffPanel = () => {
                               />
                             </td>
                           )}
-                          <td className="px-4 py-3 whitespace-nowrap text-sm">
-                            <div className="flex items-center gap-3">
-                              {/* Current Result Display */}
-                              <div className="flex-shrink-0">
-                                {participant.result?.rank ? (
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                                    participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                                    participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                                    'bg-green-100 text-green-800'
-                                  }`}>
-                                    {participant.result.rank === 'FIRST' ? '🥇 1st' :
-                                     participant.result.rank === 'SECOND' ? '🥈 2nd' :
-                                     participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400 text-xs">No result</span>
-                                )}
+                          {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                            <td className="px-4 py-3 whitespace-nowrap text-sm">
+                              <div className="flex items-center gap-3">
+                                {/* Current Result Display */}
+                                <div className="flex-shrink-0">
+                                  {participant.result?.rank ? (
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                      participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                      participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                      'bg-green-100 text-green-800'
+                                    }`}>
+                                      {participant.result.rank === 'FIRST' ? '🥇 1st' :
+                                       participant.result.rank === 'SECOND' ? '🥈 2nd' :
+                                       participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 text-xs">No result</span>
+                                  )}
+                                </div>
+                                
+                                {/* Rank Selection */}
+                                <div className="flex-1">
+                                  <select 
+                                    className={`w-full px-2 py-1 border rounded text-xs ${
+                                      getRankChanges(eventId)[participant.id] 
+                                        ? 'border-green-500 bg-green-50' 
+                                        : 'border-[#F8DFBE]'
+                                    }`}
+                                    value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
+                                    onChange={(e) => {
+                                      const newRank = e.target.value;
+                                      if (newRank) {
+                                        setRankChange(eventId, participant.id, newRank);
+                                      } else {
+                                        // Remove from changes if cleared
+                                        const currentChanges = getRankChanges(eventId);
+                                        const { [participant.id]: removed, ...rest } = currentChanges;
+                                        setRankChanges(prev => ({
+                                          ...prev,
+                                          [eventId]: rest
+                                        }));
+                                      }
+                                    }}
+                                  >
+                                    <option value="">Select Rank</option>
+                                    <option value="FIRST">🥇 1st Place</option>
+                                    <option value="SECOND">🥈 2nd Place</option>
+                                    <option value="THIRD">🥉 3rd Place</option>
+                                    <option value="CLEAR">Clear Result</option>
+                                  </select>
+                                </div>
                               </div>
-                              
-                              {/* Rank Selection */}
-                              <div className="flex-1">
-                                <select 
-                                  className={`w-full px-2 py-1 border rounded text-xs ${
-                                    getRankChanges(eventId)[participant.id] 
-                                      ? 'border-green-500 bg-green-50' 
-                                      : 'border-[#F8DFBE]'
-                                  }`}
-                                  value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
-                                  onChange={(e) => {
-                                    const newRank = e.target.value;
-                                    if (newRank) {
-                                      setRankChange(eventId, participant.id, newRank);
-                                    } else {
-                                      // Remove from changes if cleared
-                                      const currentChanges = getRankChanges(eventId);
-                                      const { [participant.id]: removed, ...rest } = currentChanges;
-                                      setRankChanges(prev => ({
-                                        ...prev,
-                                        [eventId]: rest
-                                      }));
-                                    }
-                                  }}
-                                >
-                                  <option value="">Select Rank</option>
-                                  <option value="FIRST">🥇 1st Place</option>
-                                  <option value="SECOND">🥈 2nd Place</option>
-                                  <option value="THIRD">🥉 3rd Place</option>
-                                  <option value="CLEAR">Clear Result</option>
-                                </select>
-                              </div>
-                            </div>
-                          </td>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -1799,6 +2160,164 @@ const StaffPanel = () => {
     );
   };
 
+  // Mixed Team Row Component
+  const MixedTeamRow = ({ 
+    registrationId, 
+    temple, 
+    teamEvent, 
+    rowIndex, 
+    getTeamParticipantDetails, 
+    fetchTeamParticipantDetails, 
+    getTeamRankChanges, 
+    setTeamRankChange, 
+    printTeamParticipants 
+  }) => {
+    const [participants, setParticipants] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [teamResult, setTeamResult] = useState(null);
+
+    useEffect(() => {
+      if (registrationId) {
+        loadTeamParticipants();
+        loadTeamResult();
+      }
+    }, [registrationId]);
+
+    const loadTeamParticipants = async () => {
+      setLoading(true);
+      try {
+        console.log('Loading team participants for registration ID:', registrationId);
+        const data = await fetchTeamParticipantDetails(registrationId);
+        console.log('Fetched team participants:', data);
+        setParticipants(data);
+      } catch (error) {
+        console.error('Error loading team participants:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loadTeamResult = async () => {
+      try {
+        console.log('Loading team result for registration ID:', registrationId);
+        const registrationData = await eventAPI.getTeamRegistration(registrationId);
+        console.log('Fetched team registration data:', registrationData);
+        
+        if (registrationData.event_result) {
+          setTeamResult({
+            rank: registrationData.event_result.rank,
+            points: registrationData.event_result.points
+          });
+        } else {
+          setTeamResult(null);
+        }
+      } catch (error) {
+        console.error('Error loading team result:', error);
+        setTeamResult(null);
+      }
+    };
+
+    // Separate male and female participants
+    const maleParticipants = participants.filter(p => p.gender === 'MALE');
+    const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
+
+    return (
+      <tr className="hover:bg-gray-50">
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="text-sm font-medium text-[#2A2A2A]">
+            {rowIndex}
+          </div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="flex items-center">
+            <div>
+              <div className="text-sm font-semibold text-[#2A2A2A]">
+                {temple.temple_name}
+              </div>
+              <div className="text-xs text-[#5A5A5A]">
+                Team {rowIndex % 10 || 1}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading...</div>
+          ) : maleParticipants.length > 0 ? (
+            <div className="space-y-1">
+              {maleParticipants.map((participant, idx) => (
+                <div key={idx} className="text-sm">
+                  <span className="font-medium text-[#2A2A2A]">
+                    {participant.first_name} {participant.last_name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No male participants</div>
+          )}
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading...</div>
+          ) : femaleParticipants.length > 0 ? (
+            <div className="space-y-1">
+              {femaleParticipants.map((participant, idx) => (
+                <div key={idx} className="text-sm">
+                  <span className="font-medium text-[#2A2A2A]">
+                    {participant.first_name} {participant.last_name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">No female participants</div>
+          )}
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap">
+          <div className="flex items-center gap-2">
+            {teamResult?.rank ? (
+              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                {teamResult.rank === 'FIRST' ? '🥇 1st' :
+                 teamResult.rank === 'SECOND' ? '🥈 2nd' :
+                 teamResult.rank === 'THIRD' ? '🥉 3rd' : teamResult.rank}
+              </span>
+            ) : (
+              <span className="text-xs text-[#5A5A5A]">No result</span>
+            )}
+            <select
+              className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
+              value={getTeamRankChanges(teamEvent.id)[registrationId] || teamResult?.rank || ""}
+              onChange={(e) => {
+                if (registrationId) {
+                  setTeamRankChange(teamEvent.id, registrationId, e.target.value);
+                }
+              }}
+            >
+              <option value="">Select Rank</option>
+              <option value="FIRST">🥇 1st Place</option>
+              <option value="SECOND">🥈 2nd Place</option>
+              <option value="THIRD">🥉 3rd Place</option>
+              <option value="CLEAR">Clear Result</option>
+            </select>
+          </div>
+        </td>
+        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+          <button 
+            className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+            onClick={() => printTeamParticipants(
+              { registration_id: registrationId }, 
+              teamEvent.event_type?.name || teamEvent.name || 'Team Event',
+              [registrationId]
+            )}
+          >
+            🖨️ Print Team
+          </button>
+        </td>
+      </tr>
+    );
+  };
+
   // Render Teams section
   const renderTeams = () => {
     // Group team events by gender
@@ -1858,10 +2377,20 @@ const StaffPanel = () => {
                     <div key={teamEvent.id || index} className="bg-white rounded-2xl shadow-lg overflow-hidden">
                       {/* Team Event Header */}
                       <div className="bg-[#D35D38] px-6 py-4">
-                        <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
-                        <p className="text-white/80 text-sm mt-1">
-                          {teamEvent.age_category} - {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} Event
-                        </p>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
+                            <p className="text-white/80 text-sm mt-1">
+                              {teamEvent.age_category} - {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} Event
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => printTeamEventTable(teamEvent, 'Male')}
+                            className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
+                          >
+                            🖨️ Print Table
+                          </button>
+                        </div>
                       </div>
                       
                       {/* Registered Temples */}
@@ -1869,54 +2398,106 @@ const StaffPanel = () => {
                         <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Temples</h4>
                         
                         {teamEvent.registered_temples && teamEvent.registered_temples.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {teamEvent.registered_temples.map((temple, templeIndex) => (
-                              <div key={templeIndex} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0]">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h5 className="font-semibold text-[#2A2A2A]">{temple.temple_name}</h5>
-                                    <p className="text-sm text-[#5A5A5A] mt-1">
-                                      {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
-                                    </p>
-                                    {temple.member_count && (
-                                      <p className="text-xs text-[#5A5A5A] mt-1">
-                                        {temple.member_count} members total
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="flex flex-col gap-2">
-                                      <div className="flex gap-2">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-[#D35D38]">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    SL.NO
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Temple Name
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Total Members
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Total Points
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    <div className="flex items-center justify-between">
+                                      <span>Result & Actions</span>
+                                      <button
+                                        onClick={() => handleBulkTeamResultUpdate(teamEvent.id, teamEvent.event_type?.name || teamEvent.name || 'Team Event', teamEvent.age_category)}
+                                        className={`px-3 py-1 rounded text-xs transition-colors ${
+                                          Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
+                                            ? 'bg-green-600 text-white hover:bg-green-700'
+                                            : 'bg-white text-[#D35D38] hover:bg-gray-100'
+                                        }`}
+                                        title={`Update all selected results (${Object.keys(getTeamRankChanges(teamEvent.id)).length} pending)`}
+                                      >
+                                        Update All {Object.keys(getTeamRankChanges(teamEvent.id)).length > 0 && `(${Object.keys(getTeamRankChanges(teamEvent.id)).length})`}
+                                      </button>
+                                    </div>
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Print
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {teamEvent.registered_temples.map((temple, templeIndex) => (
+                                  <tr key={templeIndex} className="hover:bg-gray-50">
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="text-sm font-medium text-[#2A2A2A]">
+                                        {templeIndex + 1}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div>
+                                          <div className="text-sm font-semibold text-[#2A2A2A]">
+                                            {temple.temple_name}
+                                          </div>
+                                          <div className="text-xs text-[#5A5A5A]">
+                                            {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-[#2A2A2A] font-medium">
+                                        {temple.member_count || 0}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="text-sm font-bold text-[#D35D38]">
+                                        {temple.result?.points || temple.total_points || 0}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="flex items-center gap-2">
+                                        {temple.result?.rank ? (
+                                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            {temple.result.rank === 'FIRST' ? '🥇 1st' :
+                                             temple.result.rank === 'SECOND' ? '🥈 2nd' :
+                                             temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-[#5A5A5A]">No result</span>
+                                        )}
                                         <select
                                           className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
-                                          defaultValue={temple.result?.rank || ""}
-                                          id={`team-rank-male-${temple.registration_ids?.[0] || templeIndex}`}
+                                          value={getTeamRankChanges(teamEvent.id)[temple.registration_ids?.[0]] || temple.result?.rank || ""}
+                                          onChange={(e) => {
+                                            if (temple.registration_ids && temple.registration_ids.length > 0) {
+                                              setTeamRankChange(teamEvent.id, temple.registration_ids[0], e.target.value);
+                                            }
+                                          }}
                                         >
                                           <option value="">Select Rank</option>
                                           <option value="FIRST">🥇 1st Place</option>
                                           <option value="SECOND">🥈 2nd Place</option>
-                                          <option value="THIRD">🥉 3rd Place</option>
+                                          {(teamEvent.event_type?.name || teamEvent.name || '').includes('Relay - 100 X 4') && (
+                                            <option value="THIRD">🥉 3rd Place</option>
+                                          )}
                                           <option value="CLEAR">Clear Result</option>
                                         </select>
-                                        <button 
-                                          className="px-2 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
-                                          onClick={() => {
-                                            const select = document.getElementById(`team-rank-male-${temple.registration_ids?.[0] || templeIndex}`);
-                                            if (select.value && temple.registration_ids && temple.registration_ids.length > 0) {
-                                              handleTeamResultUpdate(
-                                                temple.registration_ids[0], 
-                                                select.value, 
-                                                temple.temple_name,
-                                                teamEvent.event_type?.name || teamEvent.name || 'Team Event'
-                                              );
-                                            }
-                                          }}
-                                        >
-                                          Update
-                                        </button>
                                       </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                                       <button 
-                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+                                        className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
                                         onClick={() => printTeamParticipants(
                                           temple, 
                                           teamEvent.event_type?.name || teamEvent.name || 'Team Event',
@@ -1925,18 +2506,11 @@ const StaffPanel = () => {
                                       >
                                         🖨️ Print Team
                                       </button>
-                                      {temple.result?.rank && (
-                                        <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs rounded-full">
-                                          {temple.result.rank === 'FIRST' ? '🥇 1st' :
-                                           temple.result.rank === 'SECOND' ? '🥈 2nd' :
-                                           temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         ) : (
                           <div className="text-center py-8">
@@ -1981,10 +2555,20 @@ const StaffPanel = () => {
                     <div key={teamEvent.id || index} className="bg-white rounded-2xl shadow-lg overflow-hidden">
                       {/* Team Event Header */}
                       <div className="bg-[#D35D38] px-6 py-4">
-                        <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
-                        <p className="text-white/80 text-sm mt-1">
-                          {teamEvent.age_category} - {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} Event
-                        </p>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
+                            <p className="text-white/80 text-sm mt-1">
+                              {teamEvent.age_category} - {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} Event
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => printTeamEventTable(teamEvent, 'Female')}
+                            className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
+                          >
+                            🖨️ Print Table
+                          </button>
+                        </div>
                       </div>
                       
                       {/* Registered Temples */}
@@ -1992,54 +2576,106 @@ const StaffPanel = () => {
                         <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Temples</h4>
                         
                         {teamEvent.registered_temples && teamEvent.registered_temples.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {teamEvent.registered_temples.map((temple, templeIndex) => (
-                              <div key={templeIndex} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0]">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h5 className="font-semibold text-[#2A2A2A]">{temple.temple_name}</h5>
-                                    <p className="text-sm text-[#5A5A5A] mt-1">
-                                      {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
-                                    </p>
-                                    {temple.member_count && (
-                                      <p className="text-xs text-[#5A5A5A] mt-1">
-                                        {temple.member_count} members total
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="flex flex-col gap-2">
-                                      <div className="flex gap-2">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-[#D35D38]">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    SL.NO
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Temple Name
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Total Members
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Total Points
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    <div className="flex items-center justify-between">
+                                      <span>Result & Actions</span>
+                                      <button
+                                        onClick={() => handleBulkTeamResultUpdate(teamEvent.id, teamEvent.event_type?.name || teamEvent.name || 'Team Event', teamEvent.age_category)}
+                                        className={`px-3 py-1 rounded text-xs transition-colors ${
+                                          Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
+                                            ? 'bg-green-600 text-white hover:bg-green-700'
+                                            : 'bg-white text-[#D35D38] hover:bg-gray-100'
+                                        }`}
+                                        title={`Update all selected results (${Object.keys(getTeamRankChanges(teamEvent.id)).length} pending)`}
+                                      >
+                                        Update All {Object.keys(getTeamRankChanges(teamEvent.id)).length > 0 && `(${Object.keys(getTeamRankChanges(teamEvent.id)).length})`}
+                                      </button>
+                                    </div>
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Print
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {teamEvent.registered_temples.map((temple, templeIndex) => (
+                                  <tr key={templeIndex} className="hover:bg-gray-50">
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="text-sm font-medium text-[#2A2A2A]">
+                                        {templeIndex + 1}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div>
+                                          <div className="text-sm font-semibold text-[#2A2A2A]">
+                                            {temple.temple_name}
+                                          </div>
+                                          <div className="text-xs text-[#5A5A5A]">
+                                            {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-[#2A2A2A] font-medium">
+                                        {temple.member_count || 0}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="text-sm font-bold text-[#D35D38]">
+                                        {temple.result?.points || temple.total_points || 0}
+                                      </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap">
+                                      <div className="flex items-center gap-2">
+                                        {temple.result?.rank ? (
+                                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            {temple.result.rank === 'FIRST' ? '🥇 1st' :
+                                             temple.result.rank === 'SECOND' ? '🥈 2nd' :
+                                             temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-[#5A5A5A]">No result</span>
+                                        )}
                                         <select
                                           className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
-                                          defaultValue={temple.result?.rank || ""}
-                                          id={`team-rank-female-${temple.registration_ids?.[0] || templeIndex}`}
+                                          value={getTeamRankChanges(teamEvent.id)[temple.registration_ids?.[0]] || temple.result?.rank || ""}
+                                          onChange={(e) => {
+                                            if (temple.registration_ids && temple.registration_ids.length > 0) {
+                                              setTeamRankChange(teamEvent.id, temple.registration_ids[0], e.target.value);
+                                            }
+                                          }}
                                         >
                                           <option value="">Select Rank</option>
                                           <option value="FIRST">🥇 1st Place</option>
                                           <option value="SECOND">🥈 2nd Place</option>
-                                          <option value="THIRD">🥉 3rd Place</option>
+                                          {(teamEvent.event_type?.name || teamEvent.name || '').includes('Relay - 100 X 4') && (
+                                            <option value="THIRD">🥉 3rd Place</option>
+                                          )}
                                           <option value="CLEAR">Clear Result</option>
                                         </select>
-                                        <button 
-                                          className="px-2 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
-                                          onClick={() => {
-                                            const select = document.getElementById(`team-rank-female-${temple.registration_ids?.[0] || templeIndex}`);
-                                            if (select.value && temple.registration_ids && temple.registration_ids.length > 0) {
-                                              handleTeamResultUpdate(
-                                                temple.registration_ids[0], 
-                                                select.value, 
-                                                temple.temple_name,
-                                                teamEvent.event_type?.name || teamEvent.name || 'Team Event'
-                                              );
-                                            }
-                                          }}
-                                        >
-                                          Update
-                                        </button>
                                       </div>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
                                       <button 
-                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+                                        className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
                                         onClick={() => printTeamParticipants(
                                           temple, 
                                           teamEvent.event_type?.name || teamEvent.name || 'Team Event',
@@ -2048,18 +2684,11 @@ const StaffPanel = () => {
                                       >
                                         🖨️ Print Team
                                       </button>
-                                      {temple.result?.rank && (
-                                        <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs rounded-full">
-                                          {temple.result.rank === 'FIRST' ? '🥇 1st' :
-                                           temple.result.rank === 'SECOND' ? '🥈 2nd' :
-                                           temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
                         ) : (
                           <div className="text-center py-8">
@@ -2104,85 +2733,86 @@ const StaffPanel = () => {
                     <div key={teamEvent.id || index} className="bg-white rounded-2xl shadow-lg overflow-hidden">
                       {/* Team Event Header */}
                       <div className="bg-[#D35D38] px-6 py-4">
-                        <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
-                        <p className="text-white/80 text-sm mt-1">
-                          {teamEvent.age_category} - {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} Event
-                        </p>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
+                            <p className="text-white/80 text-sm mt-1">
+                              {teamEvent.age_category} - {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} Event
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => printMixedTeamEventTable(teamEvent)}
+                            className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
+                          >
+                            🖨️ Print Table
+                          </button>
+                        </div>
                       </div>
                       
-                      {/* Registered Temples */}
+                      {/* Registered Teams */}
                       <div className="p-6">
-                        <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Temples</h4>
+                        <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Teams</h4>
                         
                         {teamEvent.registered_temples && teamEvent.registered_temples.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {teamEvent.registered_temples.map((temple, templeIndex) => (
-                              <div key={templeIndex} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0]">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h5 className="font-semibold text-[#2A2A2A]">{temple.temple_name}</h5>
-                                    <p className="text-sm text-[#5A5A5A] mt-1">
-                                      {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
-                                    </p>
-                                    {temple.member_count && (
-                                      <p className="text-xs text-[#5A5A5A] mt-1">
-                                        {temple.member_count} members total
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="flex flex-col gap-2">
-                                      <div className="flex gap-2">
-                                        <select
-                                          className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
-                                          defaultValue={temple.result?.rank || ""}
-                                          id={`team-rank-mixed-${temple.registration_ids?.[0] || templeIndex}`}
-                                        >
-                                          <option value="">Select Rank</option>
-                                          <option value="FIRST">🥇 1st Place</option>
-                                          <option value="SECOND">🥈 2nd Place</option>
-                                          <option value="THIRD">🥉 3rd Place</option>
-                                          <option value="CLEAR">Clear Result</option>
-                                        </select>
-                                        <button 
-                                          className="px-2 py-1 bg-[#D35D38] text-white rounded text-xs hover:bg-[#B84A2E]"
-                                          onClick={() => {
-                                            const select = document.getElementById(`team-rank-mixed-${temple.registration_ids?.[0] || templeIndex}`);
-                                            if (select.value && temple.registration_ids && temple.registration_ids.length > 0) {
-                                              handleTeamResultUpdate(
-                                                temple.registration_ids[0], 
-                                                select.value, 
-                                                temple.temple_name,
-                                                teamEvent.event_type?.name || teamEvent.name || 'Team Event'
-                                              );
-                                            }
-                                          }}
-                                        >
-                                          Update
-                                        </button>
-                                      </div>
-                                      <button 
-                                        className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
-                                        onClick={() => printTeamParticipants(
-                                          temple, 
-                                          teamEvent.event_type?.name || teamEvent.name || 'Team Event',
-                                          temple.registration_ids || []
-                                        )}
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-[#D35D38]">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    SL.NO
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Temple Name
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Male Participants
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Female Participants
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    <div className="flex items-center justify-between">
+                                      <span>Result & Actions</span>
+                                      <button
+                                        onClick={() => handleBulkTeamResultUpdate(teamEvent.id, teamEvent.event_type?.name || teamEvent.name || 'Team Event', teamEvent.age_category)}
+                                        className={`px-3 py-1 rounded text-xs transition-colors ${
+                                          Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
+                                            ? 'bg-green-600 text-white hover:bg-green-700'
+                                            : 'bg-white text-[#D35D38] hover:bg-gray-100'
+                                        }`}
+                                        title={`Update all selected results (${Object.keys(getTeamRankChanges(teamEvent.id)).length} pending)`}
                                       >
-                                        🖨️ Print Team
+                                        Update All {Object.keys(getTeamRankChanges(teamEvent.id)).length > 0 && `(${Object.keys(getTeamRankChanges(teamEvent.id)).length})`}
                                       </button>
-                                      {temple.result?.rank && (
-                                        <span className="inline-block px-2 py-1 bg-green-600 text-white text-xs rounded-full">
-                                          {temple.result.rank === 'FIRST' ? '🥇 1st' :
-                                           temple.result.rank === 'SECOND' ? '🥈 2nd' :
-                                           temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
-                                        </span>
-                                      )}
                                     </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                                  </th>
+                                  <th className="px-4 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">
+                                    Print
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {teamEvent.registered_temples.map((temple, templeIndex) => {
+                                  // For Mixed events, we need to show each team separately
+                                  // Use registration_ids to create individual team rows
+                                  const registrationIds = temple.registration_ids || [];
+                                  return registrationIds.map((registrationId, teamIndex) => (
+                                    <MixedTeamRow
+                                      key={`${templeIndex}-${teamIndex}`}
+                                      registrationId={registrationId}
+                                      temple={temple}
+                                      teamEvent={teamEvent}
+                                      rowIndex={templeIndex * 10 + teamIndex + 1} // Ensure unique row numbers
+                                      getTeamParticipantDetails={getTeamParticipantDetails}
+                                      fetchTeamParticipantDetails={fetchTeamParticipantDetails}
+                                      getTeamRankChanges={getTeamRankChanges}
+                                      setTeamRankChange={setTeamRankChange}
+                                      printTeamParticipants={printTeamParticipants}
+                                    />
+                                  ));
+                                })}
+                              </tbody>
+                            </table>
                           </div>
                         ) : (
                           <div className="text-center py-8">
@@ -2194,14 +2824,15 @@ const StaffPanel = () => {
                         <div className="mt-6 pt-4 border-t border-[#F8DFBE]">
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                             <div>
-                              <span className="font-medium text-[#2A2A2A]">Total Registrations:</span>
+                              <span className="font-medium text-[#2A2A2A]">Total Teams:</span>
                               <span className="ml-2 text-[#D35D38] font-bold">
-                                {teamEvent.registered_temples ? teamEvent.registered_temples.length : 0}
+                                {teamEvent.registered_temples ? 
+                                  teamEvent.registered_temples.reduce((total, temple) => total + (temple.teams?.length || 0), 0) : 0}
                               </span>
                             </div>
                             <div>
                               <span className="font-medium text-[#2A2A2A]">Event Type:</span>
-                              <span className="ml-2 text-[#5A5A5A]">Team Event</span>
+                              <span className="ml-2 text-[#5A5A5A]">Mixed Team Event</span>
                             </div>
                             <div>
                               <span className="font-medium text-[#2A2A2A]">Status:</span>
@@ -2304,6 +2935,7 @@ const StaffPanel = () => {
                       body { font-family: Arial, sans-serif; margin: 20px; }
                       .header { text-align: center; margin-bottom: 20px; }
                       .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                      .place { font-size: 16px; margin-bottom: 10px; color: #666; }
                       .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
                       table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                       th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -2322,6 +2954,7 @@ const StaffPanel = () => {
                   <body>
                     <div class="header">
                       <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                      <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
                       <div class="section-title">🏛️ Top 5 Temples</div>
                     </div>
                     <table>
@@ -2447,6 +3080,7 @@ const StaffPanel = () => {
                       body { font-family: Arial, sans-serif; margin: 20px; }
                       .header { text-align: center; margin-bottom: 20px; }
                       .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                      .place { font-size: 16px; margin-bottom: 10px; color: #666; }
                       .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
                       table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                       th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -2469,6 +3103,7 @@ const StaffPanel = () => {
                   <body>
                     <div class="header">
                       <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                      <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
                       <div class="section-title">🏆 Champions Leaderboard</div>
                     </div>
                     <table>
@@ -2942,6 +3577,7 @@ const StaffPanel = () => {
                         body { font-family: Arial, sans-serif; margin: 20px; }
                         .header { text-align: center; margin-bottom: 20px; }
                         .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                        .place { font-size: 16px; margin-bottom: 10px; color: #666; }
                         .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
                         table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -2959,6 +3595,7 @@ const StaffPanel = () => {
                     <body>
                       <div class="header">
                         <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                        <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
                         <div class="section-title">${title}</div>
                       </div>
                       <table>
@@ -3053,6 +3690,7 @@ const StaffPanel = () => {
                                 body { font-family: Arial, sans-serif; margin: 20px; }
                                 .header { text-align: center; margin-bottom: 20px; }
                                 .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                                .place { font-size: 16px; margin-bottom: 10px; color: #666; }
                                 .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
                                 .event-details { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
                                 .event-name { font-size: 20px; font-weight: bold; color: #2A2A2A; margin-bottom: 5px; }
@@ -3072,6 +3710,7 @@ const StaffPanel = () => {
                             <body>
                               <div class="header">
                                 <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                                <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
                                 <div class="section-title">${title}</div>
                               </div>
                               <div class="event-details">
@@ -3199,6 +3838,7 @@ const StaffPanel = () => {
                         body { font-family: Arial, sans-serif; margin: 20px; }
                         .header { text-align: center; margin-bottom: 20px; }
                         .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+                        .place { font-size: 16px; margin-bottom: 10px; color: #666; }
                         .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
                         .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px; }
                         .summary-item { text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 8px; }
@@ -3213,6 +3853,7 @@ const StaffPanel = () => {
                     <body>
                       <div class="header">
                         <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                        <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
                         <div class="section-title">📊 Results Summary</div>
                       </div>
                       <div class="summary-grid">
@@ -3536,8 +4177,13 @@ const StaffPanel = () => {
                       executeTeamResultUpdate();
                     } else if (pendingUpdate && pendingUpdate.eventId) {
                       // Bulk result update
-                      console.log('Calling executeBulkResultUpdate');
-                      executeBulkResultUpdate();
+                      if (pendingUpdate.isTeamUpdate) {
+                        console.log('Calling executeBulkTeamResultUpdate');
+                        executeBulkTeamResultUpdate();
+                      } else {
+                        console.log('Calling executeBulkResultUpdate');
+                        executeBulkResultUpdate();
+                      }
                     }
                   } else {
                     closeModal();
