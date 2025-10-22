@@ -1128,15 +1128,31 @@ router.get('/champions', authenticate, async (req, res) => {
             };
         });
 
-        // Sort by age category and gender
-        championsArray.sort((a, b) => {
-            if (a.age_category !== b.age_category) {
-                return a.age_category.localeCompare(b.age_category);
-            }
-            return a.gender.localeCompare(b.gender);
-        });
+        // Define the desired age category order and filter out unwanted categories
+        const allowedAgeCategories = ['11-14', '15-18', '19-24', '25-35', '36-49', '50-60'];
+        const ageCategoryOrder = {
+            '11-14': 1,
+            '15-18': 2,
+            '19-24': 3,
+            '25-35': 4,
+            '36-49': 5,
+            '50-60': 6
+        };
 
-        res.json(championsArray);
+        // Filter out unwanted age categories and sort by specific order
+        const filteredChampionsArray = championsArray
+            .filter(category => allowedAgeCategories.includes(category.age_category))
+            .sort((a, b) => {
+                const ageOrderA = ageCategoryOrder[a.age_category] || 999;
+                const ageOrderB = ageCategoryOrder[b.age_category] || 999;
+                
+                if (ageOrderA !== ageOrderB) {
+                    return ageOrderA - ageOrderB;
+                }
+                return a.gender.localeCompare(b.gender);
+            });
+
+        res.json(filteredChampionsArray);
     } catch (error) {
         console.error('Error fetching champions:', error);
         res.status(500).json({ error: 'Failed to fetch champions' });

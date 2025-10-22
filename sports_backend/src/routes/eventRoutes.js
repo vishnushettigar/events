@@ -934,7 +934,9 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
           registration_id: participant.id,
           event_id: event_id,
           heat_number: heat.id,
-          heat_time: null
+          performance_1: null,
+          performance_2: null,
+          performance_3: null
         });
       });
     });
@@ -956,6 +958,31 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
   } catch (error) {
     console.error('Error generating heats:', error);
     res.status(500).json({ error: error.message || 'Failed to generate heats' });
+  }
+});
+
+// Initialize trial performances for trial events (no heats)
+router.post('/init-trials', authenticate, requireRole('ADMIN'), [
+  body('event_id').isInt().withMessage('Invalid event ID')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { event_id } = req.body;
+
+  try {
+    // Ensure records exist for all accepted participants
+    await ensureTrialPerformanceRecords(event_id);
+
+    // Count how many performance rows now exist for this event
+    const count = await prisma.event_performance.count({ where: { event_id: event_id } });
+
+    return res.json({ message: 'Trial performances initialized', event_id, count });
+  } catch (error) {
+    console.error('Error initializing trials:', error);
+    return res.status(500).json({ error: error.message || 'Failed to initialize trial performances' });
   }
 });
 
@@ -1032,7 +1059,9 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         participant_name: heat.registration.user.first_name + ' ' + (heat.registration.user.last_name || ''),
         temple_name: heat.registration.user.temple.name,
         aadhar_number: heat.registration.user.aadhar_number,
-        heat_time: heat.heat_time
+        performance_1: heat.performance_1,
+        performance_2: heat.performance_2,
+        performance_3: heat.performance_3
       });
     });
 
@@ -1050,7 +1079,9 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   body('heat_number').isInt().withMessage('Invalid heat number'),
   body('timings').isArray().withMessage('Timings must be an array'),
   body('timings.*.registration_id').isInt().withMessage('Invalid registration ID'),
-  body('timings.*.heat_time').optional().isString().withMessage('Heat time must be a string')
+  body('timings.*.performance_1').optional().isString().withMessage('Performance 1 must be a string'),
+  body('timings.*.performance_2').optional().isString().withMessage('Performance 2 must be a string'),
+  body('timings.*.performance_3').optional().isString().withMessage('Performance 3 must be a string')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -1062,26 +1093,48 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   try {
     // Update timings for each participant - only update if timing has a valid value
     const updatePromises = timings.map(timing => {
-      // Convert string timing to float, handle empty strings and invalid values
-      let heatTimeValue = null;
-      if (timing.heat_time && timing.heat_time.trim() !== '') {
-        const parsedTime = parseFloat(timing.heat_time);
-        if (!isNaN(parsedTime) && parsedTime > 0) {
-          heatTimeValue = parsedTime;
+      // Helper function to parse timing values
+      const parseTiming = (timingValue) => {
+        // Handle null, undefined, or empty values
+        if (timingValue === null || timingValue === undefined || timingValue === '') {
+          return null;
         }
-      }
+        
+        // Convert to string and trim
+        const stringValue = String(timingValue).trim();
+        if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
+          return null;
+        }
+        
+        // Parse as float
+        const parsedTime = parseFloat(stringValue);
+        if (!isNaN(parsedTime) && parsedTime > 0) {
+          return parsedTime;
+        }
+        
+        // Return null for invalid values
+        return null;
+      };
 
-      // Only update if we have a valid timing value
-      if (heatTimeValue !== null) {
+      // Parse all three performance values
+      const performance1 = parseTiming(timing.performance_1);
+      const performance2 = parseTiming(timing.performance_2);
+      const performance3 = parseTiming(timing.performance_3);
+
+      // Only update if we have at least one valid timing value
+      if (performance1 !== null || performance2 !== null || performance3 !== null) {
+        const updateData = {};
+        if (performance1 !== null) updateData.performance_1 = performance1;
+        if (performance2 !== null) updateData.performance_2 = performance2;
+        if (performance3 !== null) updateData.performance_3 = performance3;
+
         return prisma.event_performance.updateMany({
           where: {
             event_id: event_id,
             heat_number: heat_number,
             registration_id: timing.registration_id
           },
-          data: {
-            heat_time: heatTimeValue
-          }
+          data: updateData
         });
       } else {
         // Return a resolved promise for invalid timings (don't update)
@@ -1096,6 +1149,277 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   } catch (error) {
     console.error('Error saving timings:', error);
     res.status(500).json({ error: error.message || 'Failed to save timings' });
+  }
+});
+
+// Update final heat timings (no heat_number required)
+router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('timings').isArray().withMessage('Timings must be an array'),
+  body('timings.*.registration_id').isInt().withMessage('Invalid registration ID'),
+  body('timings.*.performance_1').optional().custom((value) => {
+    if (value === null || value === undefined || value === '') return true;
+    return typeof value === 'string' || typeof value === 'number';
+  }).withMessage('Performance 1 must be a string or number'),
+  body('timings.*.performance_2').optional().custom((value) => {
+    if (value === null || value === undefined || value === '') return true;
+    return typeof value === 'string' || typeof value === 'number';
+  }).withMessage('Performance 2 must be a string or number'),
+  body('timings.*.performance_3').optional().custom((value) => {
+    if (value === null || value === undefined || value === '') return true;
+    return typeof value === 'string' || typeof value === 'number';
+  }).withMessage('Performance 3 must be a string or number')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { event_id, timings } = req.body;
+
+  try {
+    // Update timings for each participant - only update if timing has a valid value
+    const updatePromises = timings.map(timing => {
+      // Helper function to parse timing values
+      const parseTiming = (timingValue) => {
+        // Handle null, undefined, or empty values
+        if (timingValue === null || timingValue === undefined || timingValue === '') {
+          return null;
+        }
+        
+        // Convert to string and trim
+        const stringValue = String(timingValue).trim();
+        if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
+          return null;
+        }
+        
+        // Parse as float
+        const parsedTime = parseFloat(stringValue);
+        if (!isNaN(parsedTime) && parsedTime > 0) {
+          return parsedTime;
+        }
+        
+        // Return null for invalid values
+        return null;
+      };
+
+      // Parse all three performance values
+      const performance1 = parseTiming(timing.performance_1);
+      const performance2 = parseTiming(timing.performance_2);
+      const performance3 = parseTiming(timing.performance_3);
+
+      // Only update if we have at least one valid timing value
+      if (performance1 !== null || performance2 !== null || performance3 !== null) {
+        const updateData = {};
+        if (performance1 !== null) updateData.performance_1 = performance1;
+        if (performance2 !== null) updateData.performance_2 = performance2;
+        if (performance3 !== null) updateData.performance_3 = performance3;
+
+        return prisma.event_performance.updateMany({
+          where: {
+            event_id: event_id,
+            registration_id: timing.registration_id
+            // No heat_number filter for final heat updates
+          },
+          data: updateData
+        });
+      } else {
+        // Return a resolved promise for invalid timings (don't update)
+        return Promise.resolve();
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    res.json({ message: 'Final heat timings updated successfully' });
+
+  } catch (error) {
+    console.error('Error saving final heat timings:', error);
+    res.status(500).json({ error: error.message || 'Failed to save final heat timings' });
+  }
+});
+
+// Helper function to ensure trial performance records exist for all accepted participants
+async function ensureTrialPerformanceRecords(eventId) {
+  // Get all accepted participants for this event
+  const acceptedParticipants = await prisma.ind_event_registration.findMany({
+    where: {
+      event_id: parseInt(eventId),
+      is_deleted: false,
+      status: 'ACCEPTED',
+      year: new Date().getFullYear()
+    },
+    select: {
+      id: true
+    }
+  });
+
+  if (acceptedParticipants.length === 0) {
+    console.log('No accepted participants found for event:', eventId);
+    return;
+  }
+
+  // Check which participants already have performance records
+  const existingRecords = await prisma.event_performance.findMany({
+    where: {
+      event_id: parseInt(eventId),
+      registration_id: {
+        in: acceptedParticipants.map(p => p.id)
+      }
+    },
+    select: {
+      registration_id: true
+    }
+  });
+
+  const existingRegistrationIds = new Set(existingRecords.map(r => r.registration_id));
+  
+  // Create performance records for participants that don't have them
+  const newRecords = acceptedParticipants
+    .filter(p => !existingRegistrationIds.has(p.id))
+    .map(participant => ({
+      year: new Date().getFullYear(),
+      registration_id: participant.id,
+      event_id: parseInt(eventId),
+      heat_number: null, // Trial events don't have heats
+      performance_1: null,
+      performance_2: null,
+      performance_3: null
+    }));
+
+  if (newRecords.length > 0) {
+    console.log(`Creating ${newRecords.length} trial performance records for event ${eventId}`);
+    await prisma.event_performance.createMany({
+      data: newRecords
+    });
+  }
+}
+
+// Get trial measurements for trial events
+router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, res) => {
+  const { eventId } = req.params;
+
+  try {
+    // First ensure all accepted participants have performance records
+    await ensureTrialPerformanceRecords(eventId);
+
+    // Fetch trial performance data for the event
+    const trialData = await prisma.event_performance.findMany({
+      where: {
+        event_id: parseInt(eventId)
+      },
+      select: {
+        registration_id: true,
+        performance_1: true,
+        performance_2: true,
+        performance_3: true
+      }
+    });
+
+    // Convert to a more usable format
+    const trialsMap = {};
+    trialData.forEach(trial => {
+      trialsMap[trial.registration_id] = {
+        performance_1: trial.performance_1,
+        performance_2: trial.performance_2,
+        performance_3: trial.performance_3
+      };
+    });
+
+    res.json(trialsMap);
+
+  } catch (error) {
+    console.error('Error fetching trials:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch trial measurements' });
+  }
+});
+
+// Update trial measurements for trial events
+router.put('/update-trials', authenticate, requireRole('STAFF'), [
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('trials').isArray().withMessage('Trials must be an array'),
+  body('trials.*.registration_id').isInt().withMessage('Invalid registration ID'),
+  body('trials.*.performance_1').optional().custom((value) => {
+    if (value === null || value === undefined || value === '') return true;
+    return typeof value === 'string' || typeof value === 'number';
+  }).withMessage('Performance 1 must be a string or number'),
+  body('trials.*.performance_2').optional().custom((value) => {
+    if (value === null || value === undefined || value === '') return true;
+    return typeof value === 'string' || typeof value === 'number';
+  }).withMessage('Performance 2 must be a string or number'),
+  body('trials.*.performance_3').optional().custom((value) => {
+    if (value === null || value === undefined || value === '') return true;
+    return typeof value === 'string' || typeof value === 'number';
+  }).withMessage('Performance 3 must be a string or number')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { event_id, trials } = req.body;
+
+  try {
+    // First ensure all accepted participants have performance records
+    await ensureTrialPerformanceRecords(event_id);
+
+    // Update trial measurements for each participant - only update if trial has a valid value
+    const updatePromises = trials.map(trial => {
+      // Helper function to parse trial values
+      const parseTrial = (trialValue) => {
+        // Handle null, undefined, or empty values
+        if (trialValue === null || trialValue === undefined || trialValue === '') {
+          return null;
+        }
+        
+        // Convert to string and trim
+        const stringValue = String(trialValue).trim();
+        if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
+          return null;
+        }
+        
+        // Parse as float
+        const parsedTrial = parseFloat(stringValue);
+        if (!isNaN(parsedTrial) && parsedTrial > 0) {
+          return parsedTrial;
+        }
+        
+        // Return null for invalid values
+        return null;
+      };
+
+      // Parse all three performance values
+      const performance1 = parseTrial(trial.performance_1);
+      const performance2 = parseTrial(trial.performance_2);
+      const performance3 = parseTrial(trial.performance_3);
+
+      // Only update if we have at least one valid trial value
+      if (performance1 !== null || performance2 !== null || performance3 !== null) {
+        const updateData = {};
+        if (performance1 !== null) updateData.performance_1 = performance1;
+        if (performance2 !== null) updateData.performance_2 = performance2;
+        if (performance3 !== null) updateData.performance_3 = performance3;
+
+        return prisma.event_performance.updateMany({
+          where: {
+            event_id: event_id,
+            registration_id: trial.registration_id
+          },
+          data: updateData
+        });
+      } else {
+        // Return a resolved promise for invalid trials (don't update)
+        return Promise.resolve();
+      }
+    });
+
+    await Promise.all(updatePromises);
+
+    res.json({ message: 'Trial measurements updated successfully' });
+
+  } catch (error) {
+    console.error('Error saving trials:', error);
+    res.status(500).json({ error: error.message || 'Failed to save trial measurements' });
   }
 });
 

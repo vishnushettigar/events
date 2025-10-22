@@ -230,7 +230,9 @@ model event_performance {
   event           Mst_event @relation(fields: [event_id], references: [id], onDelete: Cascade)
   event_id        Int
   heat_number     Int?     // e.g., Heat 1, Heat 2
-  heat_time       Float? // Only store heat timing for qualifying rounds
+  performance_1   Float?   // Heat Time (Running) OR Trial 1 Result (Field)
+  performance_2   Float?   // Final Time (Running) OR Trial 2 Result (Field)
+  performance_3   Float?   // NULL (Running) OR Trial 3 Result (Field)
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
 }
