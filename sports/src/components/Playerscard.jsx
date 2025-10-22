@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount, isAdmin = false, updatingStatus = false }) => {
+const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount, isAdmin = false, isViewer = false, updatingStatus = false }) => {
     if (!participant) return null;
 
     // Check if this participant's age category should be excluded from action buttons
@@ -34,6 +34,11 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
     );
 
     const getActionButtons = () => {
+        // Don't show action buttons in viewer mode
+        if (isViewer) {
+            return null;
+        }
+
         // Don't show action buttons for excluded age categories
         if (isExcludedAgeCategory) {
             return <div className="text-sm text-gray-500 italic">Auto-approved</div>;
@@ -190,7 +195,7 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
             </td>
 
             {/* Actions */}
-            {!isAdmin && (
+            {!isAdmin && !isViewer && (
                 <td className="px-4 py-3">
                     {getActionButtons()}
                 </td>

@@ -80,7 +80,7 @@ const Home = () => {
               {isLoggedIn ? (
                 <button
                   onClick={handleMyEventsClick}
-                  className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[160px] flex items-center justify-center"
+                  className="flex-1 sm:flex-initial px-8 h-12 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[160px] flex items-center justify-center whitespace-nowrap leading-none"
                 >
                   {isEnglish ? "My Events" : "ನನ್ನ ಸ್ಪರ್ಧೆಗಳು"}
                 </button>
@@ -88,13 +88,13 @@ const Home = () => {
                 <>
                   <a
                     href="/login"
-                    className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center text-[#D35D38] border-[1.5px] border-[#D35D38] font-medium text-md hover:bg-[#e0e0e0] transition w-[140px] flex items-center justify-center"
+                    className="flex-1 sm:flex-initial px-8 h-12 rounded-lg text-center text-[#D35D38] border-[1.5px] border-[#D35D38] font-medium text-md hover:bg-[#e0e0e0] transition w-[140px] flex items-center justify-center whitespace-nowrap leading-none"
                   >
                     {isEnglish ? "Login" : "ಲಾಗಿನ್"}
                   </a>
                   <a
                     href="/register"
-                    className="flex-1 sm:flex-initial px-8 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[140px] flex items-center justify-center"
+                    className="flex-1 sm:flex-initial px-8 h-12 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[140px] flex items-center justify-center whitespace-nowrap leading-none"
                   >
                     {isEnglish ? "Register" : "ನೋಂದಣಿ"}
                   </a>

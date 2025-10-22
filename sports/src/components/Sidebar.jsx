@@ -8,7 +8,6 @@ const Sidebar = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const fetchPendingCount = async () => {
@@ -37,22 +36,13 @@ const Sidebar = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [location]);
-
-  const handleNavigation = () => {
-    setIsMobileMenuOpen(false);
-  };
 
   return (
     <>
 
-      {/* Sidebar */}
+      {/* Sidebar - Only visible on desktop */}
       <aside
-        className={`fixed md:relative min-h-screen bg-white shadow-xl flex flex-col transition-all duration-300 ease-in-out
-          ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        className={`hidden md:flex fixed md:relative min-h-screen bg-white shadow-xl flex-col transition-all duration-300 ease-in-out
           ${isCollapsed ? 'w-20' : 'w-64'}
           z-40`}
       >
@@ -75,14 +65,6 @@ const Sidebar = () => {
         {/* Menu Header */}
         <div className="flex items-center justify-between p-4 border-b border-[#F8DFBE]">
           <h2 className={`text-lg font-bold text-[#2A2A2A] transition-all duration-300 ${isCollapsed ? 'hidden' : ''}`}>Menu</h2>
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={`md:hidden p-2 rounded-md text-[#2A2A2A] hover:bg-[#F8DFBE] transition-colors ${isCollapsed ? 'hidden' : ''}`}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         {/* Navigation Links */}
@@ -92,7 +74,6 @@ const Sidebar = () => {
             <li className={`${isCollapsed ? 'flex justify-center' : ''}`}>
               <Link
                 to="/myevents"
-                onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents' ? 'bg-[#F8DFBE]' : ''
                 } ${isCollapsed ? 'justify-center w-full' : ''} ${
@@ -114,7 +95,6 @@ const Sidebar = () => {
             <li className={`relative ${isCollapsed ? 'flex justify-center' : ''}`}>
               <Link
                 to="/myevents/templeparticipants"
-                onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents/templeparticipants' ? 'bg-[#F8DFBE]' : ''
                 } ${isCollapsed ? 'justify-center w-full' : ''} ${
@@ -154,7 +134,6 @@ const Sidebar = () => {
             <li className={`${isCollapsed ? 'flex justify-center' : ''}`}>
               <Link
                 to="/myevents/groupevents"
-                onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents/groupevents' ? 'bg-[#F8DFBE]' : ''
                 } ${isCollapsed ? 'justify-center w-full' : ''} ${
@@ -176,7 +155,6 @@ const Sidebar = () => {
             <li className={`${isCollapsed ? 'flex justify-center' : ''}`}>
               <Link
                 to="/myevents/Participantslist"
-                onClick={handleNavigation}
                 className={`flex items-center px-4 py-3 text-[#2A2A2A] hover:bg-[#F8DFBE] rounded-lg transition-colors ${
                   location.pathname === '/myevents/Participantslist' ? 'bg-[#F8DFBE]' : ''
                 } ${isCollapsed ? 'justify-center w-full' : ''} ${
@@ -199,13 +177,6 @@ const Sidebar = () => {
        
       </aside>
 
-      {/* Overlay for mobile menu */}
-      {isMobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
     </>
   );
 };

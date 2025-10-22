@@ -77,7 +77,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
     
     Object.entries(heats).forEach(([heatNumber, heatParticipants]) => {
       heatParticipants.forEach(participant => {
-        const timing = participant.heat_time;
+        const timing = participant.performance_1;
         const timingSeconds = parseTiming(timing);
         
         if (timing && timing !== '' && timingSeconds !== Infinity) {
@@ -183,7 +183,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
           <tbody>
             ${participantsToPrint.map((participant, index) => {
               const participantName = participant.participant_name || participant.team_name;
-              const timing = participant.heat_time || participant.timing || '';
+              const timing = participant.performance_1 || participant.timing || '';
               const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
               
               return `
@@ -345,11 +345,23 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
                       {participant.aadhar_number || 'N/A'}
                     </td>
                     <td className="px-4 py-2 whitespace-nowrap text-sm">
-                      <span className={`font-bold ${
-                        showFinalHeat && finalHeatParticipants.length > 0 ? 'text-green-600' : 'text-blue-600'
-                      }`}>
-                        {participant.heat_time || participant.timing || '-'}
-                      </span>
+                      <div className="space-y-1">
+                        <div className={`font-bold ${
+                          showFinalHeat && finalHeatParticipants.length > 0 ? 'text-green-600' : 'text-blue-600'
+                        }`}>
+                          {participant.performance_1 || participant.timing || '-'}
+                        </div>
+                        {participant.performance_2 && (
+                          <div className="text-xs text-gray-500">
+                            {participant.performance_2}
+                          </div>
+                        )}
+                        {participant.performance_3 && (
+                          <div className="text-xs text-gray-500">
+                            {participant.performance_3}
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

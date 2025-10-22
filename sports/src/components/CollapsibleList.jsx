@@ -3,7 +3,7 @@ import Playerscard from './Playerscard';
 import AdminHeatViewer from './AdminHeatViewer';
 import { participantAPI, eventAPI, systemAPI } from '../utils/api.js';
 
-const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false, ageCategory = "Admin View", gender = "All" }) => {
+const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false, isViewer = false, ageCategory = "Admin View", gender = "All" }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localParticipants, setLocalParticipants] = useState(participants);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -14,6 +14,8 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
   const [heatsGenerated, setHeatsGenerated] = useState(false);
   const [heatError, setHeatError] = useState(null);
   const [loadingLaneCount, setLoadingLaneCount] = useState(false);
+  const [initializingTrials, setInitializingTrials] = useState(false);
+  const [trialInitError, setTrialInitError] = useState(null);
 
   // Update local participants when props change
   useEffect(() => {
@@ -38,6 +40,12 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
   const isRunningEvent = () => {
     const eventName = title.toLowerCase();
     return eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
+  };
+
+  // Check if this event is a field/trial event (e.g., long jump, shot put)
+  const isTrialEvent = () => {
+    const eventName = title.toLowerCase();
+    return eventName.includes('long-jump') || eventName.includes('long jump') || eventName.includes('shot put');
   };
 
   // Fetch lane count from settings
@@ -119,6 +127,23 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
       setHeatError(error.message || 'Failed to regenerate heats');
     } finally {
       setRegeneratingHeats(false);
+    }
+  };
+
+  // Initialize trial performances for trial events (ADMIN only)
+  const handleInitTrials = async () => {
+    try {
+      setInitializingTrials(true);
+      setTrialInitError(null);
+      await eventAPI.initTrials(eventId);
+      if (onParticipantsUpdate) {
+        onParticipantsUpdate();
+      }
+    } catch (error) {
+      console.error('Error initializing trials:', error);
+      setTrialInitError(error.message || 'Failed to initialize trial performances');
+    } finally {
+      setInitializingTrials(false);
     }
   };
 
@@ -336,6 +361,34 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
             </div>
           )}
 
+          {/* Trial Performance Initialization (Admin Only) */}
+          {isTrialEvent() && isAdmin && (
+            <div className="bg-purple-50 border-b border-purple-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-lg font-semibold text-purple-800">🏅 Trial Management</h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleInitTrials}
+                    disabled={initializingTrials || acceptedCount === 0}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {initializingTrials ? 'Initializing...' : 'Init Trials'}
+                  </button>
+                </div>
+              </div>
+              {acceptedCount === 0 && (
+                <p className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                  ⚠️ No accepted participants found. Please approve participants first.
+                </p>
+              )}
+              {trialInitError && (
+                <p className="text-sm text-red-700 bg-red-100 p-2 rounded">
+                  {trialInitError}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Heat Viewer for Admin - Show after heats are generated */}
           {isRunningEvent() && isAdmin && heatsGenerated && (
             <AdminHeatViewer 
@@ -363,7 +416,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Result
                     </th>
-                    {!isAdmin && (
+                    {!isAdmin && !isViewer && (
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Actions
                       </th>
@@ -379,6 +432,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
                   acceptedCount={acceptedCount}
                   pendingCount={pendingCount}
                   isAdmin={isAdmin}
+                  isViewer={isViewer}
                   updatingStatus={updatingStatus}
                 />
               ))}

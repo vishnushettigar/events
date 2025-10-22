@@ -1197,6 +1197,9 @@ const TeamsManagement = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userDetails, setUserDetails] = useState({});
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [selectedTemple, setSelectedTemple] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     fetchTeamsData();
@@ -1347,6 +1350,32 @@ const TeamsManagement = () => {
   };
 
   const groupedEvents = groupTeamsByEvent();
+
+  // Handle View Teams modal
+  const handleViewTeams = async (temple) => {
+    setSelectedTemple(temple);
+    setShowTeamModal(true);
+    
+    // Fetch team member details for all teams in this temple
+    const allTeamMembers = [];
+    for (const team of temple.teams) {
+      const members = await getTeamMemberDetails(team);
+      allTeamMembers.push(...members.map(member => ({
+        ...member,
+        team_id: team.id,
+        team_status: team.status,
+        team_points: team.event_result?.points || 0
+      })));
+    }
+    setTeamMembers(allTeamMembers);
+  };
+
+  const handleCloseTeamModal = () => {
+    setShowTeamModal(false);
+    setSelectedTemple(null);
+    setTeamMembers([]);
+  };
+
  // Teams management//
   return (
     <div className="space-y-6">
@@ -1484,21 +1513,11 @@ const TeamsManagement = () => {
                                     <td className="px-6 py-4">
                                       <div className="flex space-x-2">
                                         <button 
-                                          onClick={() => {
-                                            // TODO: Implement view teams functionality
-                                          }}
+                                          onClick={() => handleViewTeams(temple)}
                                           className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                                         >
                                           View Teams
-                                        </button>
-                                        <button 
-                                          onClick={() => {
-                                            // TODO: Implement temple details functionality
-                                          }}
-                                          className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
-                                        >
-                                          Temple Details
-                                        </button>
+                                        </button>                                   
                                       </div>
                                     </td>
                                   </tr>
@@ -1597,21 +1616,11 @@ const TeamsManagement = () => {
                                     <td className="px-6 py-4">
                                       <div className="flex space-x-2">
                                         <button 
-                                          onClick={() => {
-                                            // TODO: Implement view teams functionality
-                                          }}
+                                          onClick={() => handleViewTeams(temple)}
                                           className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                                         >
                                           View Teams
-                                        </button>
-                                        <button 
-                                          onClick={() => {
-                                            // TODO: Implement temple details functionality
-                                          }}
-                                          className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
-                                        >
-                                          Temple Details
-                                        </button>
+                                        </button>                                        
                                       </div>
                                     </td>
                                   </tr>
@@ -1667,7 +1676,7 @@ const TeamsManagement = () => {
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Aadhar Numbers</th>
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Points</th>
-                                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                                  {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th> */}
                                 </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-100">
@@ -1752,6 +1761,99 @@ const TeamsManagement = () => {
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <span className="text-orange-600 text-xl">🏆</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Members Modal */}
+      {showTeamModal && selectedTemple && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[400px] max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#2A2A2A]">
+                Team Members - {selectedTemple.temple_name}
+              </h2>
+              <button
+                onClick={handleCloseTeamModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Temple Code:</span>
+                  <span className="ml-2">{selectedTemple.temple_code}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Total Teams:</span>
+                  <span className="ml-2">{selectedTemple.teams.length}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Total Members:</span>
+                  <span className="ml-2">{selectedTemple.totalMembers}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Total Points:</span>
+                  <span className="ml-2">{selectedTemple.totalPoints}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="font-semibold text-[#2A2A2A] mb-3">Team Members ({teamMembers.length})</h3>
+              {teamMembers.length > 0 ? (
+                <div className="space-y-3">
+                  {teamMembers.map((member, index) => (
+                    <div key={member.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-[#D35D38] text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#2A2A2A]">
+                            {member.profile?.first_name} {member.profile?.last_name}
+                          </p>
+                          <p className="text-sm text-[#5A5A5A]">
+                            Aadhar: {member.profile?.aadhar_number}
+                            {member.profile?.phone && ` • Phone: ${member.profile.phone}`}
+                            {member.profile?.email && ` • Email: ${member.profile.email}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm">
+                        <div className="text-[#5A5A5A]">
+                          {member.profile?.gender === 'M' ? 'Male' : 
+                           member.profile?.gender === 'F' ? 'Female' : 
+                           member.profile?.gender}
+                        </div>
+                        <div className="text-xs text-[#D35D38] font-semibold">
+                          Team #{member.team_id}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {member.team_status}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[#5A5A5A]">
+                  <p>No team members found.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleCloseTeamModal}
+                className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -1842,7 +1944,7 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
       <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">
         {team.event_result?.points || 0}
       </td>
-      <td className="px-6 py-4">
+      {/* <td className="px-6 py-4">
         <div className="flex space-x-2">
           <button 
             onClick={() => {
@@ -1852,16 +1954,8 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
           >
             View Details
           </button>
-          <button 
-            onClick={() => {
-              // TODO: Implement edit team functionality
-            }}
-            className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
-          >
-            Edit Team
-          </button>
         </div>
-      </td>
+      </td> */}
     </tr>
   );
 };

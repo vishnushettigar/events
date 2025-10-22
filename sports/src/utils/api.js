@@ -52,8 +52,14 @@ class ApiService {
         // Handle 401 Unauthorized responses
         if (response.status === 401) {
           console.log('API Service: Received 401 Unauthorized response');
-          authManager.handleUnauthorized();
-          throw new Error('Unauthorized - Please login again');
+          
+          // Don't trigger logout for login endpoint - just throw error
+          if (isAuthEndpoint) {
+            throw new Error('Invalid Aadhaar number or password. Please try again.');
+          } else {
+            authManager.handleUnauthorized();
+            throw new Error('Unauthorized - Please login again');
+          }
         }
         
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -164,6 +170,12 @@ export const eventAPI = {
   regenerateHeats: (eventId) => apiService.delete(`/events/regenerate-heats/${eventId}`),
   getHeats: (eventId) => apiService.get(`/events/heats/${eventId}`),
   saveTimings: (eventId, heatNumber, timings) => apiService.put('/events/update-timings', { event_id: eventId, heat_number: heatNumber, timings }),
+  saveFinalTimings: (eventId, timings) => apiService.put('/events/update-final-timings', { event_id: eventId, timings }),
+  
+  // Trial management
+  initTrials: (eventId) => apiService.post('/events/init-trials', { event_id: eventId }),
+  getTrials: (eventId) => apiService.get(`/events/trials/${eventId}`),
+  saveTrials: (eventId, trials) => apiService.put('/events/update-trials', { event_id: eventId, trials }),
 };
 
 export const participantAPI = {

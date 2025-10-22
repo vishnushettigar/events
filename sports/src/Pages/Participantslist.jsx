@@ -35,6 +35,12 @@ const Participantslist = () => {
       }
     };
 
+    // Set viewport meta tag to prevent zoom
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    }
+
     fetchTempleName();
     fetchParticipants();
 
@@ -45,7 +51,14 @@ const Participantslist = () => {
     };
 
     window.addEventListener('authLogout', handleAuthLogout);
-    return () => window.removeEventListener('authLogout', handleAuthLogout);
+    
+    return () => {
+      window.removeEventListener('authLogout', handleAuthLogout);
+      // Reset viewport meta tag on cleanup
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
+    };
   }, []);
 
   const filteredParticipants = participants.filter(participant => {
@@ -54,8 +67,8 @@ const Participantslist = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#F0F0F0] py-8 px-4">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-[#F0F0F0] py-8 px-4" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', position: 'relative', transform: 'translateZ(0)' }}>
+      <div className="max-w-7xl mx-auto w-full" style={{ width: '100%', maxWidth: '100%' }}>
         {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
@@ -146,7 +159,7 @@ const Participantslist = () => {
         </div>
 
         {/* Participants Table */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%' }}>
           <div className="px-6 py-4 bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
             <h2 className="text-2xl font-bold text-white">Participants List</h2>
             <p className="text-white/80 text-sm mt-1">
@@ -154,29 +167,29 @@ const Participantslist = () => {
             </p>
             </div>
 
-              <div className="overflow-x-auto">
-            <table className="w-full divide-y divide-gray-200">
+              <div className="overflow-x-auto" style={{ maxWidth: '100%', overflowX: 'auto', width: '100%', position: 'relative', transform: 'translateZ(0)' }}>
+            <table className="w-full divide-y divide-gray-200" style={{ minWidth: '800px', width: '100%', tableLayout: 'fixed', transform: 'translateZ(0)' }}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '80px' }}>
                     SL.NO
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '200px' }}>
                     Name
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '100px' }}>
                     Category
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '150px' }}>
                     Aadhar No
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '120px' }}>
                     Date of Birth
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '100px' }}>
                     Gender
                   </th>
-                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
+                  <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '120px' }}>
                     Phone No
                   </th>
                 </tr>
@@ -203,26 +216,26 @@ const Participantslist = () => {
                 ) : (
                   filteredParticipants.map((participant, idx) => (
                     <tr key={participant.id} className="hover:bg-[#F8DFBE] transition-colors duration-200">
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '80px' }}>
                         <span className="inline-flex items-center justify-center w-8 h-8 bg-[#D35D38] text-white text-sm font-bold rounded-full">
                           {idx + 1}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-semibold text-[#2A2A2A]">{participant.name}</div>
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '200px' }}>
+                        <div className="text-sm font-semibold text-[#2A2A2A] truncate" title={participant.name}>{participant.name}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '100px' }}>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {participant.age_category}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-[#5A5A5A] font-mono">{participant.aadhar_number}</div>
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '150px' }}>
+                        <div className="text-sm text-[#5A5A5A] font-mono truncate" title={participant.aadhar_number}>{participant.aadhar_number}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '120px' }}>
                         <div className="text-sm text-[#5A5A5A]">{participant.date_of_birth}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '100px' }}>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           participant.gender === 'MALE' 
                             ? 'bg-blue-100 text-blue-800' 
@@ -231,7 +244,7 @@ const Participantslist = () => {
                           {participant.gender}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap" style={{ width: '120px' }}>
                         <div className="text-sm text-[#5A5A5A]">{participant.phone_number}</div>
                       </td>
                     </tr>

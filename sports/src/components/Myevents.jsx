@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import BottomBar from './BottomBar';
 import { userAPI } from '../utils/api.js';
 import { isAuthenticated } from '../utils/tokenUtils';
 import authManager from '../utils/authManager';
@@ -69,13 +70,16 @@ const Myevents = () => {
   }
 
   return (
-    <section className="flex h-screen overflow-hidden bg-[#F0F0F0]">
+    <section className="flex bg-[#F0F0F0]">
       {userRole === 2 && (
       <Sidebar />
       )}
-      <div className="flex-1 overflow-auto bg-[#F0F0F0]">
+      <div className="flex-1 bg-[#F0F0F0] pb-16 md:pb-0">
         <Outlet />
       </div>
+      {userRole === 2 && (
+        <BottomBar />
+      )}
     </section>
   );
 };

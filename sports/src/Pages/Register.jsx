@@ -29,6 +29,8 @@ const Register = () => {
     const [isLoadingTemples, setIsLoadingTemples] = useState(true);
     const [showRulesModal, setShowRulesModal] = useState(false);
     const [acceptRules, setAcceptRules] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     // Fetch temples from backend on component mount
     useEffect(() => {
@@ -68,6 +70,14 @@ const Register = () => {
             console.log('🔍 Updated form data:', newState);
             return newState;
         });
+    };
+
+    const togglePasswordVisibility = () => {
+        setShowPassword(!showPassword);
+    };
+
+    const toggleConfirmPasswordVisibility = () => {
+        setShowConfirmPassword(!showConfirmPassword);
     };
 
     const validateForm = async () => {
@@ -229,21 +239,21 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F0F0F0] py-12 px-4">
-            <div className="max-w-2xl mx-auto">
+        <div className="min-h-screen bg-[#F0F0F0] py-6 sm:py-12 px-2 sm:px-4">
+            <div className="max-w-2xl mx-auto w-full">
                 {/* Header Section */}
-                <div className="text-center mb-8">
-                    <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
+                <div className="text-center mb-6 sm:mb-8">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-3 sm:mb-4">
                         Create Your Account
                     </h1>
-                    <p className="text-lg text-[#5A5A5A]">
+                    <p className="text-base sm:text-lg text-[#5A5A5A]">
                         Join the Padmashali Annual Sports Meet
                     </p>
                 </div>
 
                 {/* Registration Form */}
-                <div className="">
-                    <form onSubmit={handleContinue} className="space-y-6">
+                <div className="w-full">
+                    <form onSubmit={handleContinue} className="space-y-4 sm:space-y-6 w-full">
                     {errors.submit && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                             {errors.submit}
@@ -251,7 +261,7 @@ const Register = () => {
                     )}
 
                         {/* Name Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             <div>
                                 <label htmlFor="firstName" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                     First Name as in aaadhar *
@@ -262,7 +272,7 @@ const Register = () => {
                                     name="firstName"
                                     value={formData.firstName}
                                     onChange={handleChange}
-                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                         errors.firstName ? 'border-red-300' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your first name"
@@ -280,7 +290,7 @@ const Register = () => {
                                     name="lastName"
                                     value={formData.lastName}
                                     onChange={handleChange}
-                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                         errors.lastName ? 'border-red-300' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter your last name"
@@ -300,7 +310,7 @@ const Register = () => {
                             name="mobile"
                             value={formData.mobile}
                             onChange={handleChange}
-                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                     errors.mobile ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="Enter your 10-digit mobile number"
@@ -344,7 +354,7 @@ const Register = () => {
                             value={formData.temple}
                             onChange={handleChange}
                                 disabled={isLoadingTemples}
-                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                     errors.temple ? 'border-red-300' : 'border-gray-300'
                                 } ${isLoadingTemples ? 'opacity-50' : ''}`}
                         >
@@ -369,7 +379,7 @@ const Register = () => {
                             name="dob"
                             value={formData.dob}
                             onChange={handleChange}
-                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                     errors.dob ? 'border-red-300' : 'border-gray-300'
                                 }`}
                             />
@@ -377,7 +387,7 @@ const Register = () => {
                     </div>
 
                         {/* Aadhaar Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             <div>
                                 <label htmlFor="aadhaar" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                     Aadhaar Number *
@@ -388,7 +398,7 @@ const Register = () => {
                                     name="aadhaar"
                                     value={formData.aadhaar}
                                     onChange={handleChange}
-                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                         errors.aadhaar ? 'border-red-300' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter 12-digit Aadhaar number"
@@ -406,7 +416,7 @@ const Register = () => {
                                     name="confirmAadhaar"
                                     value={formData.confirmAadhaar}
                                     onChange={handleChange}
-                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                         errors.confirmAadhaar ? 'border-red-300' : 'border-gray-300'
                                     }`}
                                     placeholder="Confirm your Aadhaar number"
@@ -426,7 +436,7 @@ const Register = () => {
                             name="email"
                             value={formData.email}
                             onChange={handleChange}
-                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
+                                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                     errors.email ? 'border-red-300' : 'border-gray-300'
                                 }`}
                                 placeholder="Enter your email address"
@@ -435,22 +445,40 @@ const Register = () => {
                     </div>
 
                         {/* Password Fields */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                             <div>
                                 <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                     Password *
                                 </label>
-                                <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
-                                        errors.password ? 'border-red-300' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Create a password (min 6 characters)"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        id="password"
+                                        name="password"
+                                        value={formData.password}
+                                        onChange={handleChange}
+                                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
+                                            errors.password ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                        placeholder="Create a password (min 6 characters)"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={togglePasswordVisibility}
+                                        className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                                    >
+                                        {showPassword ? (
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
                                 {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
                             </div>
 
@@ -458,17 +486,35 @@ const Register = () => {
                                 <label htmlFor="confirmPassword" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
                                     Confirm Password *
                                 </label>
-                                <input
-                                    type="password"
-                                    id="confirmPassword"
-                                    name="confirmPassword"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
-                                        errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                                    }`}
-                                    placeholder="Confirm your password"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        id="confirmPassword"
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleChange}
+                                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
+                                            errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                                        }`}
+                                        placeholder="Confirm your password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={toggleConfirmPasswordVisibility}
+                                        className="absolute inset-y-0 right-0 pr-2 sm:pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
+                                    >
+                                        {showConfirmPassword ? (
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                        )}
+                                    </button>
+                                </div>
                                 {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
                             </div>
                     </div>
@@ -500,7 +546,7 @@ const Register = () => {
                         <button
                             type="submit"
                             disabled={isSubmitting || isValidating}
-                                className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
+                                className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-lg font-bold text-base sm:text-lg shadow-lg transition-all duration-200 ${
                                 isSubmitting || isValidating
                                         ? 'bg-gray-400 cursor-not-allowed text-white'
                                         : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'

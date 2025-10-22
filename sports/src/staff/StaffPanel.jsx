@@ -1105,6 +1105,7 @@ const StaffPanel = () => {
     const [finalHeatParticipants, setFinalHeatParticipants] = useState([]);
     const [loadingHeats, setLoadingHeats] = useState(false);
     const [savingTimings, setSavingTimings] = useState(false);
+    const [savingTrials, setSavingTrials] = useState(false);
 
     // Check if this event requires trial measurements
     const isTrialEvent = () => {
@@ -1141,62 +1142,183 @@ const StaffPanel = () => {
       });
     };
 
-    // Save timings for current heat
+    // Save timings for current heat or final heat
     const saveHeatTimings = async () => {
-      if (!selectedHeat || !heats[selectedHeat]) return;
+      if (showFinalHeat) {
+        // Save final heat timings - only update performance_2
+        if (!finalHeatParticipants || finalHeatParticipants.length === 0) return;
+        
+        try {
+          setSavingTimings(true);
+          
+          // Only include participants that have actual final time values (not empty)
+          const timingsArray = finalHeatParticipants
+            .filter(participant => {
+              const finalTime = timings[`${participant.id}_performance_2`];
+              return (finalTime && finalTime.trim() !== '');
+            })
+            .map(participant => ({
+              registration_id: participant.id,
+              performance_1: String(participant.performance_1 || ''), // Keep existing heat time as string
+              performance_2: String(timings[`${participant.id}_performance_2`] || participant.performance_2 || ''), // Convert to string
+              performance_3: '' // Not used for heat events
+            }));
+          
+          console.log(`Updating final heat timings (performance_2 only):`, timingsArray);
+          console.log(`Only sending ${timingsArray.length} participants with final times out of ${finalHeatParticipants.length} total participants`);
+          
+          if (timingsArray.length === 0) {
+            showInfoModal('No Final Times', 'Please enter at least one final time before saving.');
+            return;
+          }
+          
+          await eventAPI.saveFinalTimings(eventId, timingsArray);
+          console.log('Final heat timings updated successfully');
+          
+          // Clear the local timings state since data is now saved
+          setTimings({});
+          
+          showSuccessModal(
+            'Final Heat Timings Updated',
+            `Final heat timings have been updated successfully!`,
+            {
+              participants: timingsArray.length,
+              total: finalHeatParticipants.length
+            }
+          );
+        } catch (error) {
+          console.error('Error saving final heat timings:', error);
+          showErrorModal(
+            'Update Failed',
+            'Failed to update final heat timings. Please try again.',
+            {
+              error: error.message
+            }
+          );
+        } finally {
+          setSavingTimings(false);
+        }
+      } else {
+        // Save regular heat timings - only update performance_1
+        if (!selectedHeat || !heats[selectedHeat]) return;
+        
+        try {
+          setSavingTimings(true);
+          
+          // Only include participants that have actual heat time values (not empty)
+          const timingsArray = heats[selectedHeat]
+            .filter(participant => {
+              const heatTime = timings[participant.id];
+              return (heatTime && heatTime.trim() !== '');
+            })
+            .map(participant => ({
+              registration_id: participant.id,
+              performance_1: String(timings[participant.id] || participant.performance_1 || ''), // Convert to string
+              performance_2: String(participant.performance_2 || ''), // Keep existing final time as string
+              performance_3: '' // Not used for heat events
+            }));
+          
+          console.log(`Updating heat timings (performance_1 only):`, timingsArray);
+          console.log(`Only sending ${timingsArray.length} participants with heat times out of ${heats[selectedHeat].length} total participants`);
+          
+          if (timingsArray.length === 0) {
+            showInfoModal('No Heat Times', 'Please enter at least one heat time before saving.');
+            return;
+          }
+          
+          await eventAPI.saveTimings(eventId, selectedHeat, timingsArray);
+          console.log('Heat timings updated successfully');
+          
+          // Refresh heats to get updated data
+          await fetchHeats();
+          
+          // Clear the local timings state since data is now saved
+          setTimings({});
+          
+          showSuccessModal(
+            'Heat Timings Updated Successfully',
+            `Heat timings for Heat ${selectedHeat} have been updated successfully!`,
+            {
+              heat: selectedHeat,
+              participants: timingsArray.length,
+              total: heats[selectedHeat]?.length || 0
+            }
+          );
+        } catch (error) {
+          console.error('Error saving heat timings:', error);
+          showErrorModal(
+            'Update Failed',
+            'Failed to update heat timings. Please try again.',
+            {
+              heat: selectedHeat,
+              error: error.message
+            }
+          );
+        } finally {
+          setSavingTimings(false);
+        }
+      }
+    };
+
+    // Save trial measurements for trial events
+    const saveTrials = async () => {
+      if (!isTrialEvent()) return;
       
       try {
-        setSavingTimings(true);
+        setSavingTrials(true);
         
-        // Only include participants that have actual timing values (not empty)
-        const timingsArray = heats[selectedHeat]
+        // Only include participants that have actual trial values (not empty)
+        const trialsArray = eventParticipants
           .filter(participant => {
-            const timing = timings[participant.id];
-            return timing && timing.trim() !== '';
+            const trial1 = trialMeasurements[`${participant.id}_1`];
+            const trial2 = trialMeasurements[`${participant.id}_2`];
+            const trial3 = trialMeasurements[`${participant.id}_3`];
+            return (trial1 && trial1.trim() !== '') || 
+                   (trial2 && trial2.trim() !== '') || 
+                   (trial3 && trial3.trim() !== '');
           })
           .map(participant => ({
             registration_id: participant.id,
-            heat_time: timings[participant.id]
+            performance_1: String(trialMeasurements[`${participant.id}_1`] || participant.performance_1 || ''), // Convert to string
+            performance_2: String(trialMeasurements[`${participant.id}_2`] || participant.performance_2 || ''), // Convert to string
+            performance_3: String(trialMeasurements[`${participant.id}_3`] || participant.performance_3 || '') // Convert to string
           }));
         
-        console.log(`Updating timings for Heat ${selectedHeat}:`, timingsArray);
-        console.log(`Only sending ${timingsArray.length} participants with timings out of ${heats[selectedHeat].length} total participants`);
+        console.log(`Updating trials for event ${eventId}:`, trialsArray);
+        console.log(`Only sending ${trialsArray.length} participants with trials out of ${eventParticipants.length} total participants`);
         
-        if (timingsArray.length === 0) {
-          showInfoModal('No Timings', 'Please enter at least one timing before saving.');
+        if (trialsArray.length === 0) {
+          showInfoModal('No Trials', 'Please enter at least one trial measurement before saving.');
           return;
         }
         
-        await eventAPI.saveTimings(eventId, selectedHeat, timingsArray);
-        console.log('Timings updated successfully');
+        await eventAPI.saveTrials(eventId, trialsArray);
+        console.log('Trials updated successfully');
         
-        // Refresh heats to get updated data
-        await fetchHeats();
-        
-        // Clear the local timings state since data is now saved
-        setTimings({});
+        // Clear the local trial measurements state since data is now saved
+        setTrialMeasurements({});
         
         showSuccessModal(
-          'Timings Updated Successfully',
-          `Timings for Heat ${selectedHeat} have been updated successfully!`,
+          'Trials Updated',
+          `Trial measurements have been updated successfully!`,
           {
-            heat: selectedHeat,
-            participants: timingsArray.length,
-            total: heats[selectedHeat]?.length || 0
+            event: title,
+            participants: trialsArray.length,
+            total: eventParticipants.length
           }
         );
       } catch (error) {
-        console.error('Error saving timings:', error);
+        console.error('Error saving trials:', error);
         showErrorModal(
           'Update Failed',
-          'Failed to update timings. Please try again.',
+          'Failed to update trial measurements. Please try again.',
           {
-            heat: selectedHeat,
+            event: title,
             error: error.message
           }
         );
       } finally {
-        setSavingTimings(false);
+        setSavingTrials(false);
       }
     };
 
@@ -1228,6 +1350,34 @@ const StaffPanel = () => {
         console.error('Error details:', error.message);
       } finally {
         setLoadingHeats(false);
+      }
+    };
+
+    // Fetch trial measurements from backend
+    const fetchTrials = async () => {
+      if (!isTrialEvent()) {
+        console.log('Not a trial event, skipping trial fetch');
+        return;
+      }
+      
+      try {
+        console.log(`Fetching trials for eventId: ${eventId}`);
+        const trialsData = await eventAPI.getTrials(eventId);
+        console.log('Trials data received:', trialsData);
+        
+        // Convert the trials data to the format expected by trialMeasurements state
+        const trialsMap = {};
+        Object.entries(trialsData).forEach(([registrationId, trialData]) => {
+          if (trialData.performance_1) trialsMap[`${registrationId}_1`] = trialData.performance_1.toString();
+          if (trialData.performance_2) trialsMap[`${registrationId}_2`] = trialData.performance_2.toString();
+          if (trialData.performance_3) trialsMap[`${registrationId}_3`] = trialData.performance_3.toString();
+        });
+        
+        setTrialMeasurements(trialsMap);
+        console.log('Trial measurements set:', trialsMap);
+      } catch (error) {
+        console.error('Error fetching trials:', error);
+        console.error('Error details:', error.message);
       }
     };
 
@@ -1284,12 +1434,14 @@ const StaffPanel = () => {
         console.log(`Processing Heat ${heatNumber} with ${heatParticipants.length} participants`);
         
         heatParticipants.forEach(participant => {
-          // Priority: saved heat_time from database > current timings state
-          const timing = participant.heat_time || timings[participant.id];
+          // Priority: saved performance_1 from database > current timings state
+          const timing = participant.performance_1 || timings[participant.id];
           const timingSeconds = parseTiming(timing);
           
           console.log(`Heat ${heatNumber} - Participant ${participant.id} (${participant.participant_name}):`, {
-            heat_time: participant.heat_time,
+            performance_1: participant.performance_1,
+            performance_2: participant.performance_2,
+            performance_3: participant.performance_3,
             timings_state: timings[participant.id],
             final_timing: timing,
             timing_seconds: timingSeconds,
@@ -1382,8 +1534,8 @@ const StaffPanel = () => {
         if (participant && !finalHeatParticipants.find(p => p.id === participantId)) {
           setFinalHeatParticipants(prev => [...prev, {
             ...participant,
-            timing: participant.heat_time || timings[participantId] || '',
-            timingSeconds: parseTiming(participant.heat_time || timings[participantId])
+            timing: participant.performance_1 || timings[participantId] || '',
+            timingSeconds: parseTiming(participant.performance_1 || timings[participantId])
           }]);
         }
       } else {
@@ -1491,7 +1643,7 @@ const StaffPanel = () => {
                 const trial1 = trialMeasurements[`${participant.id}_1`] || '';
                 const trial2 = trialMeasurements[`${participant.id}_2`] || '';
                 const trial3 = trialMeasurements[`${participant.id}_3`] || '';
-                const timing = participant.heat_time || participant.timing || timings[participant.id] || '';
+                const timing = participant.performance_1 || participant.timing || timings[participant.id] || '';
                 const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
                 
                 return `
@@ -1553,6 +1705,7 @@ const StaffPanel = () => {
     const handleToggle = () => {
       if (!isOpen) {
         fetchEventParticipants();
+        fetchTrials(); // Fetch trial data for trial events
       }
       setIsOpen(!isOpen);
     };
@@ -1565,10 +1718,19 @@ const StaffPanel = () => {
       }
     }, [isOpen, eventId]);
 
+    // Ensure trials are fetched when panel opens for trial events
+    React.useEffect(() => {
+      if (isOpen && isTrialEvent()) {
+        console.log('Panel open for trial event, fetching trials...');
+        fetchTrials();
+      }
+    }, [isOpen, eventId]);
+
     // Keep dropdown open after updates - don't reset state
     const handleUpdateSuccess = () => {
       // Don't close the dropdown, just refresh the data
       fetchEventParticipants();
+      fetchTrials(); // Refresh trial data after updates
     };
 
     return (
@@ -1659,15 +1821,6 @@ const StaffPanel = () => {
                           )}
                         </div>
                       </div>
-                      {selectedHeat && (
-                        <button
-                          onClick={saveHeatTimings}
-                          disabled={savingTimings}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
-                        >
-                          {savingTimings ? 'Updating...' : 'Update Timings'}
-                        </button>
-                      )}
                     </div>
                     {selectedHeat && (
                       <div className="text-sm text-[#5A5A5A]">
@@ -1806,8 +1959,28 @@ const StaffPanel = () => {
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">NAME</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TEMPLE</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">AADHAR NO</th>
+                        {isTrialEvent() && (
+                          <>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 1</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 2</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TRIAL 3</th>
+                          </>
+                        )}
                         {isHeatEvent() && (
-                          <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TIMING</th>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">
+                            <div className="flex items-center justify-between">
+                              <span>TIMING</span>
+                              {(selectedHeat || showFinalHeat) && (
+                                <button
+                                  onClick={saveHeatTimings}
+                                  disabled={savingTimings}
+                                  className="px-2 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                                >
+                                  {savingTimings ? 'Updating...' : 'Update Timings'}
+                                </button>
+                              )}
+                            </div>
+                          </th>
                         )}
                         {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
                           <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
@@ -1846,21 +2019,75 @@ const StaffPanel = () => {
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
                             {participant.aadhar_number || 'N/A'}
                           </td>
+                          {isTrialEvent() && (
+                            <>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                <input
+                                  type="text"
+                                  placeholder="0.00"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={trialMeasurements[`${participant.id}_1`] || participant.performance_1 || ''}
+                                  onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
+                                />
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                <input
+                                  type="text"
+                                  placeholder="0.00"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={trialMeasurements[`${participant.id}_2`] || participant.performance_2 || ''}
+                                  onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
+                                />
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                <input
+                                  type="text"
+                                  placeholder="0.00"
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={trialMeasurements[`${participant.id}_3`] || participant.performance_3 || ''}
+                                  onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
+                                />
+                              </td>
+                            </>
+                          )}
                           {isHeatEvent() && (
                             <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                              <input
-                                type="text"
-                                placeholder="00:00.00"
-                                className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                value={(() => {
-                                  const localTiming = timings[participant.id];
-                                  const dbTiming = participant.heat_time;
-                                  const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
-                                  console.log(`Input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
-                                  return finalValue;
-                                })()}
-                                onChange={(e) => handleTimingInput(participant.id, e.target.value)}
-                              />
+                              {showFinalHeat ? (
+                                // Final Heat - only show Final Time input (performance_2)
+                                <input
+                                  type="text"
+                                  placeholder="Final Time"
+                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={(() => {
+                                    const localTiming = timings[`${participant.id}_performance_2`];
+                                    const dbTiming = participant.performance_2;
+                                    const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
+                                    console.log(`Final heat input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
+                                    return finalValue;
+                                  })()}
+                                  onChange={(e) => {
+                                    // Handle performance_2 input for final heat
+                                    const newTimings = { ...timings };
+                                    newTimings[`${participant.id}_performance_2`] = e.target.value;
+                                    setTimings(newTimings);
+                                  }}
+                                />
+                              ) : (
+                                // Selected Heat - only show Heat Time input (performance_1)
+                                <input
+                                  type="text"
+                                  placeholder="Heat Time"
+                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                  value={(() => {
+                                    const localTiming = timings[participant.id];
+                                    const dbTiming = participant.performance_1;
+                                    const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
+                                    console.log(`Heat input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
+                                    return finalValue;
+                                  })()}
+                                  onChange={(e) => handleTimingInput(participant.id, e.target.value)}
+                                />
+                              )}
                             </td>
                           )}
                           {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
@@ -1923,6 +2150,19 @@ const StaffPanel = () => {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Save Trials Button for Trial Events */}
+                {isTrialEvent() && (
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      onClick={saveTrials}
+                      disabled={savingTrials}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                    >
+                      {savingTrials ? 'Saving...' : 'Save Trials'}
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-gray-500 text-center py-4">No participants registered for this event</p>
@@ -2894,6 +3134,8 @@ const StaffPanel = () => {
           allChampions.push({
             rank: championIndex + 1,
             category: `${category.age_category} - ${category.gender}`,
+            age_category: category.age_category,
+            gender: category.gender,
             name: champion.name,
             temple: champion.temple,
             aadhar_number: champion.aadhar_number,
@@ -2905,8 +3147,28 @@ const StaffPanel = () => {
       }
     });
 
-    // Sort by points (highest first)
-    allChampions.sort((a, b) => b.points - a.points);
+    // Define age category order for proper sorting
+    const ageCategoryOrder = {
+      '11-14': 1,
+      '15-18': 2,
+      '19-24': 3,
+      '25-35': 4,
+      '36-49': 5,
+      '50-60': 6
+    };
+
+    // Sort by age category first, then by points within each category
+    allChampions.sort((a, b) => {
+      const ageOrderA = ageCategoryOrder[a.age_category] || 999;
+      const ageOrderB = ageCategoryOrder[b.age_category] || 999;
+      
+      if (ageOrderA !== ageOrderB) {
+        return ageOrderA - ageOrderB;
+      }
+      
+      // Within same age category, sort by points (highest first)
+      return b.points - a.points;
+    });
 
     return (
       <div className="space-y-8">
@@ -2969,13 +3231,10 @@ const StaffPanel = () => {
                         ${topTemples.map((temple, index) => `
                           <tr>
                             <td>
-                              <span class="rank-badge ${
-                                index === 0 ? 'rank-1' : 
-                                index === 1 ? 'rank-2' : 
-                                index === 2 ? 'rank-3' : 'rank-other'
-                              }">
-                                ${index + 1}
-                              </span>
+                              ${index === 0 ? '🥇' : 
+                                index === 1 ? '🥈' : 
+                                index === 2 ? '🥉' : 
+                                index + 1}
                             </td>
                             <td>${temple.temple_name}</td>
                             <td><strong>${temple.total_points}</strong></td>
@@ -3029,14 +3288,17 @@ const StaffPanel = () => {
                     <tr key={temple.temple_id} className="hover:bg-gray-50">
                       <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
                         <div className="flex items-center">
-                          <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm ${
-                            index === 0 ? 'bg-yellow-500' : 
-                            index === 1 ? 'bg-gray-400' : 
-                            index === 2 ? 'bg-orange-600' :
-                            'bg-gray-300 text-gray-700'
-                          }`}>
-                            {index + 1}
-                          </div>
+                          {index === 0 ? (
+                            <span className="text-2xl">🥇</span>
+                          ) : index === 1 ? (
+                            <span className="text-2xl">🥈</span>
+                          ) : index === 2 ? (
+                            <span className="text-2xl">🥉</span>
+                          ) : (
+                            <span className="text-sm sm:text-base font-medium text-[#2A2A2A]">
+                              {index + 1}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
@@ -3186,14 +3448,9 @@ const StaffPanel = () => {
                   <tr key={index} className="hover:bg-gray-50">
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm ${
-                          index === 0 ? 'bg-yellow-500' : 
-                          index === 1 ? 'bg-gray-400' : 
-                          index === 2 ? 'bg-orange-600' :
-                          'bg-gray-300 text-gray-700'
-                        }`}>
+                        <span className="text-sm sm:text-base font-medium text-[#2A2A2A]">
                           {index + 1}
-                        </div>
+                        </span>
                       </div>
                     </td>
                     <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">

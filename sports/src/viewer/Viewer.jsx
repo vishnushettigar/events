@@ -63,11 +63,11 @@ const Viewer = () => {
     { id: 'events', label: 'Events', icon: '📅', color: 'text-green-600' },
     { id: 'participants', label: 'Participants', icon: '👤', color: 'text-indigo-600' },
     { id: 'teams', label: 'Teams', icon: '🏃', color: 'text-teal-600' },
-    { id: 'temples', label: 'Temple Management', icon: '🏛️', color: 'text-orange-600' },
+    { id: 'temples', label: 'Temples ', icon: '🏛️', color: 'text-orange-600' },
     { id: 'results', label: 'Results', icon: '🏆', color: 'text-yellow-600' },
     { id: 'champions', label: 'Champions', icon: '👑', color: 'text-pink-600' },
     // { id: 'reports', label: 'Reports', icon: '📋', color: 'text-cyan-600' },
-    { id: 'settings', label: 'System Settings', icon: '⚙️', color: 'text-gray-600' },
+    // { id: 'settings', label: 'System Settings', icon: '⚙️', color: 'text-gray-600' },
   ];
 
   const renderContent = () => {
@@ -88,8 +88,8 @@ const Viewer = () => {
         return <ChampionsManagement />;
       case 'reports':
         return <ReportsManagement />;
-      case 'settings':
-        return <SystemSettings />;
+      // case 'settings':
+      //   return <SystemSettings />;
       default:
         return <Dashboard />;
     }
@@ -737,6 +737,7 @@ const ParticipantsManagement = () => {
                       participants={getParticipantsForEvent(event.id)}
                       onParticipantsUpdate={handleParticipantsUpdate}
                       isAdmin={false}
+                      isViewer={true}
                     />
                   ))}
                 </div>
@@ -759,6 +760,9 @@ const TeamsManagement = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userDetails, setUserDetails] = useState({});
+  const [showTeamModal, setShowTeamModal] = useState(false);
+  const [selectedTemple, setSelectedTemple] = useState(null);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   useEffect(() => {
     fetchTeamsData();
@@ -901,6 +905,31 @@ const TeamsManagement = () => {
 
   const groupedEvents = groupTeamsByEvent();
 
+  // Handle View Teams modal
+  const handleViewTeams = async (temple) => {
+    setSelectedTemple(temple);
+    setShowTeamModal(true);
+    
+    // Fetch team member details for all teams in this temple
+    const allTeamMembers = [];
+    for (const team of temple.teams) {
+      const members = await getTeamMemberDetails(team);
+      allTeamMembers.push(...members.map(member => ({
+        ...member,
+        team_id: team.id,
+        team_status: team.status,
+        team_points: team.event_result?.points || 0
+      })));
+    }
+    setTeamMembers(allTeamMembers);
+  };
+
+  const handleCloseTeamModal = () => {
+    setShowTeamModal(false);
+    setSelectedTemple(null);
+    setTeamMembers([]);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -961,7 +990,7 @@ const TeamsManagement = () => {
                         </h3>
                       </div>
                       {maleEvents.map((event, eventIndex) => (
-                        <ViewerEventTable key={`male-${eventIndex}`} event={event} />
+                        <ViewerEventTable key={`male-${eventIndex}`} event={event} onViewTeams={handleViewTeams} />
                       ))}
                     </div>
                   )}
@@ -976,7 +1005,7 @@ const TeamsManagement = () => {
                         </h3>
                       </div>
                       {femaleEvents.map((event, eventIndex) => (
-                        <ViewerEventTable key={`female-${eventIndex}`} event={event} gender="female" />
+                        <ViewerEventTable key={`female-${eventIndex}`} event={event} gender="female" onViewTeams={handleViewTeams} />
                       ))}
                     </div>
                   )}
@@ -1058,6 +1087,99 @@ const TeamsManagement = () => {
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                 <span className="text-orange-600 text-xl">🏆</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team Members Modal */}
+      {showTeamModal && selectedTemple && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[400px] max-w-4xl max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-[#2A2A2A]">
+                Team Members - {selectedTemple.temple_name}
+              </h2>
+              <button
+                onClick={handleCloseTeamModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Temple Code:</span>
+                  <span className="ml-2">{selectedTemple.temple_code}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Total Teams:</span>
+                  <span className="ml-2">{selectedTemple.teams.length}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Total Members:</span>
+                  <span className="ml-2">{selectedTemple.totalMembers}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-[#5A5A5A]">Total Points:</span>
+                  <span className="ml-2">{selectedTemple.totalPoints}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="font-semibold text-[#2A2A2A] mb-3">Team Members ({teamMembers.length})</h3>
+              {teamMembers.length > 0 ? (
+                <div className="space-y-3">
+                  {teamMembers.map((member, index) => (
+                    <div key={member.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-[#D35D38] text-white rounded-full flex items-center justify-center font-semibold text-sm">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium text-[#2A2A2A]">
+                            {member.profile?.first_name} {member.profile?.last_name}
+                          </p>
+                          <p className="text-sm text-[#5A5A5A]">
+                            Aadhar: {member.profile?.aadhar_number}
+                            {member.profile?.phone && ` • Phone: ${member.profile.phone}`}
+                            {member.profile?.email && ` • Email: ${member.profile.email}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm">
+                        <div className="text-[#5A5A5A]">
+                          {member.profile?.gender === 'M' ? 'Male' : 
+                           member.profile?.gender === 'F' ? 'Female' : 
+                           member.profile?.gender}
+                        </div>
+                        <div className="text-xs text-[#D35D38] font-semibold">
+                          Team #{member.team_id}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {member.team_status}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[#5A5A5A]">
+                  <p>No team members found.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleCloseTeamModal}
+                className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -1897,253 +2019,253 @@ const ReportsManagement = () => (
   );
 
 // System Settings Component
-const SystemSettings = () => {
-  const [settings, setSettings] = useState({
-    hostTempleName: 'MULKI',
-    eventDate: '2025-12-28',
-    season: 'season33',
-    cutoffDate: '2025-12-28',
-    contact: {
-      name: '',
-      email: '',
-      phone: '',
-      address: ''
-    }
-  });
-  const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+// const SystemSettings = () => {
+//   const [settings, setSettings] = useState({
+//     hostTempleName: 'MULKI',
+//     eventDate: '2025-12-28',
+//     season: 'season33',
+//     cutoffDate: '2025-12-28',
+//     contact: {
+//       name: '',
+//       email: '',
+//       phone: '',
+//       address: ''
+//     }
+//   });
+//   const [loading, setLoading] = useState(false);
+//   const [saved, setSaved] = useState(false);
 
-  const handleSettingChange = (key, value) => {
-    if (key === 'contact') {
-      setSettings(prev => ({
-        ...prev,
-        contact: { ...prev.contact, ...value }
-      }));
-    } else {
-      setSettings(prev => ({
-        ...prev,
-        [key]: value
-      }));
-    }
-    setSaved(false);
-  };
+//   const handleSettingChange = (key, value) => {
+//     if (key === 'contact') {
+//       setSettings(prev => ({
+//         ...prev,
+//         contact: { ...prev.contact, ...value }
+//       }));
+//     } else {
+//       setSettings(prev => ({
+//         ...prev,
+//         [key]: value
+//       }));
+//     }
+//     setSaved(false);
+//   };
 
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      // Here you would typically save to backend
-      // await settingsAPI.updateSettings(settings);
+//   const handleSave = async () => {
+//     setLoading(true);
+//     try {
+//       // Here you would typically save to backend
+//       // await settingsAPI.updateSettings(settings);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+//       // Simulate API call
+//       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    } catch (error) {
-      console.error('Error saving settings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+//       setSaved(true);
+//       setTimeout(() => setSaved(false), 3000);
+//     } catch (error) {
+//       console.error('Error saving settings:', error);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">⚙️ System Settings</h3>
-          <p className="text-[#5A5A5A]">Configure system-wide settings and event details</p>
-        </div>
-        <button 
-          onClick={handleSave}
-          disabled={loading}
-          className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-            loading 
-              ? 'bg-gray-400 text-white cursor-not-allowed' 
-              : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
-          }`}
-        >
-          {loading ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
-      </button>
-    </div>
+//   return (
+//     <div className="space-y-6">
+//       {/* Header */}
+//       <div className="flex items-center justify-between">
+//         <div>
+//           <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">⚙️ System Settings</h3>
+//           <p className="text-[#5A5A5A]">Configure system-wide settings and event details</p>
+//         </div>
+//         <button 
+//           onClick={handleSave}
+//           disabled={loading}
+//           className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+//             loading 
+//               ? 'bg-gray-400 text-white cursor-not-allowed' 
+//               : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+//           }`}
+//         >
+//           {loading ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
+//       </button>
+//     </div>
 
-      {/* Settings Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+//       {/* Settings Grid */}
+//       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
-        {/* 1. Host Temple Name */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-blue-600 text-xl">🏛️</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Host Temple Name</h4>
-              <p className="text-sm text-[#5A5A5A]">Primary temple hosting the event</p>
-            </div>
-          </div>
-          <input
-            type="text"
-            value={settings.hostTempleName}
-            onChange={(e) => handleSettingChange('hostTempleName', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            placeholder="Enter temple name"
-          />
-        </div>
+//         {/* 1. Host Temple Name */}
+//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+//           <div className="flex items-center mb-4">
+//             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+//               <span className="text-blue-600 text-xl">🏛️</span>
+//             </div>
+//             <div>
+//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Host Temple Name</h4>
+//               <p className="text-sm text-[#5A5A5A]">Primary temple hosting the event</p>
+//             </div>
+//           </div>
+//           <input
+//             type="text"
+//             value={settings.hostTempleName}
+//             onChange={(e) => handleSettingChange('hostTempleName', e.target.value)}
+//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//             placeholder="Enter temple name"
+//           />
+//         </div>
 
-        {/* 2. Event Date */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-green-600 text-xl">📅</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Event Date</h4>
-              <p className="text-sm text-[#5A5A5A]">Main event date</p>
-            </div>
-          </div>
-          <input
-            type="date"
-            value={settings.eventDate}
-            onChange={(e) => handleSettingChange('eventDate', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-          />
-        </div>
+//         {/* 2. Event Date */}
+//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+//           <div className="flex items-center mb-4">
+//             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+//               <span className="text-green-600 text-xl">📅</span>
+//             </div>
+//             <div>
+//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Event Date</h4>
+//               <p className="text-sm text-[#5A5A5A]">Main event date</p>
+//             </div>
+//           </div>
+//           <input
+//             type="date"
+//             value={settings.eventDate}
+//             onChange={(e) => handleSettingChange('eventDate', e.target.value)}
+//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//           />
+//         </div>
 
-        {/* 3. Season */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-purple-600 text-xl">🏆</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Season</h4>
-              <p className="text-sm text-[#5A5A5A]">Current event season</p>
-            </div>
-          </div>
-          <input
-            type="text"
-            value={settings.season}
-            onChange={(e) => handleSettingChange('season', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            placeholder="Enter season name"
-          />
-        </div>
+//         {/* 3. Season */}
+//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+//           <div className="flex items-center mb-4">
+//             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+//               <span className="text-purple-600 text-xl">🏆</span>
+//             </div>
+//             <div>
+//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Season</h4>
+//               <p className="text-sm text-[#5A5A5A]">Current event season</p>
+//             </div>
+//           </div>
+//           <input
+//             type="text"
+//             value={settings.season}
+//             onChange={(e) => handleSettingChange('season', e.target.value)}
+//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//             placeholder="Enter season name"
+//           />
+//         </div>
 
-        {/* 4. Cut-off Date */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-orange-600 text-xl">🎂</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Age Cut-off Date</h4>
-              <p className="text-sm text-[#5A5A5A]">Date for calculating participant ages</p>
-            </div>
-          </div>
-          <input
-            type="date"
-            value={settings.cutoffDate}
-            onChange={(e) => handleSettingChange('cutoffDate', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-          />
-        </div>
-      </div>
+//         {/* 4. Cut-off Date */}
+//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+//           <div className="flex items-center mb-4">
+//             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
+//               <span className="text-orange-600 text-xl">🎂</span>
+//             </div>
+//             <div>
+//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Age Cut-off Date</h4>
+//               <p className="text-sm text-[#5A5A5A]">Date for calculating participant ages</p>
+//             </div>
+//           </div>
+//           <input
+//             type="date"
+//             value={settings.cutoffDate}
+//             onChange={(e) => handleSettingChange('cutoffDate', e.target.value)}
+//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//           />
+//         </div>
+//       </div>
 
-      {/* 5. Contact Information - Full Width */}
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-        <div className="flex items-center mb-6">
-          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-            <span className="text-red-600 text-xl">📞</span>
-          </div>
-          <div>
-            <h4 className="text-lg font-semibold text-[#2A2A2A]">Contact Information</h4>
-            <p className="text-sm text-[#5A5A5A]">Primary contact details for the event</p>
-          </div>
-        </div>
+//       {/* 5. Contact Information - Full Width */}
+//       <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+//         <div className="flex items-center mb-6">
+//           <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+//             <span className="text-red-600 text-xl">📞</span>
+//           </div>
+//           <div>
+//             <h4 className="text-lg font-semibold text-[#2A2A2A]">Contact Information</h4>
+//             <p className="text-sm text-[#5A5A5A]">Primary contact details for the event</p>
+//           </div>
+//         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Contact Name</label>
-            <input
-              type="text"
-              value={settings.contact.name}
-              onChange={(e) => handleSettingChange('contact', { name: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter contact name"
-            />
-          </div>
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+//           <div>
+//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Contact Name</label>
+//             <input
+//               type="text"
+//               value={settings.contact.name}
+//               onChange={(e) => handleSettingChange('contact', { name: e.target.value })}
+//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//               placeholder="Enter contact name"
+//             />
+//           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Email Address</label>
-            <input
-              type="email"
-              value={settings.contact.email}
-              onChange={(e) => handleSettingChange('contact', { email: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter email address"
-            />
-          </div>
+//           <div>
+//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Email Address</label>
+//             <input
+//               type="email"
+//               value={settings.contact.email}
+//               onChange={(e) => handleSettingChange('contact', { email: e.target.value })}
+//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//               placeholder="Enter email address"
+//             />
+//           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Phone Number</label>
-            <input
-              type="tel"
-              value={settings.contact.phone}
-              onChange={(e) => handleSettingChange('contact', { phone: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter phone number"
-            />
-          </div>
+//           <div>
+//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Phone Number</label>
+//             <input
+//               type="tel"
+//               value={settings.contact.phone}
+//               onChange={(e) => handleSettingChange('contact', { phone: e.target.value })}
+//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//               placeholder="Enter phone number"
+//             />
+//           </div>
           
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Address</label>
-            <input
-              type="text"
-              value={settings.contact.address}
-              onChange={(e) => handleSettingChange('contact', { address: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter address"
-            />
-          </div>
-        </div>
-      </div>
+//           <div>
+//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Address</label>
+//             <input
+//               type="text"
+//               value={settings.contact.address}
+//               onChange={(e) => handleSettingChange('contact', { address: e.target.value })}
+//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+//               placeholder="Enter address"
+//             />
+//           </div>
+//         </div>
+//       </div>
 
-      {/* Settings Summary */}
-      <div className="bg-gray-50 rounded-lg p-6">
-        <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">📋 Current Settings Summary</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Host Temple:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.hostTempleName}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Event Date:</span>
-            <span className="ml-2 text-[#2A2A2A]">{new Date(settings.eventDate).toLocaleDateString()}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Season:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.season}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Age Cut-off:</span>
-            <span className="ml-2 text-[#2A2A2A]">{new Date(settings.cutoffDate).toLocaleDateString()}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Contact:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.contact.name || 'Not set'}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Email:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.contact.email || 'Not set'}</span>
-          </div>
-        </div>
-      </div>
-  </div>
-);
-};
+//       {/* Settings Summary */}
+//       <div className="bg-gray-50 rounded-lg p-6">
+//         <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">📋 Current Settings Summary</h4>
+//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+//           <div className="bg-white p-3 rounded border">
+//             <span className="font-medium text-[#5A5A5A]">Host Temple:</span>
+//             <span className="ml-2 text-[#2A2A2A]">{settings.hostTempleName}</span>
+//           </div>
+//           <div className="bg-white p-3 rounded border">
+//             <span className="font-medium text-[#5A5A5A]">Event Date:</span>
+//             <span className="ml-2 text-[#2A2A2A]">{new Date(settings.eventDate).toLocaleDateString()}</span>
+//           </div>
+//           <div className="bg-white p-3 rounded border">
+//             <span className="font-medium text-[#5A5A5A]">Season:</span>
+//             <span className="ml-2 text-[#2A2A2A]">{settings.season}</span>
+//           </div>
+//           <div className="bg-white p-3 rounded border">
+//             <span className="font-medium text-[#5A5A5A]">Age Cut-off:</span>
+//             <span className="ml-2 text-[#2A2A2A]">{new Date(settings.cutoffDate).toLocaleDateString()}</span>
+//           </div>
+//           <div className="bg-white p-3 rounded border">
+//             <span className="font-medium text-[#5A5A5A]">Contact:</span>
+//             <span className="ml-2 text-[#2A2A2A]">{settings.contact.name || 'Not set'}</span>
+//           </div>
+//           <div className="bg-white p-3 rounded border">
+//             <span className="font-medium text-[#5A5A5A]">Email:</span>
+//             <span className="ml-2 text-[#2A2A2A]">{settings.contact.email || 'Not set'}</span>
+//           </div>
+//         </div>
+//       </div>
+//   </div>
+// );
+// };
 
 // Helper component for Male/Female event tables
-const ViewerEventTable = ({ event, gender = "male" }) => {
+const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
   const hoverColor = "hover:bg-orange-50";
   const buttonColor = "bg-[#D35D38] hover:bg-[#B84A2E]";
 
@@ -2224,20 +2346,10 @@ const ViewerEventTable = ({ event, gender = "male" }) => {
                 <td className="px-6 py-4">
                   <div className="flex space-x-2">
                     <button 
-                      onClick={() => {
-                        // TODO: Implement view teams functionality
-                      }}
+                      onClick={() => onViewTeams(temple)}
                       className="inline-block px-3 py-1 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-xs"
                     >
                       View Teams
-                    </button>
-                    <button 
-                      onClick={() => {
-                        // TODO: Implement temple details functionality
-                      }}
-                      className="inline-block px-3 py-1 bg-gray-600 text-white rounded-lg shadow hover:bg-gray-700 transition font-semibold text-xs"
-                    >
-                      Temple Details
                     </button>
                   </div>
                 </td>
