@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { userAPI, eventAPI, reportAPI } from '../utils/api';
-import authManager from '../utils/authManager';
+import { eventAPI, reportAPI } from '../utils/api';
+import TempleManagement from '../components/TempleManagement.jsx';
+import Schedule from '../components/Schedule.jsx';
+import Results from '../components/Results.jsx';
+import Champions from '../components/Champions.jsx';
 
 const StaffPanel = () => {
   const [activeTab, setActiveTab] = useState('update-results');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [formData, setFormData] = useState({});
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingId, setEditingId] = useState(null);
 
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -26,20 +26,6 @@ const StaffPanel = () => {
   const [genders, setGenders] = useState([]);
   const [events, setEvents] = useState([]);
 
-  // For Temple Reports section
-  const [templeReports, setTempleReports] = useState([]);
-  const [loadingTemples, setLoadingTemples] = useState(false);
-  const [templeError, setTempleError] = useState(null);
-
-  // For Champions section - Top Temples
-  const [topTemples, setTopTemples] = useState([]);
-  const [loadingTopTemples, setLoadingTopTemples] = useState(false);
-  const [topTemplesError, setTopTemplesError] = useState(null);
-
-  // For Schedule section
-  const [scheduleData, setScheduleData] = useState({ individual: [], team: [] });
-  const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [scheduleError, setScheduleError] = useState(null);
 
   // For collapsible event states
   const [collapsibleStates, setCollapsibleStates] = useState({});
@@ -240,6 +226,17 @@ const StaffPanel = () => {
       const updatedData = await eventAPI.getEventParticipants(eventId);
       setEventParticipants(eventId, updatedData);
       
+      // Also refresh heats data if this is a heat event
+      const currentEvent = events.find(e => e.id === parseInt(eventId));
+      if (currentEvent && currentEvent.event_type && currentEvent.event_type.name) {
+        const eventName = currentEvent.event_type.name.toLowerCase();
+        const isHeat = eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
+        if (isHeat) {
+          console.log('Bulk update - refreshing heats data for heat event:', eventId);
+          await fetchHeats();
+        }
+      }
+      
       // Close the confirmation modal and show success modal
       closeModal();
       
@@ -376,104 +373,19 @@ const StaffPanel = () => {
     { id: 'temples', name: 'Temple Reports', endpoint: '/api/admin/temples' }
   ];
 
-  // Fetch temple reports from backend
-  const fetchTempleReports = async () => {
-    try {
-      setLoadingTemples(true);
-      setTempleError(null);
-
-      const temples = await userAPI.getAllTemples();
-      
-      // Transform temple data to include points from backend
-      const templeReportsData = temples.map((temple) => ({
-        temple_id: temple.id,
-        temple_name: temple.name,
-        total_points: temple.total_points || 0
-      }));
-      
-      setTempleReports(templeReportsData);
-    } catch (err) {
-      console.error('Error fetching temple reports:', err);
-      setTempleError(err.message);
-      // Fallback to empty array
-      setTempleReports([]);
-    } finally {
-      setLoadingTemples(false);
-    }
-  };
-
-  // Fetch top temples for champions section
-  const fetchTopTemples = async () => {
-    try {
-      setLoadingTopTemples(true);
-      setTopTemplesError(null);
-
-      const temples = await userAPI.getAllTemples();
-      
-      // Transform and sort temples by points
-      const topTemplesData = temples
-        .map((temple) => ({
-          temple_id: temple.id,
-          temple_name: temple.name,
-          total_points: temple.total_points || 0
-        }))
-        .sort((a, b) => b.total_points - a.total_points)
-        .slice(0, 5); // Get top 5 temples
-      
-      setTopTemples(topTemplesData);
-    } catch (err) {
-      console.error('Error fetching top temples:', err);
-      setTopTemplesError(err.message);
-      setTopTemples([]);
-    } finally {
-      setLoadingTopTemples(false);
-    }
-  };
-
-  // Fetch schedule data
-  const fetchScheduleData = async () => {
-    try {
-      setLoadingSchedule(true);
-      setScheduleError(null);
-
-      // Fetch all events from the new comprehensive endpoint
-      const response = await eventAPI.getAllEventsComplete();
-      
-      setScheduleData({
-        individual: response.individual || [],
-        team: response.team || []
-      });
-    } catch (err) {
-      console.error('Error fetching schedule data:', err);
-      setScheduleError(err.message);
-      setScheduleData({ individual: [], team: [] });
-    } finally {
-      setLoadingSchedule(false);
-    }
-  };
-
   useEffect(() => {
     // Clear data when switching tabs to prevent structure conflicts
     setData([]);
     setError(null);
     
-    if (activeTab === 'temples') {
-      fetchTempleReports();
-    } else if (activeTab === 'update-results') {
+    if (activeTab === 'update-results') {
       fetchUpdateResultsData();
     } else if (activeTab === 'teams') {
       fetchTeamEvents();
     } else if (activeTab === 'champions') {
       fetchChampions();
-      fetchTopTemples();
     } else if (activeTab === 'all-result') {
       fetchAllResults();
-    } else if (activeTab === 'schedule') {
-      fetchScheduleData();
-    } else if (activeTab === 'results') {
-      fetchResults();
-    } else {
-    fetchData();
     }
   }, [activeTab, selectedAge, selectedGender]);
 
@@ -878,21 +790,6 @@ const StaffPanel = () => {
     }
   };
 
-  // Fetch results data
-  const fetchResults = async () => {
-    try {
-    setLoading(true);
-      setError(null);
-      const data = await eventAPI.getEventPerformance();
-      setData(data);
-    } catch (err) {
-      console.error('Error fetching results:', err);
-      setError(err.message);
-      setData([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Group events by age category and gender
   const groupedEvents = events.reduce((acc, event) => {
@@ -1001,6 +898,19 @@ const StaffPanel = () => {
         try {
           const updatedData = await eventAPI.getEventParticipants(eventId);
           setEventParticipants(eventId, updatedData);
+          
+          // Also refresh heats data if this is a heat event
+          // Check if the current event is a heat event by looking at the event data
+          const currentEvent = events.find(e => e.id === parseInt(eventId));
+          if (currentEvent && currentEvent.event_type && currentEvent.event_type.name) {
+            const eventName = currentEvent.event_type.name.toLowerCase();
+            const isHeat = eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
+            if (isHeat) {
+              console.log('Refreshing heats data for heat event:', eventId);
+              await fetchHeats();
+            }
+          }
+          
           console.log('Participants data refreshed successfully');
         } catch (refreshError) {
           console.error('Error refreshing participants data:', refreshError);
@@ -1324,6 +1234,9 @@ const StaffPanel = () => {
 
     // Fetch heats from backend
     const fetchHeats = async () => {
+      console.log('fetchHeats called for event:', title, 'eventId:', eventId);
+      console.log('isHeatEvent():', isHeatEvent());
+      
       if (!isHeatEvent()) {
         console.log('Not a heat event, skipping heat fetch');
         return;
@@ -1334,6 +1247,7 @@ const StaffPanel = () => {
         setLoadingHeats(true);
         const heatsData = await eventAPI.getHeats(eventId);
         console.log('Heats data received:', heatsData);
+        console.log('Number of heats:', Object.keys(heatsData).length);
         setHeats(heatsData);
         
         // Set first heat as selected if available
@@ -1677,23 +1591,20 @@ const StaffPanel = () => {
 
     // Fetch participants when event is opened
     const fetchEventParticipants = async () => {
-      if (eventParticipants.length > 0) return; // Already loaded
+      if (eventParticipants.length > 0) {
+        console.log('Participants already loaded, skipping participant fetch');
+        return;
+      }
       
       try {
         console.log(`Fetching participants for event: ${title} (${eventId})`);
         setLoadingParticipantsState(eventId, true);
         setParticipantError(eventId, null);
+        
+        // Fetch participants
         const data = await eventAPI.getEventParticipants(eventId);
         setEventParticipants(eventId, data);
         
-        // Fetch heats for running events
-        console.log(`Checking if event is heat event: ${isHeatEvent()}`);
-        if (isHeatEvent()) {
-          console.log('Event is heat event, fetching heats...');
-          await fetchHeats();
-        } else {
-          console.log('Event is not a heat event, skipping heat fetch');
-        }
     } catch (err) {
         console.error('Error fetching event participants:', err);
         setParticipantError(eventId, err.message);
@@ -1710,27 +1621,23 @@ const StaffPanel = () => {
       setIsOpen(!isOpen);
     };
 
-    // Ensure heats are fetched when component mounts for heat events
+    // Auto-fetch heats when heat event is opened
     React.useEffect(() => {
-      if (isOpen && isHeatEvent() && Object.keys(heats).length === 0 && !loadingHeats) {
-        console.log('Component mounted for heat event, fetching heats...');
+      if (isOpen && isHeatEvent()) {
+        console.log('Heat event opened, auto-fetching heats...');
         fetchHeats();
       }
     }, [isOpen, eventId]);
 
-    // Ensure trials are fetched when panel opens for trial events
-    React.useEffect(() => {
-      if (isOpen && isTrialEvent()) {
-        console.log('Panel open for trial event, fetching trials...');
-        fetchTrials();
-      }
-    }, [isOpen, eventId]);
+
 
     // Keep dropdown open after updates - don't reset state
     const handleUpdateSuccess = () => {
       // Don't close the dropdown, just refresh the data
       fetchEventParticipants();
-      fetchTrials(); // Refresh trial data after updates
+      if (isTrialEvent()) {
+        fetchTrials(); // Only refresh trial data for trial events
+      }
     };
 
     return (
@@ -1850,10 +1757,31 @@ const StaffPanel = () => {
                     </p>
                     <div className="mt-2">
                       <button
-                        onClick={fetchHeats}
+                        onClick={async () => {
+                          console.log('Try Fetching heats button clicked');
+                          console.log('Current heats state:', heats);
+                          console.log('Object.keys(heats).length:', Object.keys(heats).length);
+                          
+                          // First try to fetch existing heats
+                          await fetchHeats();
+                          
+                          // If no heats found, try to generate them
+                          if (Object.keys(heats).length === 0) {
+                            console.log('No heats found, trying to generate heats...');
+                            try {
+                              const generateResponse = await eventAPI.generateHeats(eventId);
+                              console.log('Generate heats response:', generateResponse);
+                              
+                              // After generating, fetch the heats again
+                              await fetchHeats();
+                            } catch (generateError) {
+                              console.error('Error generating heats:', generateError);
+                            }
+                          }
+                        }}
                         className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
                       >
-                        🔄 Try Fetching Heats
+                        🔄 Try Fetching/Generating Heats
                       </button>
                     </div>
                     <div className="mt-2 text-xs text-gray-600">
@@ -2095,20 +2023,23 @@ const StaffPanel = () => {
                               <div className="flex items-center gap-3">
                                 {/* Current Result Display */}
                                 <div className="flex-shrink-0">
-                                  {participant.result?.rank ? (
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      participant.result.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                                      participant.result.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                                      participant.result.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                                      'bg-green-100 text-green-800'
-                                    }`}>
-                                      {participant.result.rank === 'FIRST' ? '🥇 1st' :
-                                       participant.result.rank === 'SECOND' ? '🥈 2nd' :
-                                       participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank}
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-400 text-xs">No result</span>
-                                  )}
+                                  {(() => {
+                                    const currentRank = getRankChanges(eventId)[participant.id] || participant.result?.rank;
+                                    return currentRank ? (
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        currentRank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                        currentRank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                        currentRank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-green-100 text-green-800'
+                                      }`}>
+                                        {currentRank === 'FIRST' ? '🥇 1st' :
+                                         currentRank === 'SECOND' ? '🥈 2nd' :
+                                         currentRank === 'THIRD' ? '🥉 3rd' : currentRank}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400 text-xs">No result</span>
+                                    );
+                                  })()}
                                 </div>
                                 
                                 {/* Rank Selection */}
@@ -2175,121 +2106,9 @@ const StaffPanel = () => {
    
   // tabs code start from here 
  
-  // Render Temple Reports
+  // Render Temple Reports - now using reusable component
   const renderTempleReports = () => {
-    return (
-      <div className="space-y-6">
-        {/* Loading State */}
-        {loadingTemples && (
-          <div className="flex justify-center items-center py-8">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D35D38]"></div>
-            <span className="ml-3 text-[#2A2A2A]">Loading temple reports...</span>
-          </div>
-        )}
-
-        {/* Error State */}
-        {templeError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-            <strong className="font-bold">Error!</strong>
-            <span className="block sm:inline"> {templeError}</span>
-          </div>
-        )}
-
-        {/* Temple Reports Table */}
-        {!loadingTemples && !templeError && (
-          <div className="bg-white rounded-lg sm:rounded-2xl shadow-lg sm:shadow-xl overflow-hidden">
-            {/* Mobile Cards View */}
-            <div className="block lg:hidden">
-              {templeReports.length > 0 ? (
-                <div className="space-y-4 p-4">
-                  {templeReports.map((temple_info, idx) => (
-                    <div key={temple_info.temple_id} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0]">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-sm font-medium text-[#5A5A5A]">#{idx + 1}</span>
-                            <h3 className="font-semibold text-[#2A2A2A] text-lg">{temple_info.temple_name}</h3>
-                          </div>
-                          <p className="text-[#D35D38] font-bold text-xl">{temple_info.total_points} Points</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col space-y-2">
-                        <button
-                          onClick={() => window.open(`/templedetailedreport/?temple_id=${temple_info.temple_id}`, '_blank')}
-                          className="w-full px-3 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
-                        >
-                          View Points
-                        </button>
-                        <button
-                          onClick={() => window.open(`/participantslist/?temple_id=${temple_info.temple_id}`, '_blank')}
-                          className="w-full px-3 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
-                        >
-                          View All Participants
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 text-center text-[#5A5A5A]">
-                  No temple reports available
-                </div>
-              )}
-            </div>
-
-            {/* Desktop Table View */}
-            <div className="hidden lg:block">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-[#F8DFBE]">
-                  <thead className="bg-[#D35D38]">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">SL.NO</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Temple Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">Total Points</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View Points</th>
-                      <th className="px-6 py-3 text-left text-xs font-bold text-white uppercase tracking-wider">View All Participants</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-[#F8DFBE]">
-                    {templeReports.length > 0 ? (
-                      templeReports.map((temple_info, idx) => (
-                        <tr key={temple_info.temple_id} className="hover:bg-[#F8DFBE] transition">
-                          <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{idx + 1}</td>
-                          <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{temple_info.temple_name}</td>
-                          <td className="px-6 py-4 text-[#D35D38] font-bold">{temple_info.total_points}</td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => window.open(`/templedetailedreport/?temple_id=${temple_info.temple_id}`, '_blank')}
-                              className="inline-block px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
-                            >
-                              View Points
-                            </button>
-                          </td>
-                          <td className="px-6 py-4">
-                            <button
-                              onClick={() => window.open(`/participantslist/?temple_id=${temple_info.temple_id}`, '_blank')}
-                              className="inline-block px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition font-semibold text-sm"
-                            >
-                              View All Participants
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className="px-6 py-8 text-center text-[#5A5A5A]">
-                          No temple reports available
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
+    return <TempleManagement apiSource="staff" showContactInfo={false} showParticipants={false} />;
   };
 
   // Render Update Individual Results
@@ -3099,1222 +2918,6 @@ const StaffPanel = () => {
     );
   };
 
-  // Render Champions
-  const renderChampions = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
-          <span className="ml-2 text-[#2A2A2A]">Loading champions...</span>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          <strong>Error:</strong> {error}
-        </div>
-      );
-    }
-
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-[#5A5A5A]">No champions data available yet.</p>
-        </div>
-      );
-    }
-
-    // Flatten champions data for table display
-    const allChampions = [];
-    data.forEach((category, categoryIndex) => {
-      if (category.champions && Array.isArray(category.champions)) {
-        category.champions.forEach((champion, championIndex) => {
-          allChampions.push({
-            rank: championIndex + 1,
-            category: `${category.age_category} - ${category.gender}`,
-            age_category: category.age_category,
-            gender: category.gender,
-            name: champion.name,
-            temple: champion.temple,
-            aadhar_number: champion.aadhar_number,
-            points: champion.points,
-            events_count: champion.events ? champion.events.length : 0,
-            events: champion.events || []
-          });
-        });
-      }
-    });
-
-    // Define age category order for proper sorting
-    const ageCategoryOrder = {
-      '11-14': 1,
-      '15-18': 2,
-      '19-24': 3,
-      '25-35': 4,
-      '36-49': 5,
-      '50-60': 6
-    };
-
-    // Sort by age category first, then by points within each category
-    allChampions.sort((a, b) => {
-      const ageOrderA = ageCategoryOrder[a.age_category] || 999;
-      const ageOrderB = ageCategoryOrder[b.age_category] || 999;
-      
-      if (ageOrderA !== ageOrderB) {
-        return ageOrderA - ageOrderB;
-      }
-      
-      // Within same age category, sort by points (highest first)
-      return b.points - a.points;
-    });
-
-    return (
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-[#2A2A2A]">🏆 Champions</h1>
-          <p className="text-[#5A5A5A] mt-1">Top performers from all categories</p>
-        </div>
-
-        {/* Top 5 Temples Section */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200 flex justify-between items-center">
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-white">🏛️ Top 5 Temples</h3>
-              <p className="text-xs sm:text-sm text-white/80 mt-1">Temples ranked by total points</p>
-            </div>
-            <button
-              onClick={() => {
-                const printWindow = window.open('', '_blank');
-                const printContent = `
-                  <!DOCTYPE html>
-                  <html>
-                  <head>
-                    <title>Top 5 Temples - Champions</title>
-                    <style>
-                      body { font-family: Arial, sans-serif; margin: 20px; }
-                      .header { text-align: center; margin-bottom: 20px; }
-                      .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                      .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                      .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                      th { background-color: #f2f2f2; font-weight: bold; }
-                      .rank-badge { padding: 4px 8px; border-radius: 50%; color: white; font-weight: bold; }
-                      .rank-1 { background-color: #ffd700; }
-                      .rank-2 { background-color: #c0c0c0; }
-                      .rank-3 { background-color: #cd7f32; }
-                      .rank-other { background-color: #6c757d; }
-                      @media print {
-                        body { margin: 0; }
-                        .no-print { display: none; }
-                      }
-                    </style>
-                  </head>
-                  <body>
-                    <div class="header">
-                      <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                      <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                      <div class="section-title">🏛️ Top 5 Temples</div>
-                    </div>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Rank</th>
-                          <th>Temple Name</th>
-                          <th>Total Points</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${topTemples.map((temple, index) => `
-                          <tr>
-                            <td>
-                              ${index === 0 ? '🥇' : 
-                                index === 1 ? '🥈' : 
-                                index === 2 ? '🥉' : 
-                                index + 1}
-                            </td>
-                            <td>${temple.temple_name}</td>
-                            <td><strong>${temple.total_points}</strong></td>
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
-                  </body>
-                  </html>
-                `;
-                printWindow.document.write(printContent);
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
-                printWindow.close();
-              }}
-              className="bg-white text-[#D35D38] px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors"
-            >
-              🖨️ Print
-            </button>
-          </div>
-          
-          {loadingTopTemples ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
-              <span className="ml-3 text-[#2A2A2A]">Loading top temples...</span>
-            </div>
-          ) : topTemplesError ? (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 m-4 rounded">
-              <strong className="font-bold">Error!</strong>
-              <span className="block sm:inline"> {topTemplesError}</span>
-            </div>
-          ) : topTemples.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                      Rank
-                    </th>
-                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                      Temple Name
-                    </th>
-                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                      Total Points
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {topTemples.map((temple, index) => (
-                    <tr key={temple.temple_id} className="hover:bg-gray-50">
-                      <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center">
-                          {index === 0 ? (
-                            <span className="text-2xl">🥇</span>
-                          ) : index === 1 ? (
-                            <span className="text-2xl">🥈</span>
-                          ) : index === 2 ? (
-                            <span className="text-2xl">🥉</span>
-                          ) : (
-                            <span className="text-sm sm:text-base font-medium text-[#2A2A2A]">
-                              {index + 1}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                        <div className="text-xs sm:text-sm font-medium text-[#2A2A2A]">
-                          {temple.temple_name}
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                        <span className="text-sm sm:text-lg font-bold text-[#D35D38]">
-                          {temple.total_points}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-6 text-center text-[#5A5A5A]">
-              No temple data available
-            </div>
-          )}
-        </div>
-
-        {/* Champions Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200 flex justify-between items-center">
-            <div>
-              <h3 className="text-base sm:text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
-              <p className="text-xs sm:text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
-            </div>
-            <button
-              onClick={() => {
-                const printWindow = window.open('', '_blank');
-                const printContent = `
-                  <!DOCTYPE html>
-                  <html>
-                  <head>
-                    <title>Champions Leaderboard</title>
-                    <style>
-                      body { font-family: Arial, sans-serif; margin: 20px; }
-                      .header { text-align: center; margin-bottom: 20px; }
-                      .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                      .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                      .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                      th { background-color: #f2f2f2; font-weight: bold; }
-                      .rank-badge { padding: 4px 8px; border-radius: 50%; color: white; font-weight: bold; }
-                      .rank-1 { background-color: #ffd700; }
-                      .rank-2 { background-color: #c0c0c0; }
-                      .rank-3 { background-color: #cd7f32; }
-                      .rank-other { background-color: #6c757d; }
-                      .result-badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-                      .first { background-color: #fff3cd; color: #856404; }
-                      .second { background-color: #f8f9fa; color: #6c757d; }
-                      .third { background-color: #ffeaa7; color: #d63031; }
-                      @media print {
-                        body { margin: 0; }
-                        .no-print { display: none; }
-                      }
-                    </style>
-                  </head>
-                  <body>
-                    <div class="header">
-                      <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                      <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                      <div class="section-title">🏆 Champions Leaderboard</div>
-                    </div>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Rank</th>
-                          <th>Category</th>
-                          <th>Name</th>
-                          <th>Temple</th>
-                          <th>Aadhar No</th>
-                          <th>Points</th>
-                          <th>Events Won</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${allChampions.map((champion, index) => `
-                          <tr>
-                            <td>
-                              <span class="rank-badge ${
-                                index === 0 ? 'rank-1' : 
-                                index === 1 ? 'rank-2' : 
-                                index === 2 ? 'rank-3' : 'rank-other'
-                              }">
-                                ${index + 1}
-                              </span>
-                            </td>
-                            <td>${champion.category || 'N/A'}</td>
-                            <td>${champion.name || 'N/A'}</td>
-                            <td>${champion.temple || 'N/A'}</td>
-                            <td>${champion.aadhar_number || 'N/A'}</td>
-                            <td><strong>${champion.points || 0}</strong></td>
-                            <td>${champion.events_count || 0}</td>
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
-                  </body>
-                  </html>
-                `;
-                printWindow.document.write(printContent);
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
-                printWindow.close();
-              }}
-              className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
-            >
-              🖨️ Print
-            </button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Rank
-                  </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Champion
-                  </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Temple
-                  </th>
-                  <th className="hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Aadhar Number
-                  </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Total Points
-                  </th>
-                  <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Events Won
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {allChampions.map((champion, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <span className="text-sm sm:text-base font-medium text-[#2A2A2A]">
-                          {index + 1}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                      {champion.category}
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                      <div className="text-xs sm:text-sm font-medium text-[#2A2A2A]">
-                        {champion.name}
-                      </div>
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                      {champion.temple}
-                    </td>
-                    <td className="hidden md:table-cell px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                      {champion.aadhar_number}
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                      <span className="text-sm sm:text-lg font-bold text-[#D35D38]">
-                        {champion.points}
-                      </span>
-                    </td>
-                    <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                      {champion.events_count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Summary */}
-        {allChampions.length > 0 && (
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">{allChampions.length}</p>
-                <p className="text-xs text-[#5A5A5A]">Total Champions</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">
-                  {allChampions.reduce((sum, champ) => sum + champ.points, 0)}
-                </p>
-                <p className="text-xs text-[#5A5A5A]">Total Points</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">
-                  {allChampions.reduce((sum, champ) => sum + champ.events_count, 0)}
-                </p>
-                <p className="text-xs text-[#5A5A5A]">Events Won</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">
-                  {allChampions.length > 0 ? Math.round(allChampions.reduce((sum, champ) => sum + champ.points, 0) / allChampions.length) : 0}
-                </p>
-                <p className="text-xs text-[#5A5A5A]">Avg Points</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Render Schedule
-  const renderSchedule = () => {
-    if (loadingSchedule) {
-      return (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
-          <span className="ml-2 text-[#2A2A2A]">Loading schedule...</span>
-        </div>
-      );
-    }
-
-    if (scheduleError) {
-      return (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          <strong>Error:</strong> {scheduleError}
-        </div>
-      );
-    }
-
-    // Group individual events by age category and gender
-    const groupedIndividualEvents = scheduleData.individual.reduce((acc, event) => {
-      const key = `${event.age_category?.name || 'Unknown'}::${event.gender}`;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(event);
-      return acc;
-    }, {});
-
-    // Group team events by gender
-    const groupedTeamEvents = scheduleData.team.reduce((acc, event) => {
-      const key = event.gender || 'ALL';
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(event);
-      return acc;
-    }, {});
-
-    return (
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-[#2A2A2A]">📅 Complete Event Schedule</h1>
-          <p className="text-[#5A5A5A] mt-1">All individual and team events organized by age category and gender</p>
-        </div>
-
-        {/* Individual Events Section */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200">
-            <h3 className="text-base sm:text-lg font-semibold text-white">🏃 Individual Events ({scheduleData.individual.length})</h3>
-            <p className="text-xs sm:text-sm text-white/80 mt-1">Individual competitions by age category and gender</p>
-          </div>
-          
-          <div className="p-4 sm:p-6">
-            {Object.keys(groupedIndividualEvents).length > 0 ? (
-              <div className="space-y-6">
-                {Object.entries(groupedIndividualEvents).map(([key, events]) => {
-                  const [ageCategory, gender] = key.split('::');
-                  return (
-                    <div key={key} className="border border-[#F8DFBE] rounded-lg p-4">
-                      <h4 className="text-lg font-semibold text-[#D35D38] mb-4 border-b border-[#F8DFBE] pb-2">
-                        {ageCategory} - {gender} ({events.length} events)
-                      </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {events.map((event, index) => (
-                          <div key={event.id || index} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0] hover:shadow-md transition-shadow">
-                            <div className="flex items-center justify-between mb-3">
-                              <h5 className="font-semibold text-[#2A2A2A] text-sm leading-tight">{event.name}</h5>
-                              <span className="text-xs bg-[#D35D38] text-white px-2 py-1 rounded-full whitespace-nowrap">
-                                Individual
-                              </span>
-                            </div>
-                            <div className="space-y-2 text-xs text-[#5A5A5A]">
-                              <div className="flex justify-between">
-                                <span><strong>Age:</strong> {event.age_category?.name}</span>
-                                <span><strong>Gender:</strong> {event.gender}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span><strong>Participants:</strong> {event.participant_count}</span>
-                                <span><strong>Registered:</strong> {event.registrations_count}</span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span><strong>Status:</strong></span>
-                                <span className={`px-2 py-1 rounded text-xs ${
-                                  event.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                }`}>
-                                  {event.is_closed ? 'Closed' : 'Open'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-[#5A5A5A]">
-                No individual events found
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Team Events Section */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200">
-            <h3 className="text-base sm:text-lg font-semibold text-white">🤝 Team Events ({scheduleData.team.length})</h3>
-            <p className="text-xs sm:text-sm text-white/80 mt-1">Team competitions by gender</p>
-          </div>
-          
-          <div className="p-4 sm:p-6">
-            {Object.keys(groupedTeamEvents).length > 0 ? (
-              <div className="space-y-6">
-                {Object.entries(groupedTeamEvents).map(([gender, events]) => (
-                  <div key={gender} className="border border-[#F8DFBE] rounded-lg p-4">
-                    <h4 className="text-lg font-semibold text-[#D35D38] mb-4 border-b border-[#F8DFBE] pb-2">
-                      {gender} Team Events ({events.length} events)
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {events.map((event, index) => (
-                        <div key={event.id || index} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0] hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between mb-3">
-                            <h5 className="font-semibold text-[#2A2A2A] text-sm leading-tight">
-                              {event.name}
-                            </h5>
-                            <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full whitespace-nowrap">
-                              Team
-                            </span>
-                          </div>
-                          <div className="space-y-2 text-xs text-[#5A5A5A]">
-                            <div className="flex justify-between">
-                              <span><strong>Age:</strong> {event.age_category?.name}</span>
-                              <span><strong>Gender:</strong> {event.gender}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span><strong>Team Size:</strong> {event.participant_count}</span>
-                              <span><strong>Registered:</strong> {event.team_registrations_count}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span><strong>Status:</strong></span>
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                event.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                              }`}>
-                                {event.is_closed ? 'Closed' : 'Open'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-[#5A5A5A]">
-                No team events found
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Summary Statistics */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-[#D35D38] mb-4 text-center">📊 Event Summary</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-            <div className="bg-[#F8DFBE] rounded-lg p-4">
-              <p className="text-2xl font-bold text-[#D35D38]">
-                {scheduleData.individual.length}
-              </p>
-              <p className="text-sm text-[#5A5A5A]">Individual Events</p>
-            </div>
-            <div className="bg-[#F8DFBE] rounded-lg p-4">
-              <p className="text-2xl font-bold text-[#D35D38]">
-                {scheduleData.team.length}
-              </p>
-              <p className="text-sm text-[#5A5A5A]">Team Events</p>
-            </div>
-            <div className="bg-[#F8DFBE] rounded-lg p-4">
-              <p className="text-2xl font-bold text-[#D35D38]">
-                {scheduleData.individual.length + scheduleData.team.length}
-              </p>
-              <p className="text-sm text-[#5A5A5A]">Total Events</p>
-            </div>
-            <div className="bg-[#F8DFBE] rounded-lg p-4">
-              <p className="text-2xl font-bold text-[#D35D38]">
-                {Object.keys(groupedIndividualEvents).length + Object.keys(groupedTeamEvents).length}
-              </p>
-              <p className="text-sm text-[#5A5A5A]">Categories</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Render All Results
-  const renderAllResults = () => {
-    if (loading) {
-      return (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
-          <span className="ml-2 text-[#2A2A2A]">Loading results...</span>
-        </div>
-      );
-    }
-
-    if (error) {
-      return (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-          <strong>Error:</strong> {error}
-        </div>
-      );
-    }
-
-    if (!data || typeof data !== 'object' || (!data.individual && !data.team)) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-[#5A5A5A]">No results data available yet.</p>
-        </div>
-      );
-    }
-
-    // Helper function to get winner display text
-    const getWinnerText = (winners, isIndividual = true) => {
-      if (!winners || winners.length === 0) return 'No winner';
-      
-      if (isIndividual) {
-        return winners.map(winner => `${winner.name} (${winner.temple})`).join(', ');
-      } else {
-        return winners.map(winner => `${winner.temple} (${winner.points} pts)`).join(', ');
-      }
-    };
-
-    // Filter results based on selected filters
-    const filterResults = (results, ageFilter, genderFilter) => {
-      return results.filter(result => {
-        const [categoryAge, categoryGender] = result.category.split(' - ');
-        const ageMatch = !ageFilter || ageFilter === 'all' || categoryAge === ageFilter;
-        const genderMatch = !genderFilter || genderFilter === 'all' || categoryGender === genderFilter;
-        return ageMatch && genderMatch;
-      });
-    };
-
-    // Collect individual and team results separately
-    const allIndividualResults = [];
-    const allTeamResults = [];
-
-    // Process individual events
-    if (data.individual) {
-      data.individual.forEach(category => {
-        category.events.forEach(event => {
-          allIndividualResults.push({
-            category: `${category.age_category} - ${category.gender}`,
-            eventName: event.event_name,
-            firstPlace: getWinnerText(event.first, true),
-            secondPlace: getWinnerText(event.second, true),
-            thirdPlace: getWinnerText(event.third, true),
-            ageCategory: category.age_category,
-            gender: category.gender
-          });
-        });
-      });
-    }
-
-    // Process team events
-    if (data.team) {
-      data.team.forEach(category => {
-        category.events.forEach(event => {
-          allTeamResults.push({
-            category: `${category.age_category} - ${category.gender}`,
-            eventName: event.event_name,
-            firstPlace: getWinnerText(event.first, false),
-            secondPlace: getWinnerText(event.second, false),
-            thirdPlace: getWinnerText(event.third, false),
-            ageCategory: category.age_category,
-            gender: category.gender
-          });
-        });
-      });
-    }
-
-    // Apply filters
-    const individualResults = filterResults(allIndividualResults, selectedAge, selectedGender);
-    const teamResults = filterResults(allTeamResults, selectedAge, selectedGender);
-
-    // Helper function to render results table
-    const renderResultsTable = (results, title, type) => {
-      if (results.length === 0) {
-        return (
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-[#2A2A2A] mb-4">{title}</h3>
-            <p className="text-[#5A5A5A] text-center py-4">No {type.toLowerCase()} results available</p>
-          </div>
-        );
-      }
-
-      return (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-4 bg-[#F8DFBE] border-b border-gray-200 flex justify-between items-center">
-            <div>
-              <h3 className="text-lg font-semibold text-[#2A2A2A]">{title}</h3>
-              <p className="text-sm text-[#5A5A5A] mt-1">{results.length} events with results</p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  const printWindow = window.open('', '_blank');
-                  const printContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                      <title>${title} - All Results</title>
-                      <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 20px; }
-                        .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                        .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        th { background-color: #f2f2f2; font-weight: bold; }
-                        .winner-text { font-weight: bold; }
-                        .first-place { color: #ffd700; font-weight: bold; }
-                        .second-place { color: #c0c0c0; font-weight: bold; }
-                        .third-place { color: #cd7f32; font-weight: bold; }
-                        @media print {
-                          body { margin: 0; }
-                          .no-print { display: none; }
-                        }
-                      </style>
-                    </head>
-                    <body>
-                      <div class="header">
-                        <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                        <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                        <div class="section-title">${title}</div>
-                      </div>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>Category</th>
-                            <th>Event</th>
-                            <th>1st Place</th>
-                            <th>2nd Place</th>
-                            <th>3rd Place</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          ${results.map((result, index) => `
-                            <tr>
-                              <td class="winner-text">${result.category}</td>
-                              <td class="winner-text">${result.eventName}</td>
-                              <td class="first-place">${result.firstPlace}</td>
-                              <td class="second-place">${result.secondPlace}</td>
-                              <td class="third-place">${result.thirdPlace}</td>
-                            </tr>
-                          `).join('')}
-                        </tbody>
-                      </table>
-                    </body>
-                    </html>
-                  `;
-                  printWindow.document.write(printContent);
-                  printWindow.document.close();
-                  printWindow.focus();
-                  printWindow.print();
-                  printWindow.close();
-                }}
-                className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
-              >
-                🖨️ Print All
-              </button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Event
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    1st Place
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    2nd Place
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    3rd Place
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                    Print
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {results.map((result, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A]">
-                      {result.category}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#2A2A2A]">
-                      {result.eventName}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#5A5A5A]">
-                      {result.firstPlace}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#5A5A5A]">
-                      {result.secondPlace}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#5A5A5A]">
-                      {result.thirdPlace}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => {
-                          const printWindow = window.open('', '_blank');
-                          const printContent = `
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                              <title>${result.eventName} - ${result.category}</title>
-                              <style>
-                                body { font-family: Arial, sans-serif; margin: 20px; }
-                                .header { text-align: center; margin-bottom: 20px; }
-                                .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                                .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                                .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                                .event-details { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-                                .event-name { font-size: 20px; font-weight: bold; color: #2A2A2A; margin-bottom: 5px; }
-                                .event-category { font-size: 16px; color: #5A5A5A; }
-                                .winners-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                                .winners-table th, .winners-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-                                .winners-table th { background-color: #f2f2f2; font-weight: bold; }
-                                .first-place { color: #ffd700; font-weight: bold; }
-                                .second-place { color: #c0c0c0; font-weight: bold; }
-                                .third-place { color: #cd7f32; font-weight: bold; }
-                                @media print {
-                                  body { margin: 0; }
-                                  .no-print { display: none; }
-                                }
-                              </style>
-                            </head>
-                            <body>
-                              <div class="header">
-                                <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                                <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                                <div class="section-title">${title}</div>
-                              </div>
-                              <div class="event-details">
-                                <div class="event-name">${result.eventName}</div>
-                                <div class="event-category">${result.category}</div>
-                              </div>
-                              <table class="winners-table">
-                                <thead>
-                                  <tr>
-                                    <th>Position</th>
-                                    <th>Winner</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  <tr>
-                                    <td class="first-place">1st Place</td>
-                                    <td class="first-place">${result.firstPlace}</td>
-                                  </tr>
-                                  <tr>
-                                    <td class="second-place">2nd Place</td>
-                                    <td class="second-place">${result.secondPlace}</td>
-                                  </tr>
-                                  <tr>
-                                    <td class="third-place">3rd Place</td>
-                                    <td class="third-place">${result.thirdPlace}</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </body>
-                            </html>
-                          `;
-                          printWindow.document.write(printContent);
-                          printWindow.document.close();
-                          printWindow.focus();
-                          printWindow.print();
-                          printWindow.close();
-                        }}
-                        className="bg-[#D35D38] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#B84A2A] transition-colors"
-                      >
-                        🖨️
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
-    };
-
-    return (
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-[#2A2A2A]">All Results</h1>
-          <p className="text-[#5A5A5A] mt-1">Complete list of winners from all events</p>
-        </div>
-
-        {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          {/* Age Category Filter */}
-          <div className="flex flex-col">
-            <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Age Category</label>
-            <select 
-              className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
-              value={selectedAge}
-              onChange={(e) => setSelectedAge(e.target.value)}
-            >
-              <option value="all">All Age Categories</option>
-              {ageGroups && ageGroups.length > 0 ? (
-                ageGroups.map((group) => (
-                  <option key={group.id} value={group.value}>
-                    {group.name}
-                  </option>
-                ))
-              ) : (
-                <option value="" disabled>Loading age groups...</option>
-              )}
-            </select>
-          </div>
-
-          {/* Gender Filter */}
-          <div className="flex flex-col">
-            <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Gender</label>
-            <select 
-              className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
-              value={selectedGender}
-              onChange={(e) => setSelectedGender(e.target.value)}
-            >
-              <option value="all">All Genders</option>
-              {genders && genders.length > 0 ? (
-                genders.map((gender) => (
-                  <option key={gender.id} value={gender.value}>
-                    {gender.name}
-                  </option>
-                ))
-              ) : (
-                <option value="" disabled>Loading genders...</option>
-              )}
-            </select>
-          </div>
-        </div>
-
-        {/* Individual Events Results */}
-        {renderResultsTable(individualResults, "🏃 Individual Events", "Individual")}
-
-        {/* Team Events Results */}
-        {renderResultsTable(teamResults, "🤝 Team Events", "Team")}
-
-        {/* Summary */}
-        {(individualResults.length > 0 || teamResults.length > 0) && (
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-[#2A2A2A]">📊 Results Summary</h3>
-              <button
-                onClick={() => {
-                  const printWindow = window.open('', '_blank');
-                  const printContent = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                      <title>All Results Summary</title>
-                      <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .header { text-align: center; margin-bottom: 20px; }
-                        .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                        .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                        .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 20px; }
-                        .summary-item { text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 8px; }
-                        .summary-number { font-size: 24px; font-weight: bold; color: #D35D38; margin-bottom: 5px; }
-                        .summary-label { font-size: 14px; color: #6c757d; }
-                        @media print {
-                          body { margin: 0; }
-                          .no-print { display: none; }
-                        }
-                      </style>
-                    </head>
-                    <body>
-                      <div class="header">
-                        <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                        <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                        <div class="section-title">📊 Results Summary</div>
-                      </div>
-                      <div class="summary-grid">
-                        <div class="summary-item">
-                          <div class="summary-number">${individualResults.length + teamResults.length}</div>
-                          <div class="summary-label">Total Events</div>
-                        </div>
-                        <div class="summary-item">
-                          <div class="summary-number">${individualResults.length}</div>
-                          <div class="summary-label">Individual Events</div>
-                        </div>
-                        <div class="summary-item">
-                          <div class="summary-number">${teamResults.length}</div>
-                          <div class="summary-label">Team Events</div>
-                        </div>
-                        <div class="summary-item">
-                          <div class="summary-number">${(individualResults.length + teamResults.length) * 3}</div>
-                          <div class="summary-label">Total Winners</div>
-                        </div>
-                      </div>
-                    </body>
-                    </html>
-                  `;
-                  printWindow.document.write(printContent);
-                  printWindow.document.close();
-                  printWindow.focus();
-                  printWindow.print();
-                  printWindow.close();
-                }}
-                className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
-              >
-                🖨️ Print Summary
-              </button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">{individualResults.length + teamResults.length}</p>
-                <p className="text-xs text-[#5A5A5A]">Total Events</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">{individualResults.length}</p>
-                <p className="text-xs text-[#5A5A5A]">Individual Events</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">{teamResults.length}</p>
-                <p className="text-xs text-[#5A5A5A]">Team Events</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold text-[#D35D38]">{(individualResults.length + teamResults.length) * 3}</p>
-                <p className="text-xs text-[#5A5A5A]">Total Winners</p>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const renderForm = () => {
-    const fields = {
-      users: ['first_name', 'last_name', 'email', 'phone', 'gender', 'dob', 'aadhar_number'],
-      registrations: ['user_id', 'event_id', 'status'],
-      teams: ['temple_id', 'event_id', 'member_user_ids', 'status'],
-      results: ['event_type_id', 'rank', 'points']
-    };
-
-    const currentFields = fields[activeTab] || [];
-
-    return (
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h3 className="text-lg font-semibold mb-4 text-[#2A2A2A]">
-          {isEditing ? 'Edit' : 'Add'} {activeTab.replace('-', ' ').slice(0, -1)}
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {currentFields.map(field => (
-            <div key={field}>
-              <label className="block text-sm font-medium text-[#2A2A2A] mb-1">
-                {field.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-              </label>
-              <input
-                type={field.includes('dob') ? 'date' : 'text'}
-                value={formData[field] || ''}
-                onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                className="w-full p-2 border border-[#F8DFBE] rounded focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-                required
-              />
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2 mt-4">
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 bg-[#D35D38] text-white rounded hover:bg-[#B84A2E] disabled:opacity-50"
-          >
-            {loading ? 'Saving...' : (isEditing ? 'Update' : 'Create')}
-          </button>
-          {isEditing && (
-            <button
-              type="button"
-              onClick={() => {
-                setFormData({});
-                setIsEditing(false);
-                setEditingId(null);
-              }}
-              className="px-4 py-2 bg-[#5A5A5A] text-white rounded hover:bg-[#2A2A2A]"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      </form>
-    );
-  };
-
-  const renderTable = () => {
-    if (loading) {
-      return (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2">Loading...</p>
-        </div>
-      );
-    }
-
-    if (error) {
-        return null;
-    //   return (
-    //     <div className="text-center py-8">
-    //       <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-    //         <p className="font-bold">Demo Admin Panel</p>
-    //         <p>{error}</p>
-    //         <p className="text-sm mt-2">
-    //           This is a demonstration admin interface. The backend APIs for admin operations are not implemented yet.
-    //         </p>
-    //       </div>
-    //     </div>
-    //   );
-    }
-
-    if (!Array.isArray(data) || data.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-500">No data available</p>
-        </div>
-      );
-    }
-
-    const columns = Object.keys(data[0] || {}).filter(key => 
-      !['created_at', 'updated_at', 'is_deleted'].includes(key)
-    );
-
-    return (
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[#F8DFBE]">
-            <thead className="bg-[#F8DFBE]">
-              <tr>
-                {columns.map(column => (
-                  <th
-                    key={column}
-                    className="px-6 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider"
-                  >
-                    {column.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                  </th>
-                ))}
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-[#F8DFBE]">
-              {data.map((item, index) => (
-                <tr key={item.id || index} className="hover:bg-[#F8DFBE]">
-                  {columns.map(column => (
-                    <td key={column} className="px-6 py-4 whitespace-nowrap text-sm text-[#2A2A2A]">
-                      {typeof item[column] === 'boolean' 
-                        ? (item[column] ? 'Yes' : 'No')
-                        : item[column]?.toString() || '-'
-                      }
-                    </td>
-                  ))}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="text-[#D35D38] hover:text-[#B84A2E] mr-3"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
 
   // Modal Component
   const Modal = () => {
@@ -4463,7 +3066,8 @@ const StaffPanel = () => {
       </div>
     );
   };
-
+  
+  //Body
   return (
     <div className="min-h-screen bg-[#F0F0F0] p-3 sm:p-4 md:p-6">
       {/* Modal */}
@@ -4541,28 +3145,12 @@ const StaffPanel = () => {
         ) : activeTab === 'teams' ? (
           renderTeams()
         ) : activeTab === 'champions' ? (
-          renderChampions()
+          <Champions apiSource="staff" />
         ) : activeTab === 'all-result' ? (
-          renderAllResults()
+          <Results apiSource="staff" />
         ) : activeTab === 'schedule' ? (
-          renderSchedule()
-        ) : activeTab === 'results' ? (
-          <>
-        {/* Form */}
-        {renderForm()}
-
-        {/* Table */}
-        {renderTable()}
-          </>
-        ) : (
-          <>
-            {/* Form */}
-            {renderForm()}
-
-            {/* Table */}
-            {renderTable()}
-          </>
-        )}
+          <Schedule apiSource="staff" />
+        ) : null}
       </div>
     </div>
   );

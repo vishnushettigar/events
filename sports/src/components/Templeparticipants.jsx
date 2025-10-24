@@ -110,8 +110,8 @@ const Templeparticipants = () => {
 
     return (
         <section className="min-h-screen bg-[#F0F0F0]">
-            <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
-                <div className="max-w-7xl mx-auto p-6 m-4">
+            <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
+                <div className="max-w-7xl mx-auto m-4">
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">Temple Participants</h1>

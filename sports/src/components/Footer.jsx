@@ -4,7 +4,7 @@ import SFC_logo from "../assets/sfc_logo.png";
 
 const Footer = () => {
   return (
-    <footer className="w-full bg-[#FCFCFC]">
+    <footer className="w-full z-46 bg-[#FCFCFC]">
       <div className="bg-[#FCFCFC] z-20 w-[90%] mx-auto">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-4">
         {/* Left Side - Logo, Designer, and Contact */}

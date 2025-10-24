@@ -362,7 +362,7 @@ const AvailableEvents = () => {
                           handleTooltipShow(event.id);
                         }
                       }}
-                      className="w-6 h-6 rounded-full bg-blue-500 text-white text-sm font-bold flex items-center justify-center hover:bg-blue-600 transition-colors"
+                      className="w-6 h-6 rounded-full bg-[#F8DFBE] text-brown text-sm font-bold flex items-center justify-center hover:bg-[#D35D38] transition-colors"
                     >
                       i
                     </button>

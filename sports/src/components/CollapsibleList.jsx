@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Playerscard from './Playerscard';
+import MobileParticipantCard from './MobileParticipantCard';
 import AdminHeatViewer from './AdminHeatViewer';
 import { participantAPI, eventAPI, systemAPI } from '../utils/api.js';
 
@@ -400,45 +401,64 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
           )}
           
           {sortedParticipants.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name & Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Phone
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Result
-                    </th>
-                    {!isAdmin && !isViewer && (
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
+                        Name & Status
                       </th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-              {sortedParticipants.map((participant) => (
-                <Playerscard
-                  key={participant.id}
-                  participant={participant}
-                  onStatusUpdate={(newStatus) => handleStatusUpdate(participant.id, newStatus)}
-                  acceptedCount={acceptedCount}
-                  pendingCount={pendingCount}
-                  isAdmin={isAdmin}
-                  isViewer={isViewer}
-                  updatingStatus={updatingStatus}
-                />
-              ))}
-                </tbody>
-              </table>
-            </div>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Email
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Phone
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Result
+                      </th>
+                      {!isAdmin && !isViewer && (
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                {sortedParticipants.map((participant) => (
+                  <Playerscard
+                    key={participant.id}
+                    participant={participant}
+                    onStatusUpdate={(newStatus) => handleStatusUpdate(participant.id, newStatus)}
+                    acceptedCount={acceptedCount}
+                    pendingCount={pendingCount}
+                    isAdmin={isAdmin}
+                    isViewer={isViewer}
+                    updatingStatus={updatingStatus}
+                  />
+                ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="md:hidden p-4 space-y-3">
+                {sortedParticipants.map((participant) => (
+                  <MobileParticipantCard
+                    key={participant.id}
+                    participant={participant}
+                    onStatusUpdate={(newStatus) => handleStatusUpdate(participant.id, newStatus)}
+                    acceptedCount={acceptedCount}
+                    pendingCount={pendingCount}
+                    isAdmin={isAdmin}
+                    isViewer={isViewer}
+                    updatingStatus={updatingStatus}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <div className="p-4 text-center text-[#5A5A5A]">
               No participants registered for this event

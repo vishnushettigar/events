@@ -11,6 +11,21 @@ const Participantslist = () => {
   const [participants, setParticipants] = useState([]);
   const [participantsLoading, setParticipantsLoading] = useState(true);
 
+  // Function to format date from YYYY-MM-DD to DD/MM/YYYY
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear());
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Return original string if formatting fails
+    }
+  };
+
   useEffect(() => {
     const fetchTempleName = async () => {
       try {
@@ -158,16 +173,17 @@ const Participantslist = () => {
           </div>
         </div>
 
-        {/* Participants Table */}
+        {/* Participants List */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%' }}>
-          <div className="px-6 py-4 bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
-            <h2 className="text-2xl font-bold text-white">Participants List</h2>
-            <p className="text-white/80 text-sm mt-1">
+          <div className="px-6 py-4 bg-[#F8DFBE]">
+            <h2 className="text-2xl font-bold text-black">Participants List</h2>
+            <p className="text-black/80 text-sm mt-1">
               {filteredParticipants.length} participant{filteredParticipants.length !== 1 ? 's' : ''} found
             </p>
-            </div>
+          </div>
 
-              <div className="overflow-x-auto" style={{ maxWidth: '100%', overflowX: 'auto', width: '100%', position: 'relative', transform: 'translateZ(0)' }}>
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto" style={{ maxWidth: '100%', overflowX: 'auto', width: '100%', position: 'relative', transform: 'translateZ(0)' }}>
             <table className="w-full divide-y divide-gray-200" style={{ minWidth: '800px', width: '100%', tableLayout: 'fixed', transform: 'translateZ(0)' }}>
               <thead className="bg-gray-50">
                 <tr>
@@ -217,7 +233,7 @@ const Participantslist = () => {
                   filteredParticipants.map((participant, idx) => (
                     <tr key={participant.id} className="hover:bg-[#F8DFBE] transition-colors duration-200">
                       <td className="px-6 py-4 whitespace-nowrap" style={{ width: '80px' }}>
-                        <span className="inline-flex items-center justify-center w-8 h-8 bg-[#D35D38] text-white text-sm font-bold rounded-full">
+                        <span className="inline-flex items-center justify-center w-8 h-8  text-black text-sm font-bold rounded-full">
                           {idx + 1}
                         </span>
                       </td>
@@ -233,7 +249,7 @@ const Participantslist = () => {
                         <div className="text-sm text-[#5A5A5A] font-mono truncate" title={participant.aadhar_number}>{participant.aadhar_number}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap" style={{ width: '120px' }}>
-                        <div className="text-sm text-[#5A5A5A]">{participant.date_of_birth}</div>
+                        <div className="text-sm text-[#5A5A5A]">{formatDate(participant.date_of_birth)}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap" style={{ width: '100px' }}>
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -250,8 +266,73 @@ const Participantslist = () => {
                     </tr>
                   ))
                 )}
-                  </tbody>
-                </table>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden p-4 space-y-4">
+            {participantsLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
+                <span className="ml-3 text-[#5A5A5A]">Loading participants...</span>
+              </div>
+            ) : filteredParticipants.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-[#5A5A5A] text-lg">No participants found</p>
+                <p className="text-[#5A5A5A] text-sm mt-1">Try adjusting your filters</p>
+              </div>
+            ) : (
+              filteredParticipants.map((participant, idx) => (
+                <div key={participant.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                  {/* 1st line - Name, age category, gender */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
+                    <div className="flex items-center space-x-2 mb-2 sm:mb-0">
+                      
+                      <h3 className="text-lg font-semibold text-[#2A2A2A] truncate" title={participant.name}>
+                        {participant.name}
+                      </h3>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {participant.age_category}
+                      </span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        participant.gender === 'MALE' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-pink-100 text-pink-800'
+                      }`}>
+                        {participant.gender}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 2nd line - Aadhar number */}
+                  <div className="mb-3">
+                    <div className="text-sm text-[#5A5A5A] flex items-center">
+                      <span className="text-lg font-bold mr-2 text-[#5A5A5A]">#</span>
+                      <span className="ml-1 font-mono">{participant.aadhar_number}</span>
+                    </div>
+                  </div>
+
+                  {/* 3rd line - Date of birth and mobile number */}
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="text-sm text-[#5A5A5A] flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-[#5A5A5A]" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                      </svg>
+                      <span className="ml-1">{participant.phone_number}</span>
+                    </div>
+                    <div className="text-sm text-[#5A5A5A] flex items-center">
+                      <svg className="w-4 h-4 mr-2 text-[#5A5A5A]" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                      </svg>
+                      <span className="ml-1">{formatDate(participant.date_of_birth)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
