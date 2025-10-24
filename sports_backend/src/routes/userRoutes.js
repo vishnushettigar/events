@@ -1255,8 +1255,35 @@ router.get('/all-results', authenticate, async (req, res) => {
             ]
         });
 
-        console.log('Team registrations found:', teamRegistrations.length);
-        console.log('Sample team registration:', teamRegistrations[0]);
+        // For mixed team events, we need to fetch participant details
+        const teamRegistrationsWithParticipants = await Promise.all(
+            teamRegistrations.map(async (registration) => {
+                if (registration.event.gender === 'MIXED' && registration.member_user_ids) {
+                    // Fetch participant details for mixed teams
+                    const userIds = registration.member_user_ids.split(',').map(id => parseInt(id.trim()));
+                    const participants = await prisma.profile.findMany({
+                        where: {
+                            user_id: { in: userIds }
+                        },
+                        select: {
+                            id: true,
+                            first_name: true,
+                            last_name: true,
+                            gender: true
+                        }
+                    });
+                    
+                    return {
+                        ...registration,
+                        participants: participants
+                    };
+                }
+                return registration;
+            })
+        );
+
+        console.log('Team registrations found:', teamRegistrationsWithParticipants.length);
+        console.log('Sample team registration:', teamRegistrationsWithParticipants[0]);
 
         // Group individual events by age category and gender
         const individualEventsByCategory = {};
@@ -1340,7 +1367,7 @@ router.get('/all-results', authenticate, async (req, res) => {
         // Group team events by age category and gender
         const teamEventsByCategory = {};
 
-        teamRegistrations.forEach(registration => {
+        teamRegistrationsWithParticipants.forEach(registration => {
             const ageCategory = registration.event.age_category.name;
             const gender = registration.event.gender;
             const eventName = registration.event.event_type.name;
@@ -1372,6 +1399,11 @@ router.get('/all-results', authenticate, async (req, res) => {
                 temple: templeName,
                 points: points
             };
+
+            // For mixed events, include participant details
+            if (gender === 'MIXED' && registration.participants) {
+                teamData.participants = registration.participants;
+            }
 
             if (rank === 'FIRST') {
                 if (!teamEventsByCategory[key].events[eventName].first) {

@@ -1037,7 +1037,8 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
           include: {
             user: {
               include: { temple: true }
-            }
+            },
+            event_result: true
           }
         }
       },
@@ -1061,7 +1062,11 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         aadhar_number: heat.registration.user.aadhar_number,
         performance_1: heat.performance_1,
         performance_2: heat.performance_2,
-        performance_3: heat.performance_3
+        performance_3: heat.performance_3,
+        result: heat.registration.event_result ? {
+          rank: heat.registration.event_result.rank,
+          points: heat.registration.event_result.points
+        } : null
       });
     });
 
