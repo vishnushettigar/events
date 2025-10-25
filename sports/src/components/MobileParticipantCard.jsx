@@ -144,50 +144,64 @@ const MobileParticipantCard = ({ participant, onStatusUpdate, acceptedCount, pen
     };
 
     return (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-white  p-2 mb-3 border-b-1 border-b-gray-300">
             {/* Header with Name and Status */}
-            <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 text-lg truncate">
-                            {participant.user?.first_name} {participant.user?.last_name}
-                        </h3>
+            <div className='flex  gap-2'>
+                <div className='flex flex-1 flex-col gap-2'>
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <h3 className="font-medium  text-gray-900">
+                                    {participant.user?.first_name} {participant.user?.last_name}
+                                </h3>
+                            </div>
+                            {isAdmin && participant.user?.temple?.name && (
+                                <div className="text-sm text-gray-500 mb-1">
+                                    Temple: {participant.user.temple.name}
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+                    {/* Contact Information */}
+                    <div className="flex items-center justify-between gap-2">
+                        <div className='flex items-center gap-2'>
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                            <span className="text-sm text-gray-600">
+                                {participant.user?.phone || 'Phone not provided'}
+                            </span>
+                        </div>
+                        
                         {getStatusBadge()}
                     </div>
-                    {isAdmin && participant.user?.temple?.name && (
-                        <div className="text-sm text-gray-500 mb-2">
-                            Temple: {participant.user.temple.name}
+
+
+
+                </div>
+
+                {/* Result Row */}
+                <div className="mb-1 flex items-start justify-between">
+
+
+                    {/* Result - Right (only show if there's a result) */}
+                    {participant.event_result?.rank && (
+                        <div className="flex items-center">
+                            {participant.event_result?.rank === 'FIRST' && (
+                                <span className="text-2xl">🥇</span>
+                            )}
+                            {participant.event_result?.rank === 'SECOND' && (
+                                <span className="text-2xl">🥈</span>
+                            )}
+                            {participant.event_result?.rank === 'THIRD' && (
+                                <span className="text-2xl">🥉</span>
+                            )}
                         </div>
                     )}
                 </div>
-            </div>
 
-            {/* Contact and Result Row */}
-            <div className="mb-4 flex items-center justify-between">
-                {/* Contact Information - Left */}
-                <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                    </svg>
-                    <span className="text-sm text-gray-600">
-                        {participant.user?.phone || 'Phone not provided'}
-                    </span>
-                </div>
 
-                {/* Result - Right (only show if there's a result) */}
-                {participant.event_result?.rank && (
-                    <div className="flex items-center">
-                        {participant.event_result?.rank === 'FIRST' && (
-                            <span className="text-2xl">🥇</span>
-                        )}
-                        {participant.event_result?.rank === 'SECOND' && (
-                            <span className="text-2xl">🥈</span>
-                        )}
-                        {participant.event_result?.rank === 'THIRD' && (
-                            <span className="text-2xl">🥉</span>
-                        )}
-                    </div>
-                )}
             </div>
 
             {/* Action Buttons */}

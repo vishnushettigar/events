@@ -28,48 +28,68 @@ const Rules = () => {
                                         {rule.split('<table')[0].trim()}
                                     </div>
                                     <div className="overflow-x-auto rounded-2xl">
-                                        <table className="w-full border-collapse border border-gray-400 bg-white rounded-lg shadow-sm">
+                                        <table className="w-full border-collapse border border-gray-400 bg-white rounded-lg shadow-sm table-fixed">
                                             <thead>
                                                 <tr className="bg-[#D35D38] text-white">
-                                                    <th className="border border-gray-400 px-4 py-3 text-left font-semibold">Event</th>
-                                                    <th className="border border-gray-400 px-4 py-3 text-center font-semibold">1st Place</th>
-                                                    <th className="border border-gray-400 px-4 py-3 text-center font-semibold">2nd Place</th>
-                                                    <th className="border border-gray-400 px-4 py-3 text-center font-semibold">3rd Place</th>
+                                                    <th className="text-start border border-gray-400 px-4 py-3 text-left font-medium w-1/4">
+                                                        {isEnglish ? "Event" : "ಸ್ಪರ್ಧೆ"}
+                                                    </th>
+                                                    <th className="border border-gray-400 px-4 py-3 text-center md:text-start font-medium w-1/6">
+                                                        {isEnglish ? "1st Place" : "ಪ್ರಥಮ"}
+                                                    </th>
+                                                    <th className="border border-gray-400 px-4 py-3 text-center md:text-start font-medium w-1/6">
+                                                        {isEnglish ? "2nd Place" : "ದ್ವಿತೀಯ"}
+                                                    </th>
+                                                    <th className="text-start border border-gray-400 px-4 py-3 text-center md:text-start font-medium w-1/6">
+                                                        {isEnglish ? "3rd Place" : "ತೃತೀಯ"}
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-400 px-4 py-3 font-medium">Individual Events</td>
+                                                    <td className="border border-gray-400 px-4 py-3 font-medium">
+                                                        {isEnglish ? "Individual Events" : "ವೈಯಕ್ತಿಕ ಸ್ಪರ್ಧೆಗಳು"}
+                                                    </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">5</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">3</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-orange-600">1</td>
                                                 </tr>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-400 px-4 py-3 font-medium">Couple Relay</td>
+                                                    <td className="border border-gray-400 px-4 py-3 font-medium">
+                                                        {isEnglish ? "Couple Relay" : "ದಂಪತಿ ರಿಲೇ"}
+                                                    </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">5</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">3</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-orange-600">1</td>
                                                 </tr>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-400 px-4 py-3 font-medium">4x100 Relay</td>
+                                                    <td className="border border-gray-400 px-4 py-3 font-medium">
+                                                        {isEnglish ? "4x100 Relay" : "4x100 ರಿಲೇ"}
+                                                    </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">10</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">6</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-orange-600">3</td>
                                                 </tr>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-400 px-4 py-3 font-medium">Volleyball (Men)</td>
+                                                    <td className="border border-gray-400 px-4 py-3 font-medium">
+                                                        {isEnglish ? "Volleyball (Men)" : "ವಾಲಿಬಾಲ್ (ಪುರುಷರು)"}
+                                                    </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">10</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">5</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-gray-400">–</td>
                                                 </tr>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-400 px-4 py-3 font-medium">Throwball (Women)</td>
+                                                    <td className="border border-gray-400 px-4 py-3 font-medium">
+                                                        {isEnglish ? "Throwball (Women)" : "ಥ್ರೋಬಾಲ್ (ಮಹಿಳೆಯರು)"}
+                                                    </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">10</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">5</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-gray-400">–</td>
                                                 </tr>
                                                 <tr className="hover:bg-gray-50">
-                                                    <td className="border border-gray-400 px-4 py-3 font-medium">Tug of War</td>
+                                                    <td className="border border-gray-400 px-4 py-3 font-medium">
+                                                        {isEnglish ? "Tug of War" : "ಹಗ್ಗಜಗ್ಗಾಟ"}
+                                                    </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">10</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">5</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-gray-400">–</td>

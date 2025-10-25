@@ -82,10 +82,10 @@ const Participantslist = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#F0F0F0] py-8 px-4" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', position: 'relative', transform: 'translateZ(0)' }}>
+    <div className="min-h-screen bg-[#F0F0F0] md:py-8 md:px-4" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', position: 'relative', transform: 'translateZ(0)' }}>
       <div className="max-w-7xl mx-auto w-full" style={{ width: '100%', maxWidth: '100%' }}>
         {/* Header Section */}
-        <div className="text-center mb-8">
+        <div className="hidden md:block text-center mb-8">
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
             33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025
           </h1>
@@ -100,7 +100,7 @@ const Participantslist = () => {
 
         {/* Summary Stats */}
         {!participantsLoading && filteredParticipants.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
+          <div className="hidden md:block bg-white rounded-2xl shadow-xl p-6 mb-8">
             <h3 className="text-xl font-bold text-[#2A2A2A] mb-4 text-center">📊 Summary Statistics</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
@@ -130,20 +130,20 @@ const Participantslist = () => {
         )}
             
         {/* Filters Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 mb-8">
-          <h2 className="text-2xl font-bold text-[#2A2A2A] mb-4">Filter Participants</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="ageCategory" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+        <div className=" md:bg-white p-4 mb-8 rounded-lg shadow-sm">
+        <h2 className="hidden md:block text-2xl font-bold text-[#2A2A2A] mb-4">Filter Participants</h2>
+          <div className="flex gap-4 w-full">
+            <div className="flex-1">
+             <label htmlFor="ageCategory" className="hidden md:block block text-sm font-semibold text-[#2A2A2A] mb-2">
                 Age Category
               </label>
               <select
                 id="ageCategory"
                 value={selectedAgeCategory}
                 onChange={(e) => setSelectedAgeCategory(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+                className="w-full px-4 py-2 md:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
               >
-                <option value="">All Age Categories</option>
+                <option value="">All Ages</option>
                 <option value="0-5">0-5</option>
                 <option value="6-10">6-10</option>
                 <option value="11-14">11-14</option>
@@ -155,15 +155,16 @@ const Participantslist = () => {
                 <option value="61-90">61-90</option>
               </select>
             </div>
-            <div>
-              <label htmlFor="gender" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
+
+            <div className="flex-1">
+            <label htmlFor="gender" className="hidden md:block block text-sm font-semibold text-[#2A2A2A] mb-2">
                 Gender
               </label>
               <select
                 id="gender"
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+                className="w-full px-4 py-2 md:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
               >
                 <option value="">All Genders</option>
                 <option value="MALE">Male</option>
@@ -172,13 +173,14 @@ const Participantslist = () => {
             </div>
           </div>
         </div>
+      
 
         {/* Participants List */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ width: '100%', maxWidth: '100%' }}>
-          <div className="px-6 py-4 bg-[#F8DFBE]">
-            <h2 className="text-2xl font-bold text-black">Participants List</h2>
+          <div className="flex items-center justify-between px-4 py-2">
+            <h2 className="font-bold text-black">Participants List</h2>
             <p className="text-black/80 text-sm mt-1">
-              {filteredParticipants.length} participant{filteredParticipants.length !== 1 ? 's' : ''} found
+              {filteredParticipants.length} participant{filteredParticipants.length !== 1 ? 's' : ''} 
             </p>
           </div>
 
@@ -271,7 +273,7 @@ const Participantslist = () => {
           </div>
 
           {/* Mobile Card View */}
-          <div className="md:hidden p-4 space-y-4">
+          <div className="md:hidden p-4 space-y-2">
             {participantsLoading ? (
               <div className="flex justify-center items-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
@@ -284,51 +286,67 @@ const Participantslist = () => {
               </div>
             ) : (
               filteredParticipants.map((participant, idx) => (
-                <div key={participant.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                <div key={participant.id} className="bg-gray-50 rounded-lg p-2 border border-gray-200 hover:shadow-md transition-shadow duration-200">
                   {/* 1st line - Name, age category, gender */}
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3">
-                    <div className="flex items-center space-x-2 mb-2 sm:mb-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start justify-between mb-2 sm:mb-0">
                       
-                      <h3 className="text-lg font-semibold text-[#2A2A2A] truncate" title={participant.name}>
+                      <h3 className="font-medium text-[#2A2A2A] " title={participant.name}>
                         {participant.name}
                       </h3>
+                      <span className={`inline-flex items-start px-2.5 py-0.5 rounded-full whitespace-nowrap text-xs font-medium ${
+                        participant.gender === 'MALE' 
+                          ? 'bg-blue-100 text-blue-800' 
+                          : 'bg-pink-100 text-pink-800'
+                      }`}>
+                        {participant.gender} &nbsp;| &nbsp;
+                        <span>
+                       {participant.age_category}
+                      
+                        </span>
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      {/* <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {participant.age_category}
-                      </span>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      </span> */}
+                      {/* <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         participant.gender === 'MALE' 
                           ? 'bg-blue-100 text-blue-800' 
                           : 'bg-pink-100 text-pink-800'
                       }`}>
                         {participant.gender}
-                      </span>
+                      </span> */}
                     </div>
                   </div>
 
                   {/* 2nd line - Aadhar number */}
-                  <div className="mb-3">
-                    <div className="text-sm text-[#5A5A5A] flex items-center">
+                  <div className="mb-1 flex justify-between">
+                    {/* <div className="text-sm text-[#5A5A5A] flex items-center">
                       <span className="text-lg font-bold mr-2 text-[#5A5A5A]">#</span>
                       <span className="ml-1 font-mono">{participant.aadhar_number}</span>
-                    </div>
+                    </div> */}
+                    
                   </div>
 
                   {/* 3rd line - Date of birth and mobile number */}
                   <div className="flex justify-between items-center gap-2">
+                  <div className="text-sm text-[#5A5A5A] flex items-center">
+                      <span className="text-lg font-bold mr-2 text-[#5A5A5A]">#</span>
+                      <span className="ml-1 font-mono">{participant.aadhar_number}</span>
+                    </div>
                     <div className="text-sm text-[#5A5A5A] flex items-center">
                       <svg className="w-4 h-4 mr-2 text-[#5A5A5A]" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                       </svg>
                       <span className="ml-1">{participant.phone_number}</span>
                     </div>
-                    <div className="text-sm text-[#5A5A5A] flex items-center">
+                    {/* <div className="text-sm text-[#5A5A5A] flex items-center">
                       <svg className="w-4 h-4 mr-2 text-[#5A5A5A]" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                       </svg>
                       <span className="ml-1">{formatDate(participant.date_of_birth)}</span>
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               ))

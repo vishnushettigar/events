@@ -138,19 +138,19 @@ const Register = () => {
             }
         }
 
-        // Check for duplicate email if email is valid
-        if (formData.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            try {
-                const data = await authAPI.checkEmail(formData.email);
+        // // Check for duplicate email if email is valid
+        // if (formData.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        //     try {
+        //         const data = await authAPI.checkEmail(formData.email);
                 
-                if (data.exists) {
-                    newErrors.email = 'This email address is already registered. Please use a different email address or try logging in.';
-                }
-            } catch (error) {
-                console.error('❌ Error checking email:', error);
-                // Don't block form submission if email check fails
-            }
-        }
+        //         if (data.exists) {
+        //             newErrors.email = 'This email address is already registered. Please use a different email address or try logging in.';
+        //         }
+        //     } catch (error) {
+        //         console.error('❌ Error checking email:', error);
+        //         // Don't block form submission if email check fails
+        //     }
+        // }
 
         setErrors(newErrors);
         setIsValidating(false);

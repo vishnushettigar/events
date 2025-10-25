@@ -28,7 +28,7 @@ const CollapsibleList = ({ title, children }) => {
                 {title}
                 <span>{open ? '-' : '+'}</span>
             </button>
-            {open && <div className="p-4 bg-white rounded-b">{children}</div>}
+            {open && <div className="p-1 bg-white rounded-b">{children}</div>}
         </div>
     );
 };
@@ -631,9 +631,9 @@ const TeamEvents = () => {
                 )}
 
                 {/* Team Registration Form */}
-                <div className="border-t pt-4">
+                <div className="">
                     <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">
-                        {isMixedGender && registeredTeams.length > 0 ? 'Add New Team' : 'Team Registration'}
+                        {isMixedGender && registeredTeams.length > 0 ? 'Add New Team' : ''}
                     </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {players.map((player, i) => (

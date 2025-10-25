@@ -124,7 +124,8 @@ const Home = () => {
         </div>
          {/* Sports History Section */}
       <div >
-        <SportsHistoryHome />
+        <SportsHistoryMarquee />
+        {/* <SportsHistoryHome /> */}
       </div>
         <div>
           <Location />

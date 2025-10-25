@@ -444,7 +444,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden p-4 space-y-3">
+              <div className="md:hidden p-2 space-y-3">
                 {sortedParticipants.map((participant) => (
                   <MobileParticipantCard
                     key={participant.id}

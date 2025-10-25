@@ -1,12 +1,15 @@
 import Home from './Pages/Home';
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { LanguageProvider } from './contexts/LanguageContext';
 
 function App() {
- 
+  const location = useLocation();
+  
+  // Hide footer when on Myevents page (where BottomBar appears)
+  const shouldHideFooter = location.pathname.startsWith('/myevents');
 
   return (
     <LanguageProvider>
@@ -18,8 +21,8 @@ function App() {
         <Outlet />
       </main>
 
-      {/* Footer */}
-      <Footer />
+      {/* Footer - conditionally rendered */}
+      {!shouldHideFooter && <Footer />}
     </div>
        {/* <SignInForm /> */}
        {/* <Register /> */}
