@@ -120,15 +120,15 @@ const Home = () => {
           <Sponsors />
         </div>
         <div>
-          <Rules />
-        </div>
-         {/* Sports History Section */}
-      <div >
-        <SportsHistoryMarquee />
-        {/* <SportsHistoryHome /> */}
-      </div>
-        <div>
           <Location />
+        </div>
+        {/* Sports History Section */}
+        {/* <div >
+        <SportsHistoryMarquee />
+        <SportsHistoryHome />
+        </div> */}
+        <div>
+          <Rules />
         </div>
         <div>
           <Contacts />
