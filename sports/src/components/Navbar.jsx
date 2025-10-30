@@ -11,8 +11,8 @@ import { useAuth } from '../hooks/useAuth';
 const Navbar = () => {
     const [userInfo, setUserInfo] = useState(null);
     
-    // Use custom auth hook with periodic checking enabled
-    const { isLoggedIn, user } = useAuth(true, 30000);
+    // Use custom auth hook without periodic checking
+    const { isLoggedIn, user } = useAuth(false);
 
     // Get the current location
     const location = useLocation();
@@ -22,12 +22,12 @@ const Navbar = () => {
 
     // Fetch user profile when authenticated
     useEffect(() => {
-        if (isLoggedIn && user) {
+        if (isLoggedIn && user && !userInfo) {
             fetchUserProfile();
-        } else {
+        } else if (!isLoggedIn) {
             setUserInfo(null);
         }
-    }, [isLoggedIn, user]);
+    }, [isLoggedIn, user, userInfo]);
 
     const fetchUserProfile = async () => {
         try {
@@ -56,7 +56,7 @@ const Navbar = () => {
                             <Link to="">
                                 <img
                                     src={logo2}
-                                    className='drop-shadow-[0px_0px_20px_white] filter h-8 w-auto md:h-12 lg:h-12 max-h-full object-contain'
+                                    className=' filter h-8 w-auto md:h-12 lg:h-12 max-h-full object-contain'
                                     alt="logo"
                                 />
                             </Link>

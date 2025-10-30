@@ -113,118 +113,111 @@ const Schedule = ({
 
       {/* Individual Events Section */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200">
-          <h3 className="text-base sm:text-lg font-semibold text-white">🏃 Individual Events ({scheduleData.individual.length})</h3>
-          <p className="text-xs sm:text-sm text-white/80 mt-1">Individual competitions by age category and gender</p>
+        <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-black">🏃 Individual Events ({scheduleData.individual.length})</h3>
+          <p className="text-xs sm:text-sm text-black/80 mt-1">Individual competitions by age category and gender</p>
         </div>
         
-        <div className="p-4 sm:p-6">
-          {Object.keys(groupedIndividualEvents).length > 0 ? (
-            <div className="space-y-6">
-              {Object.entries(groupedIndividualEvents).map(([key, events]) => {
-                const [ageCategory, gender] = key.split('::');
-                return (
-                  <div key={key} className="border border-[#F8DFBE] rounded-lg p-4">
-                    <h4 className="text-lg font-semibold text-[#D35D38] mb-4 border-b border-[#F8DFBE] pb-2">
-                      {ageCategory} - {gender} ({events.length} events)
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {events.map((event, index) => (
-                        <div key={event.id || index} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0] hover:shadow-md transition-shadow">
-                          <div className="flex items-center justify-between mb-3">
-                            <h5 className="font-semibold text-[#2A2A2A] text-sm leading-tight">{event.name}</h5>
-                            <span className="text-xs bg-[#D35D38] text-white px-2 py-1 rounded-full whitespace-nowrap">
-                              Individual
-                            </span>
-                          </div>
-                          <div className="space-y-2 text-xs text-[#5A5A5A]">
-                            <div className="flex justify-between">
-                              <span><strong>Age:</strong> {event.age_category?.name}</span>
-                              <span><strong>Gender:</strong> {event.gender}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span><strong>Participants:</strong> {event.participant_count || event.event_type?.participant_count || 0}</span>
-                              <span><strong>Registered:</strong> {event.registrations_count || 0}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span><strong>Status:</strong></span>
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                event.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                              }`}>
-                                {event.is_closed ? 'Closed' : 'Open'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-[#5A5A5A]">
-              No individual events found
-            </div>
-          )}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age Category</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {scheduleData.individual.length > 0 ? (
+                scheduleData.individual.map((event, index) => (
+                  <tr key={event.id || index} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      10:00 AM
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.name}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.age_category?.name || 'N/A'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.gender || 'N/A'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                    No individual events found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Team Events Section */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200">
-          <h3 className="text-base sm:text-lg font-semibold text-white">🤝 Team Events ({scheduleData.team.length})</h3>
-          <p className="text-xs sm:text-sm text-white/80 mt-1">Team competitions by gender</p>
+        <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+          <h3 className="text-base sm:text-lg font-semibold text-black">🤝 Team Events ({scheduleData.team.length})</h3>
+          <p className="text-xs sm:text-sm text-black/80 mt-1">Team competitions by gender</p>
         </div>
         
-        <div className="p-4 sm:p-6">
-          {Object.keys(groupedTeamEvents).length > 0 ? (
-            <div className="space-y-6">
-              {Object.entries(groupedTeamEvents).map(([gender, events]) => (
-                <div key={gender} className="border border-[#F8DFBE] rounded-lg p-4">
-                  <h4 className="text-lg font-semibold text-[#D35D38] mb-4 border-b border-[#F8DFBE] pb-2">
-                    {gender} Team Events ({events.length} events)
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {events.map((event, index) => (
-                      <div key={event.id || index} className="bg-[#F8DFBE] rounded-lg p-4 border border-[#E0E0E0] hover:shadow-md transition-shadow">
-                        <div className="flex items-center justify-between mb-3">
-                          <h5 className="font-semibold text-[#2A2A2A] text-sm leading-tight">
-                            {event.name}
-                          </h5>
-                          <span className="text-xs bg-blue-600 text-white px-2 py-1 rounded-full whitespace-nowrap">
-                            Team
-                          </span>
-                        </div>
-                        <div className="space-y-2 text-xs text-[#5A5A5A]">
-                          <div className="flex justify-between">
-                            <span><strong>Age:</strong> {event.age_category?.name}</span>
-                            <span><strong>Gender:</strong> {event.gender}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span><strong>Team Size:</strong> {event.participant_count || event.event_type?.participant_count || 0}</span>
-                            <span><strong>Registered:</strong> {event.team_registrations_count || event.registrations_count || 0}</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span><strong>Status:</strong></span>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              event.is_closed ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                            }`}>
-                              {event.is_closed ? 'Closed' : 'Open'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-[#5A5A5A]">
-              No team events found
-            </div>
-          )}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {scheduleData.team.length > 0 ? (
+                scheduleData.team.map((event, index) => (
+                  <tr key={event.id || index} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {index + 1}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      10:00 AM
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.name}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {event.gender || 'N/A'}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                        Pending
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                    No team events found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

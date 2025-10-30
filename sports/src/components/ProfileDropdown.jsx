@@ -15,8 +15,8 @@ const ProfileDropdown = () => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
   
-  // Use custom auth hook with periodic checking enabled
-  const { isLoggedIn, user, logout } = useAuth(true, 30000);
+  // Use custom auth hook without periodic checking
+  const { isLoggedIn, user, logout } = useAuth(false);
 
   // Add click outside handler
   useEffect(() => {
@@ -42,28 +42,15 @@ const ProfileDropdown = () => {
     // Use both useAuth hook and direct token check as fallback
     const isActuallyLoggedIn = isLoggedIn || isAuthenticated();
     
-    if (isActuallyLoggedIn) {
+    if (isActuallyLoggedIn && !userInfo && !isLoadingProfile) {
       setIsLoadingProfile(true);
       fetchUserProfile();
-    } else {
+    } else if (!isActuallyLoggedIn) {
       setUserInfo(null);
       setIsLoadingProfile(false);
     }
-  }, [isLoggedIn, user]);
+  }, [isLoggedIn, user, userInfo, isLoadingProfile]);
 
-  // Add periodic check to ensure dropdown stays in sync
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const isActuallyLoggedIn = isLoggedIn || isAuthenticated();
-      if (isActuallyLoggedIn && !userInfo && !isLoadingProfile) {
-        console.log('ProfileDropdown - Periodic check: fetching profile');
-        setIsLoadingProfile(true);
-        fetchUserProfile();
-      }
-    }, 5000); // Check every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [isLoggedIn, userInfo, isLoadingProfile]);
 
   // Listen for global logout events
   useEffect(() => {

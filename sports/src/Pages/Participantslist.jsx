@@ -27,10 +27,22 @@ const Participantslist = () => {
   };
 
   useEffect(() => {
+    // Get temple_id from URL query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const templeIdParam = urlParams.get('temple_id');
+    const templeId = templeIdParam ? parseInt(templeIdParam) : null;
+
     const fetchTempleName = async () => {
       try {
-        const templeInfo = await getCurrentUserTemple();
-        setTempleName(templeInfo.name);
+        if (templeId) {
+          // Fetch temple by ID if temple_id is provided in URL
+          const templeInfo = await userAPI.getTempleById(templeId);
+          setTempleName(templeInfo.name || 'Temple Name Unavailable');
+        } else {
+          // Otherwise, use current user's temple
+          const templeInfo = await getCurrentUserTemple();
+          setTempleName(templeInfo.name);
+        }
         setLoading(false);
       } catch (error) {
         console.error('Error fetching temple name:', error);
@@ -41,7 +53,8 @@ const Participantslist = () => {
 
     const fetchParticipants = async () => {
       try {
-        const data = await userAPI.getTempleUsers();
+        // Pass temple_id to getTempleUsers if provided
+        const data = await userAPI.getTempleUsers(templeId);
         setParticipants(data);
         setParticipantsLoading(false);
       } catch (error) {
@@ -74,7 +87,7 @@ const Participantslist = () => {
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
     };
-  }, []);
+  }, []); // Empty dependency array is fine - we read from URL on mount
 
   const filteredParticipants = participants.filter(participant => {
     return (selectedAgeCategory === '' || participant.age_category === selectedAgeCategory) &&

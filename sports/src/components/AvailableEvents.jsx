@@ -255,26 +255,26 @@ const AvailableEvents = () => {
   return (
     <>
       <div className='flex-1'>
-      <div className='bg-[#D35D38] rounded-br-md rounded-bl-md'>
-          <div className='flex flex-col  w-[80%] mx-auto text-white items-start  p-6'>
+      <div className='bg-[#FFF4E6] rounded-br-md '>
+          <div className='flex flex-col  w-[80%] mx-auto text-black items-start pb-2'>
             
             
             {userInfo && (
               <div className='flex flex-col gap-2 sm:gap-4 pt-6'>
                 <h2 className='text-sm sm:text-base font-semibold'>Point of contact for {userInfo.temple}:</h2>
                 {userInfo.temple_admins && userInfo.temple_admins.length > 0 ? (
-                  <div className='flex flex-col gap-2'>
+                  <div className='flex flex-col md:flex-row flex-col justify-between  gap-4'>
                     {userInfo.temple_admins.map((admin, index) => (
-                      <div key={index} className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
+                      <div key={index} className='flex flex-row  gap-1 sm:gap-1 text-sm sm:text-base'>
                         <span className='font-medium'>{admin.name || 'Not available'}</span>
+                        <span>:</span>
                         <span className='font-medium'>{admin.phone || 'Not available'}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className='flex flex-col sm:flex-row gap-1 sm:gap-4 text-sm sm:text-base'>
-                    <span className='font-medium'>Not available</span>
-                    <span className='font-medium'>Not available</span>
+                    <span className='font-medium'>Not available</span>               
                   </div>
                 )}
               </div>
@@ -306,7 +306,9 @@ const AvailableEvents = () => {
             </div>
           </div>
           <div className='mt-4'>
-            <h4 className='text-[#D35D38] font-semibold bg-yellow-200 px-4 py-2 rounded-lg border-l-4 border-[#D35D38] shadow-md animate-pulse'>Last date for registration: 18-12-2025</h4> 
+            <h4 className='text-[#D35D38] font-semibold bg-yellow-200 px-4 py-2 rounded-lg border-l-4 border-[#D35D38] shadow-md animate-pulse'>Last Date for Registration:{' '}
+              <span style={{ whiteSpace: 'nowrap' }}>18-12-2025 </span>
+            </h4> 
           </div>
           
           {/* Points Table Button */}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { eventAPI, reportAPI } from '../utils/api';
 import TempleManagement from '../components/TempleManagement.jsx';
 import Schedule from '../components/Schedule.jsx';
@@ -30,6 +30,15 @@ const StaffPanel = () => {
   // For collapsible event states
   const [collapsibleStates, setCollapsibleStates] = useState({});
   
+  // Map of eventId -> ref to scroll into view on open
+  const eventRefs = useRef({});
+  const getEventRef = (eventId) => {
+    if (!eventRefs.current[eventId]) {
+      eventRefs.current[eventId] = React.createRef();
+    }
+    return eventRefs.current[eventId];
+  };
+  
   // For event participants data
   const [eventParticipantsData, setEventParticipantsData] = useState({});
   const [loadingParticipants, setLoadingParticipants] = useState({});
@@ -50,10 +59,25 @@ const StaffPanel = () => {
   };
 
   const setCollapsibleState = (eventId, isOpen) => {
+    // Store current scroll position before opening
+    const currentScrollY = window.scrollY;
+    
     setCollapsibleStates(prev => ({
       ...prev,
       [eventId]: isOpen
     }));
+
+    // If opening, focus on the event container and restore scroll position
+    if (isOpen) {
+      setTimeout(() => {
+        const ref = getEventRef(eventId);
+        if (ref && ref.current) {
+          ref.current.focus();
+          // Restore the original scroll position to prevent auto-scroll
+          window.scrollTo(0, currentScrollY);
+        }
+      }, 0);
+    }
   };
 
   // Helper functions for participants data management
@@ -992,6 +1016,7 @@ const StaffPanel = () => {
     gender, 
     isOpen, 
     setIsOpen,
+    containerRef,
     getEventParticipants,
     setEventParticipants,
     getLoadingParticipants,
@@ -1641,7 +1666,11 @@ const StaffPanel = () => {
     };
 
     return (
-      <div className="border border-gray-200 rounded-lg mb-4">
+      <div 
+        ref={containerRef} 
+        className="border border-gray-200 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:ring-offset-2 transition-all duration-200"
+        tabIndex={-1}
+      >
         <div className="flex justify-between items-center">
           <button
             className="flex-1 px-4 py-3 text-left bg-[#F8DFBE] hover:bg-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#D35D38] rounded-lg flex justify-between items-center"
@@ -2193,6 +2222,7 @@ const StaffPanel = () => {
                         gender={gender}
                         isOpen={getCollapsibleState(event.id)}
                         setIsOpen={(isOpen) => setCollapsibleState(event.id, isOpen)}
+                        containerRef={getEventRef(event.id)}
                         getEventParticipants={getEventParticipants}
                         setEventParticipants={setEventParticipants}
                         getLoadingParticipants={getLoadingParticipants}

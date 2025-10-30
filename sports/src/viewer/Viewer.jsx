@@ -6,8 +6,7 @@ import Results from '../components/Results.jsx';
 import Champions from '../components/Champions.jsx';
 import { authAPI, userAPI, eventAPI, participantAPI, teamAPI, templeAPI, reportAPI, viewerAPI } from '../utils/api.js';
 import authManager from '../utils/authManager';
-// Icons temporarily disabled due to import issues
-// import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaBars, FaTimes, FaUser, FaRunning, FaAward, FaMars, FaVenus, FaCheckCircle, FaFileAlt } from 'react-icons/fa';
 
 const Viewer = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -63,15 +62,13 @@ const Viewer = () => {
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', color: 'text-blue-600' },
-    { id: 'events', label: 'Events', icon: '📅', color: 'text-green-600' },
-    { id: 'participants', label: 'Participants', icon: '👤', color: 'text-indigo-600' },
-    { id: 'teams', label: 'Teams', icon: '🏃', color: 'text-teal-600' },
-    { id: 'temples', label: 'Temples ', icon: '🏛️', color: 'text-orange-600' },
-    { id: 'results', label: 'Results', icon: '🏆', color: 'text-yellow-600' },
-    { id: 'champions', label: 'Champions', icon: '👑', color: 'text-pink-600' },
-    // { id: 'reports', label: 'Reports', icon: '📋', color: 'text-cyan-600' },
-    // { id: 'settings', label: 'System Settings', icon: '⚙️', color: 'text-gray-600' },
+    { id: 'dashboard', label: 'Dashboard', icon: FaTachometerAlt, color: 'text-blue-600' },
+    { id: 'events', label: 'Events', icon: FaCalendarAlt, color: 'text-green-600' },
+    { id: 'participants', label: 'Participants', icon: FaUser, color: 'text-indigo-600' },
+    { id: 'teams', label: 'Teams', icon: FaRunning, color: 'text-teal-600' },
+    { id: 'temples', label: 'Temples ', icon: FaBuilding, color: 'text-orange-600' },
+    { id: 'results', label: 'Results', icon: FaTrophy, color: 'text-yellow-600' },
+    { id: 'champions', label: 'Champions', icon: FaAward, color: 'text-pink-600' },
   ];
 
   const renderContent = () => {
@@ -140,7 +137,7 @@ const Viewer = () => {
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600"
             >
-              ✕
+              <FaTimes className="text-xl" />
             </button>
           </div>
 
@@ -165,20 +162,23 @@ const Viewer = () => {
 
           {/* Navigation Menu */}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
-                  activeTab === item.id
-                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
-                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
-                }`}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-              </button>
-            ))}
+            {menuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
+                    activeTab === item.id
+                      ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                      : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                  }`}
+                >
+                  <IconComponent className={`text-xl ${activeTab === item.id ? item.color : ''}`} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
           </nav>
 
           {/* Logout */}
@@ -204,7 +204,7 @@ const Viewer = () => {
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
               >
-                ☰
+                <FaBars className="text-xl" />
               </button>
               <h2 className="text-xl font-semibold text-[#2A2A2A]">
                 {menuItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
@@ -245,7 +245,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <span className="text-blue-600 text-xl">📅</span>
+            <FaCalendarAlt className="text-blue-600 text-xl" />
           </div>
         </div>
       </div>
@@ -259,7 +259,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <span className="text-green-600 text-xl">👥</span>
+            <FaUsers className="text-green-600 text-xl" />
           </div>
         </div>
       </div>
@@ -273,7 +273,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-            <span className="text-orange-600 text-xl">🏛️</span>
+            <FaBuilding className="text-orange-600 text-xl" />
           </div>
         </div>
       </div>
@@ -287,7 +287,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-            <span className="text-purple-600 text-xl">🏆</span>
+            <FaTrophy className="text-purple-600 text-xl" />
           </div>
         </div>
       </div>
@@ -809,9 +809,9 @@ const TeamsManagement = () => {
                   {/* Male Events */}
                   {maleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-[#D35D38] px-6 py-3 rounded-lg">
-                        <h3 className="text-xl font-bold text-white flex items-center">
-                          <span className="mr-2">👨</span>
+                      <div className="bg-[#e0e0e0] px-6 py-3 rounded-lg">
+                        <h3 className="text-xl font-bold text-black flex items-center">
+                          <FaMars className="mr-2" />
                           Male Events ({maleEvents.length})
                         </h3>
                       </div>
@@ -824,9 +824,10 @@ const TeamsManagement = () => {
                   {/* Female Events */}
                   {femaleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-[#D35D38] px-6 py-3 rounded-lg">
+                      {/* <div className="bg-[#e0e0e0] px-6 py-3 rounded-lg"> */}
+                      <div className="bg-gray-600 px-6 py-3 rounded-lg">
                         <h3 className="text-xl font-bold text-white flex items-center">
-                          <span className="mr-2">👩</span>
+                          <FaVenus className="mr-2" />
                           Female Events ({femaleEvents.length})
                         </h3>
                       </div>
@@ -839,9 +840,9 @@ const TeamsManagement = () => {
                   {/* Mixed Gender Events */}
                   {mixedEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-[#D35D38] px-6 py-3 rounded-lg">
-                        <h3 className="text-xl font-bold text-white flex items-center">
-                          <span className="mr-2">👥</span>
+                      <div className="bg-[#e0e0e0] px-6 py-3 rounded-lg">
+                        <h3 className="text-xl font-bold text-black flex items-center">
+                          <FaUsers className="mr-2" />
                           Mixed Gender Events ({mixedEvents.length})
                         </h3>
                       </div>
@@ -871,7 +872,7 @@ const TeamsManagement = () => {
                 <p className="text-2xl font-bold text-[#2A2A2A]">{groupedEvents.length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-orange-600 text-xl">🏃</span>
+                <FaRunning className="text-orange-600 text-xl" />
               </div>
             </div>
           </div>
@@ -883,7 +884,7 @@ const TeamsManagement = () => {
                 <p className="text-2xl font-bold text-[#2A2A2A]">{teams.length}</p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-orange-600 text-xl">✅</span>
+                <FaCheckCircle className="text-orange-600 text-xl" />
               </div>
             </div>
           </div>
@@ -897,7 +898,7 @@ const TeamsManagement = () => {
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-orange-600 text-xl">👥</span>
+                <FaUsers className="text-orange-600 text-xl" />
               </div>
             </div>
           </div>
@@ -911,7 +912,7 @@ const TeamsManagement = () => {
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <span className="text-orange-600 text-xl">🏆</span>
+                <FaTrophy className="text-orange-600 text-xl" />
               </div>
             </div>
           </div>
@@ -1024,7 +1025,7 @@ const ReportsManagement = () => (
     <h3 className="text-2xl font-bold text-[#2A2A2A]">Reports Management</h3>
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="text-center py-12">
-        <div className="text-6xl mb-4">📋</div>
+        <FaFileAlt className="text-6xl mb-4 text-gray-400 mx-auto" />
         <h4 className="text-xl font-semibold text-[#2A2A2A] mb-2">Reports Management</h4>
         <p className="text-[#5A5A5A]">Generate and view system reports</p>
         </div>
@@ -1032,251 +1033,7 @@ const ReportsManagement = () => (
     </div>
   );
 
-// System Settings Component
-// const SystemSettings = () => {
-//   const [settings, setSettings] = useState({
-//     hostTempleName: 'MULKI',
-//     eventDate: '2025-12-28',
-//     season: 'season33',
-//     cutoffDate: '2025-12-28',
-//     contact: {
-//       name: '',
-//       email: '',
-//       phone: '',
-//       address: ''
-//     }
-//   });
-//   const [loading, setLoading] = useState(false);
-//   const [saved, setSaved] = useState(false);
 
-//   const handleSettingChange = (key, value) => {
-//     if (key === 'contact') {
-//       setSettings(prev => ({
-//         ...prev,
-//         contact: { ...prev.contact, ...value }
-//       }));
-//     } else {
-//       setSettings(prev => ({
-//         ...prev,
-//         [key]: value
-//       }));
-//     }
-//     setSaved(false);
-//   };
-
-//   const handleSave = async () => {
-//     setLoading(true);
-//     try {
-//       // Here you would typically save to backend
-//       // await settingsAPI.updateSettings(settings);
-      
-//       // Simulate API call
-//       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-//       setSaved(true);
-//       setTimeout(() => setSaved(false), 3000);
-//     } catch (error) {
-//       console.error('Error saving settings:', error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="space-y-6">
-//       {/* Header */}
-//       <div className="flex items-center justify-between">
-//         <div>
-//           <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">⚙️ System Settings</h3>
-//           <p className="text-[#5A5A5A]">Configure system-wide settings and event details</p>
-//         </div>
-//         <button 
-//           onClick={handleSave}
-//           disabled={loading}
-//           className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-//             loading 
-//               ? 'bg-gray-400 text-white cursor-not-allowed' 
-//               : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
-//           }`}
-//         >
-//           {loading ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
-//       </button>
-//     </div>
-
-//       {/* Settings Grid */}
-//       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-//         {/* 1. Host Temple Name */}
-//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-//           <div className="flex items-center mb-4">
-//             <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-//               <span className="text-blue-600 text-xl">🏛️</span>
-//             </div>
-//             <div>
-//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Host Temple Name</h4>
-//               <p className="text-sm text-[#5A5A5A]">Primary temple hosting the event</p>
-//             </div>
-//           </div>
-//           <input
-//             type="text"
-//             value={settings.hostTempleName}
-//             onChange={(e) => handleSettingChange('hostTempleName', e.target.value)}
-//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//             placeholder="Enter temple name"
-//           />
-//         </div>
-
-//         {/* 2. Event Date */}
-//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-//           <div className="flex items-center mb-4">
-//             <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-//               <span className="text-green-600 text-xl">📅</span>
-//             </div>
-//             <div>
-//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Event Date</h4>
-//               <p className="text-sm text-[#5A5A5A]">Main event date</p>
-//             </div>
-//           </div>
-//           <input
-//             type="date"
-//             value={settings.eventDate}
-//             onChange={(e) => handleSettingChange('eventDate', e.target.value)}
-//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//           />
-//         </div>
-
-//         {/* 3. Season */}
-//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-//           <div className="flex items-center mb-4">
-//             <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-//               <span className="text-purple-600 text-xl">🏆</span>
-//             </div>
-//             <div>
-//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Season</h4>
-//               <p className="text-sm text-[#5A5A5A]">Current event season</p>
-//             </div>
-//           </div>
-//           <input
-//             type="text"
-//             value={settings.season}
-//             onChange={(e) => handleSettingChange('season', e.target.value)}
-//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//             placeholder="Enter season name"
-//           />
-//         </div>
-
-//         {/* 4. Cut-off Date */}
-//         <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-//           <div className="flex items-center mb-4">
-//             <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-//               <span className="text-orange-600 text-xl">🎂</span>
-//             </div>
-//             <div>
-//               <h4 className="text-lg font-semibold text-[#2A2A2A]">Age Cut-off Date</h4>
-//               <p className="text-sm text-[#5A5A5A]">Date for calculating participant ages</p>
-//             </div>
-//           </div>
-//           <input
-//             type="date"
-//             value={settings.cutoffDate}
-//             onChange={(e) => handleSettingChange('cutoffDate', e.target.value)}
-//             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//           />
-//         </div>
-//       </div>
-
-//       {/* 5. Contact Information - Full Width */}
-//       <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-//         <div className="flex items-center mb-6">
-//           <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-//             <span className="text-red-600 text-xl">📞</span>
-//           </div>
-//           <div>
-//             <h4 className="text-lg font-semibold text-[#2A2A2A]">Contact Information</h4>
-//             <p className="text-sm text-[#5A5A5A]">Primary contact details for the event</p>
-//           </div>
-//         </div>
-        
-//         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//           <div>
-//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Contact Name</label>
-//             <input
-//               type="text"
-//               value={settings.contact.name}
-//               onChange={(e) => handleSettingChange('contact', { name: e.target.value })}
-//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//               placeholder="Enter contact name"
-//             />
-//           </div>
-          
-//           <div>
-//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Email Address</label>
-//             <input
-//               type="email"
-//               value={settings.contact.email}
-//               onChange={(e) => handleSettingChange('contact', { email: e.target.value })}
-//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//               placeholder="Enter email address"
-//             />
-//           </div>
-          
-//           <div>
-//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Phone Number</label>
-//             <input
-//               type="tel"
-//               value={settings.contact.phone}
-//               onChange={(e) => handleSettingChange('contact', { phone: e.target.value })}
-//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//               placeholder="Enter phone number"
-//             />
-//           </div>
-          
-//           <div>
-//             <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Address</label>
-//             <input
-//               type="text"
-//               value={settings.contact.address}
-//               onChange={(e) => handleSettingChange('contact', { address: e.target.value })}
-//               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-//               placeholder="Enter address"
-//             />
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Settings Summary */}
-//       <div className="bg-gray-50 rounded-lg p-6">
-//         <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">📋 Current Settings Summary</h4>
-//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-//           <div className="bg-white p-3 rounded border">
-//             <span className="font-medium text-[#5A5A5A]">Host Temple:</span>
-//             <span className="ml-2 text-[#2A2A2A]">{settings.hostTempleName}</span>
-//           </div>
-//           <div className="bg-white p-3 rounded border">
-//             <span className="font-medium text-[#5A5A5A]">Event Date:</span>
-//             <span className="ml-2 text-[#2A2A2A]">{new Date(settings.eventDate).toLocaleDateString()}</span>
-//           </div>
-//           <div className="bg-white p-3 rounded border">
-//             <span className="font-medium text-[#5A5A5A]">Season:</span>
-//             <span className="ml-2 text-[#2A2A2A]">{settings.season}</span>
-//           </div>
-//           <div className="bg-white p-3 rounded border">
-//             <span className="font-medium text-[#5A5A5A]">Age Cut-off:</span>
-//             <span className="ml-2 text-[#2A2A2A]">{new Date(settings.cutoffDate).toLocaleDateString()}</span>
-//           </div>
-//           <div className="bg-white p-3 rounded border">
-//             <span className="font-medium text-[#5A5A5A]">Contact:</span>
-//             <span className="ml-2 text-[#2A2A2A]">{settings.contact.name || 'Not set'}</span>
-//           </div>
-//           <div className="bg-white p-3 rounded border">
-//             <span className="font-medium text-[#5A5A5A]">Email:</span>
-//             <span className="ml-2 text-[#2A2A2A]">{settings.contact.email || 'Not set'}</span>
-//           </div>
-//         </div>
-//       </div>
-//   </div>
-// );
-// };
 
 // Helper component for Male/Female event tables
 const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
@@ -1286,10 +1043,10 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
       {/* Event Header */}
-      <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
+      <div className="bg-[#e0e0e0] px-6 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
+            <h4 className="text-xl font-bold text-black">{event.eventName}</h4>
             <div className="flex items-center space-x-4 mt-1 text-[#F8DFBE]">
               <span className="text-sm">
                 {event.ageCategory?.name || 'All Ages'} • {gender === "female" ? "Female" : "Male"}
@@ -1380,20 +1137,21 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
 const ViewerEventTableWithMembers = ({ event, getTeamMemberDetails }) => (
   <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
     {/* Event Header */}
-    <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4">
+    <div className="bg-[#e0e0e0] px-6 py-4">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xl font-bold text-white">{event.eventName}</h4>
-          <div className="flex items-center space-x-4 mt-1 text-[#F8DFBE]">
+          <h4 className="text-xl font-bold text-black">{event.eventName}</h4>
+          <div className="flex items-center space-x-4 mt-1 text-[#2A2A2A]">
             <span className="text-sm">
-              {event.ageCategory?.name || 'All Ages'} • Mixed Gender
+              {/* {event.ageCategory?.name || 'All Ages'} */}
+                Mixed Gender
             </span>
             <span className="text-sm">
               {event.temples.length} Temple{event.temples.length !== 1 ? 's' : ''} Registered
             </span>
           </div>
         </div>
-        <div className="text-right text-[#F8DFBE]">
+        <div className="text-right text-[#2A2A2A]">
           <div className="text-2xl font-bold">{event.temples.length}</div>
           <div className="text-sm">Temples</div>
         </div>
@@ -1458,7 +1216,7 @@ const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => 
       <td className="px-6 py-4 font-semibold text-[#D35D38]">{index + 1}</td>
       <td className="px-6 py-4">
         <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
-        <div className="text-sm text-gray-600">{temple.temple_code}</div>
+        {/* <div className="text-sm text-gray-600">{temple.temple_code}</div> */}
       </td>
       <td className="px-6 py-4">
         {loading ? (

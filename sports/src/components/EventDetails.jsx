@@ -23,7 +23,7 @@ const EventDetails = () => {
             alt="calender"
             width={24}
           />
-          <span className="text-[#2a2a2a] w-32 flex-shrink-0">21-12-2025</span>
+          <span className="text-[#2a2a2a] w-32 flex-shrink-0 mt-1">21-12-2025</span>
         </div>
         <div className="flex gap-2 items-start">
           <img
@@ -32,7 +32,7 @@ const EventDetails = () => {
             alt="calender"
             width={24}
           />
-          <span className="text-[#2a2a2a] flex-1 leading-tight min-h-[3rem]">
+          <span className="mt-1 text-[#2a2a2a] flex-1 leading-tight min-h-[3rem] min-w-0 break-words block sm:min-w-[45ch] sm:max-w-[45h]">
             {isEnglish 
               ? "Government Junior College, Karnad, Mulki, Karnataka 574154"
               : "ಸರ್ಕಾರಿ ಪದವಿ ಪೂರ್ವ ಕಾಲೇಜು, ಕರ್ನಾಡ್, ಮುಲ್ಕಿ, ಕರ್ನಾಟಕ 574154"
