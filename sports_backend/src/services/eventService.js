@@ -971,29 +971,47 @@ async function getEventParticipants(eventId) {
               }
             }
           },
-          event_result: true
+          event_result: true,
+          performances: {
+            select: {
+              performance_1: true,
+              performance_2: true,
+              performance_3: true,
+              heat_number: true
+            }
+          }
         }
       });
 
       console.log('Individual registrations found:', individualRegistrations.length);
       console.log('First registration sample:', individualRegistrations[0] || 'None');
 
-      participants = individualRegistrations.map(reg => ({
-        id: reg.id,
-        registration_type: 'INDIVIDUAL',
-        participant_name: `${reg.user.first_name} ${reg.user.last_name || ''}`.trim(),
-        temple_name: reg.user.temple.name,
-        age_category: event.age_category.name,
-        gender: reg.user.gender,
-        phone: reg.user.phone,
-        aadhar_number: reg.user.aadhar_number,
-        registration_status: reg.status,
-        result: reg.event_result ? {
-          rank: reg.event_result.rank,
-          points: reg.event_result.points
-        } : null,
-        registered_at: reg.created_at
-      }));
+      participants = individualRegistrations.map(reg => {
+        // Get the first performance record if available (or use null)
+        const performance = reg.performances && reg.performances.length > 0 ? reg.performances[0] : null;
+        
+        return {
+          id: reg.id,
+          registration_type: 'INDIVIDUAL',
+          participant_name: `${reg.user.first_name} ${reg.user.last_name || ''}`.trim(),
+          temple_name: reg.user.temple.name,
+          age_category: event.age_category.name,
+          gender: reg.user.gender,
+          phone: reg.user.phone,
+          aadhar_number: reg.user.aadhar_number,
+          registration_status: reg.status,
+          result: reg.event_result ? {
+            rank: reg.event_result.rank,
+            points: reg.event_result.points
+          } : null,
+          registered_at: reg.created_at,
+          performance_1: performance?.performance_1 ? String(performance.performance_1) : null,
+          performance_2: performance?.performance_2 ? String(performance.performance_2) : null,
+          performance_3: performance?.performance_3 ? String(performance.performance_3) : null,
+          heat_number: performance?.heat_number || null,
+          timing: performance?.performance_1 ? String(performance.performance_1) : null // Alias for compatibility with existing code
+        };
+      });
 
     } else if (event.event_type.type === 'TEAM') {
       console.log('Fetching team registrations for event:', eventId);

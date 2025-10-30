@@ -707,33 +707,62 @@ router.get('/search-by-aadhar', authenticate, async (req, res) => {
  *   get:
  *     tags: [Users]
  *     summary: Get all participants from a specific temple
- *     description: Fetch all participants from the authenticated user's temple with their details
+ *     description: Fetch all participants from the authenticated user's temple (or specified temple_id) with their details
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: temple_id
+ *         schema:
+ *           type: integer
+ *         description: Optional temple ID. If not provided, uses the authenticated user's temple
  *     responses:
  *       200:
  *         description: List of temple participants
  *       401:
  *         description: Unauthorized
+ *       404:
+ *         description: Temple not found or user profile not found
  *       500:
  *         description: Server error
  */
 router.get('/templeusers', authenticate, async (req, res) => {
     try {
-        // Get the authenticated user's profile to determine their temple
-        const userProfile = await prisma.profile.findUnique({
-            where: { user_id: req.user.id },
-            select: { temple_id: true }
-        });
+        let templeId;
+        
+        // Check if temple_id is provided in query parameters
+        if (req.query.temple_id) {
+            templeId = parseInt(req.query.temple_id);
+            
+            // Verify the temple exists
+            const temple = await prisma.mst_temple.findFirst({
+                where: {
+                    id: templeId,
+                    is_deleted: false
+                }
+            });
+            
+            if (!temple) {
+                return res.status(404).json({ error: 'Temple not found' });
+            }
+        } else {
+            // Get the authenticated user's profile to determine their temple
+            const userProfile = await prisma.profile.findUnique({
+                where: { user_id: req.user.id },
+                select: { temple_id: true }
+            });
 
-        if (!userProfile) {
-            return res.status(404).json({ error: 'User profile not found' });
+            if (!userProfile) {
+                return res.status(404).json({ error: 'User profile not found' });
+            }
+            
+            templeId = userProfile.temple_id;
         }
 
-        // Fetch all participants from the same temple
+        // Fetch all participants from the specified temple
         const participants = await prisma.profile.findMany({
             where: {
-                temple_id: userProfile.temple_id,
+                temple_id: templeId,
                 is_deleted: false
             },
             select: {
