@@ -4,30 +4,30 @@ import { createClient } from "@libsql/client";
 
     //Tables
     const migrationData = [
-        // {
-        //     mysqlTable: 'mst_temple',
-        //     tursoTable: 'Mst_temple',
-        //     selectQuery: 'SELECT id, code, name, address, contact_name, contact_phone, is_deleted, created_at, modified_at FROM mst_temple',
-        //     insertQuery: 'INSERT INTO Mst_temple (id, code, name, address, contact_name, contact_phone, is_deleted, created_at, modified_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-        // },
-        // {
-        //     mysqlTable: 'mst_event_type',
-        //     tursoTable: 'Mst_event_type',
-        //     selectQuery: 'SELECT id, name, type, participant_count FROM mst_event_type',
-        //     insertQuery: 'INSERT INTO Mst_event_type (id, name, type, participant_count) VALUES (?, ?, ?, ?)'
-        // },
-        // {
-        //     mysqlTable: 'mst_age_category',
-        //     tursoTable: 'Mst_age_category',
-        //     selectQuery: 'SELECT id, name, from_age, to_age, is_deleted FROM mst_age_category',
-        //     insertQuery: 'INSERT INTO Mst_age_category (id, name, from_age, to_age, is_deleted) VALUES (?, ?, ?, ?, ?)'
-        // },
-        // {
-        //     mysqlTable: 'mst_event',
-        //     tursoTable: 'Mst_event',
-        //     selectQuery: 'SELECT id, event_type_id, age_category_id, gender, is_deleted, is_closed FROM mst_event',
-        //     insertQuery: 'INSERT INTO Mst_event (id, event_type_id, age_category_id, gender, is_deleted, is_closed) VALUES (?, ?, ?, ?, ?, ?)'
-        // },
+        {
+            mysqlTable: 'mst_temple',
+            tursoTable: 'Mst_temple',
+            selectQuery: 'SELECT id, code, name, address, contact_name, contact_phone, is_deleted, created_at, modified_at FROM mst_temple',
+            insertQuery: 'INSERT INTO Mst_temple (id, code, name, address, contact_name, contact_phone, is_deleted, created_at, modified_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        },
+        {
+            mysqlTable: 'mst_event_type',
+            tursoTable: 'Mst_event_type',
+            selectQuery: 'SELECT id, name, type, participant_count FROM mst_event_type',
+            insertQuery: 'INSERT INTO Mst_event_type (id, name, type, participant_count) VALUES (?, ?, ?, ?)'
+        },
+        {
+            mysqlTable: 'mst_age_category',
+            tursoTable: 'Mst_age_category',
+            selectQuery: 'SELECT id, name, from_age, to_age, is_deleted FROM mst_age_category',
+            insertQuery: 'INSERT INTO Mst_age_category (id, name, from_age, to_age, is_deleted) VALUES (?, ?, ?, ?, ?)'
+        },
+        {
+            mysqlTable: 'mst_event',
+            tursoTable: 'Mst_event',
+            selectQuery: 'SELECT id, event_type_id, age_category_id, gender, is_deleted, is_closed FROM mst_event',
+            insertQuery: 'INSERT INTO Mst_event (id, event_type_id, age_category_id, gender, is_deleted, is_closed) VALUES (?, ?, ?, ?, ?, ?)'
+        },
         {
             mysqlTable: 'mst_event_result',
             tursoTable: 'Mst_event_result',

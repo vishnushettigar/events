@@ -331,8 +331,19 @@ async function main() {
     }
 
   // Seed system settings
+  // Note: Dates are stored as ISO strings (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ssZ)
+  // Integers are stored as strings since the database column is TEXT
   const settings = [
-    { name: 'lane_count', value: 8 }
+    { name: 'lane_count', value: '8' },
+    { name: 'AGE_CALC_CUTOFF_DATE', value: '2025-12-01'},
+    { name: 'HOST_TEMPLE', value: 'MULKI'},
+    { name: 'SEASON', value: '33'},
+    { name: 'EVENT_DATE', value: '2025-12-21'},
+    { name: 'REG_LAST_DATE_TEAM', value: '2025-12-13'},
+    { name: 'REG_LAST_DATE_INDIVIDUAL', value: '2025-12-18'},
+    { name: 'LAST_DATE_STATUS_UPDATE', value: '2025-12-18'},
+    // { name: 'REG_LAST_DATE_TEAM', value: '2025-12-18T23:59:59+05:30'},
+    // { name: 'REG_LAST_DATE_INDIVIDUAL', value: '2025-12-13T23:59:59+05:30'},
   ];
 
   for (const setting of settings) {

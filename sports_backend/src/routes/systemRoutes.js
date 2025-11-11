@@ -31,7 +31,7 @@ const router = express.Router();
  *                     type: string
  *                     description: Setting name
  *                   value:
- *                     type: integer
+ *                     type: string
  *                     description: Setting value
  *       401:
  *         description: Unauthorized
@@ -76,7 +76,7 @@ router.get('/settings', authenticate, requireRole('ADMIN'), async (req, res) => 
  *               - value
  *             properties:
  *               value:
- *                 type: integer
+ *                 type: string
  *                 description: New value for the setting
  *     responses:
  *       200:
@@ -91,7 +91,7 @@ router.get('/settings', authenticate, requireRole('ADMIN'), async (req, res) => 
  *         description: Server error
  */
 router.put('/settings/:name', authenticate, requireRole('ADMIN'), [
-  body('value').isInt().withMessage('Value must be an integer')
+  body('value').notEmpty().withMessage('Value is required')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -101,7 +101,7 @@ router.put('/settings/:name', authenticate, requireRole('ADMIN'), [
   try {
     const setting = await systemService.updateSystemSetting(
       req.params.name,
-      parseInt(req.body.value)
+      req.body.value
     );
     res.json(setting);
   } catch (error) {

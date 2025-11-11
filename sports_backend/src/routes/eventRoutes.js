@@ -47,6 +47,9 @@ router.post('/register-participant', authenticate, [
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
+    if (error.message.includes('registration closed') || error.message.includes('last date')) {
+      return res.status(403).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message || 'Registration failed' });
   }
 });
@@ -135,6 +138,9 @@ router.post('/register-team', authenticate, requireRole('TEMPLE_ADMIN'), [
     if (error.message.includes('already registered')) {
       return res.status(409).json({ error: error.message });
     }
+    if (error.message.includes('registration closed') || error.message.includes('last date')) {
+      return res.status(403).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message || 'Team registration failed' });
   }
 });
@@ -181,6 +187,9 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
     }
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('deadline has passed') || error.message.includes('last date')) {
+      return res.status(403).json({ error: error.message });
     }
     res.status(500).json({ error: error.message || 'Failed to update registration status' });
   }
@@ -358,6 +367,9 @@ router.put('/update-team/:registrationId', authenticate, requireRole('TEMPLE_ADM
       return res.status(404).json({ error: error.message });
     }
     if (error.message.includes('unauthorized')) {
+      return res.status(403).json({ error: error.message });
+    }
+    if (error.message.includes('update closed') || error.message.includes('last date')) {
       return res.status(403).json({ error: error.message });
     }
     res.status(500).json({ error: error.message || 'Team update failed' });
@@ -811,39 +823,31 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
     // =========================================================================
     
     if (totalParticipants <= lane_count) {
-      // lane_count or fewer participants, create one heat
+      // Single heat
       heatSizes.push(totalParticipants);
+    } else if (totalParticipants < 16) {
+      // Case 1: less than 2 complete heats
+      let half = Math.floor(totalParticipants / 2);
+      let remaining = totalParticipants - half;
+      heatSizes.push(Math.max(half, remaining));
+      heatSizes.push(Math.min(half, remaining));
     } else {
-      let fullHeats = Math.floor(totalParticipants / lane_count);
-      let remainder = totalParticipants % lane_count;
-      
-      // LOGIC: If remainder is 1, 2, 3, or 4, borrow lane_count from one full heat
-      if (remainder > 0 && remainder <= 4) {
-        // Ensure we don't end up with negative full heats if remainder is 1-4 and fullHeats is 0
-        if (fullHeats > 0) {
-            fullHeats -= 1; // Borrow lane_count
-            remainder += lane_count; // Remainder becomes lane_count+1, lane_count+2, lane_count+3, or lane_count+4
-        }
-      }
-      
-      // Add all the full heats
-      for (let i = 0; i < fullHeats; i++) {
+      // Case 2: more than 3 full heats possible
+      let remaining = totalParticipants;
+
+      // Add all full heats except the last few
+      while (remaining > lane_count * 3) {
         heatSizes.push(lane_count);
+        remaining -= lane_count;
       }
-      
-      // Handle remaining participants (R will be 0, 5, 6, 7, lane_count+1, lane_count+2, lane_count+3, lane_count+4)
-      if (remainder > 0) {
-        if (remainder <= lane_count) {
-          // R = 5, 6, 7, or lane_count. One final heat.
-          heatSizes.push(remainder);
-        } else {
-          // R = lane_count+1, lane_count+2, lane_count+3, lane_count+4. Split into two heats as evenly as possible.
-          const firstHeatSize = Math.ceil(remainder / 2);
-          const secondHeatSize = remainder - firstHeatSize;
-          
-          heatSizes.push(firstHeatSize);
-          heatSizes.push(secondHeatSize);
-        }
+
+      // Distribute remaining participants equally
+      let numHeatsLeft = Math.ceil(remaining / lane_count);
+      let baseSize = Math.floor(remaining / numHeatsLeft);
+      let extra = remaining % numHeatsLeft;
+
+      for (let i = 0; i < numHeatsLeft; i++) {
+        heatSizes.push(baseSize + (i < extra ? 1 : 0));
       }
     }
 

@@ -2,7 +2,78 @@ import { calculateAge, getAgeCategory, isExcludedAgeCategory } from '../utils/ag
 import prisma from '../utils/prismaClient.js';
 
 // Register participant using SQLite's built-in serialization
+//indiviual event registration
 async function registerParticipant(user_id, event_id, temple_id) {
+  // Check if individual event registration deadline has passed
+  const lastDateSetting = await prisma.settings.findUnique({
+    where: { name: 'REG_LAST_DATE_INDIVIDUAL' }
+  });
+
+  console.log('Registration deadline check:', {
+    settingFound: !!lastDateSetting,
+    settingValue: lastDateSetting?.value
+  });
+
+  if (lastDateSetting && lastDateSetting.value) {
+    try {
+      // Parse the date string (format: 'YYYY-MM-DD' or 'YYYY-M-D')
+      // Create date in local timezone to avoid timezone issues
+      const dateParts = lastDateSetting.value.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        
+        // Validate parsed values
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+          console.error('Invalid date values:', { year, month, day, original: lastDateSetting.value });
+          throw new Error('Invalid date format in registration deadline');
+        }
+        
+        // Create last date at end of day (23:59:59) for comparison
+        const lastDate = new Date(year, month, day, 23, 59, 59, 999);
+        const currentDate = new Date();
+        
+        // Compare dates at day level (ignore time) using local timezone
+        // Create dates in local timezone to avoid timezone conversion issues
+        const lastDateOnly = new Date(year, month, day);
+        lastDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        const currentDateOnly = new Date();
+        currentDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        // Format dates for logging (YYYY-MM-DD)
+        const lastDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const currentDateStr = `${currentDateOnly.getFullYear()}-${String(currentDateOnly.getMonth() + 1).padStart(2, '0')}-${String(currentDateOnly.getDate()).padStart(2, '0')}`;
+        
+        console.log('Date comparison:', {
+          lastDateString: lastDateSetting.value,
+          lastDateParsed: lastDateStr,
+          currentDateStr: currentDateStr,
+          lastDateTimestamp: lastDateOnly.getTime(),
+          currentDateTimestamp: currentDateOnly.getTime(),
+          isAfterDeadline: currentDateOnly >= lastDateOnly
+        });
+
+        // Block registration if current date is AFTER or EQUAL TO the last date
+        // This blocks registration on the last date itself and after
+        if (currentDateOnly > lastDateOnly) {
+          throw new Error(`Individual event registration closed. The last date for registration was ${lastDateSetting.value}.`);
+        }
+      } else {
+        console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
+        throw new Error('Invalid date format in registration deadline');
+      }
+    } catch (dateError) {
+      // If date parsing fails, log and block registration for safety
+      console.error('Error parsing registration deadline date:', dateError);
+      // Re-throw the error to block registration if date parsing fails
+      throw dateError;
+    }
+  } else {
+    console.log('No registration deadline setting found - allowing registration');
+  }
+
   // Use SQLite's built-in serialization - all writes are automatically serialized
   return await prisma.$transaction(async (tx) => {
     // First check if user has already registered for 3 events
@@ -124,7 +195,7 @@ async function registerParticipant(user_id, event_id, temple_id) {
     timeout: 10000 // 10 second timeout
   });
 }
-
+//cancel registration
 async function unregisterParticipant(user_id, event_id) {
   try {
     console.log('Unregistering participant:', { user_id, event_id });
@@ -161,6 +232,72 @@ async function unregisterParticipant(user_id, event_id) {
 }
 
 async function registerTeamEvent(temple_id, event_id, member_user_ids) {
+  // Check if team event registration deadline has passed
+  const lastDateSetting = await prisma.settings.findUnique({
+    where: { name: 'REG_LAST_DATE_TEAM' }
+  });
+
+  console.log('Team registration deadline check:', {
+    settingFound: !!lastDateSetting,
+    settingValue: lastDateSetting?.value
+  });
+
+  if (lastDateSetting && lastDateSetting.value) {
+    try {
+      // Parse the date string (format: 'YYYY-MM-DD' or 'YYYY-M-D')
+      // Create date in local timezone to avoid timezone issues
+      const dateParts = lastDateSetting.value.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        
+        // Validate parsed values
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+          console.error('Invalid date values:', { year, month, day, original: lastDateSetting.value });
+          throw new Error('Invalid date format in team registration deadline');
+        }
+        
+        // Compare dates at day level (ignore time) using local timezone
+        // Create dates in local timezone to avoid timezone conversion issues
+        const lastDateOnly = new Date(year, month, day);
+        lastDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        const currentDateOnly = new Date();
+        currentDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        // Format dates for logging (YYYY-MM-DD)
+        const lastDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const currentDateStr = `${currentDateOnly.getFullYear()}-${String(currentDateOnly.getMonth() + 1).padStart(2, '0')}-${String(currentDateOnly.getDate()).padStart(2, '0')}`;
+        
+        console.log('Team registration date comparison:', {
+          lastDateString: lastDateSetting.value,
+          lastDateParsed: lastDateStr,
+          currentDateStr: currentDateStr,
+          lastDateTimestamp: lastDateOnly.getTime(),
+          currentDateTimestamp: currentDateOnly.getTime(),
+          isAfterDeadline: currentDateOnly > lastDateOnly
+        });
+
+        // Block team registration if current date is AFTER the last date
+        // This blocks team registration after the last date
+        if (currentDateOnly > lastDateOnly) {
+          throw new Error(`Team event registration closed. The last date for team registration was ${lastDateSetting.value}.`);
+        }
+      } else {
+        console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
+        throw new Error('Invalid date format in team registration deadline');
+      }
+    } catch (dateError) {
+      // If date parsing fails, log and block team registration for safety
+      console.error('Error parsing team registration deadline date:', dateError);
+      // Re-throw the error to block team registration if date parsing fails
+      throw dateError;
+    }
+  } else {
+    console.log('No team registration deadline setting found - allowing team registration');
+  }
+
   try {
     console.log('registerTeamEvent called with:', { temple_id, event_id, member_user_ids });
 
@@ -287,7 +424,74 @@ async function updateEventResult(event_id, result_id, staff_user_id) {
   return updatedEvent;
 }
 
+// Update registration status for temple admin
 async function updateRegistrationStatus(registration_id, status, temple_admin_id) {
+  // Check if status update deadline has passed
+  const lastDateSetting = await prisma.settings.findUnique({
+    where: { name: 'LAST_DATE_STATUS_UPDATE' }
+  });
+
+  console.log('Status update deadline check:', {
+    settingFound: !!lastDateSetting,
+    settingValue: lastDateSetting?.value
+  });
+
+  if (lastDateSetting && lastDateSetting.value) {
+    try {
+      // Parse the date string (format: 'YYYY-MM-DD' or 'YYYY-M-D')
+      // Create date in local timezone to avoid timezone issues
+      const dateParts = lastDateSetting.value.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        
+        // Validate parsed values
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+          console.error('Invalid date values:', { year, month, day, original: lastDateSetting.value });
+          throw new Error('Invalid date format in status update deadline');
+        }
+        
+        // Compare dates at day level (ignore time) using local timezone
+        // Create dates in local timezone to avoid timezone conversion issues
+        const lastDateOnly = new Date(year, month, day);
+        lastDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        const currentDateOnly = new Date();
+        currentDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        // Format dates for logging (YYYY-MM-DD)
+        const lastDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const currentDateStr = `${currentDateOnly.getFullYear()}-${String(currentDateOnly.getMonth() + 1).padStart(2, '0')}-${String(currentDateOnly.getDate()).padStart(2, '0')}`;
+        
+        console.log('Status update date comparison:', {
+          lastDateString: lastDateSetting.value,
+          lastDateParsed: lastDateStr,
+          currentDateStr: currentDateStr,
+          lastDateTimestamp: lastDateOnly.getTime(),
+          currentDateTimestamp: currentDateOnly.getTime(),
+          isAfterDeadline: currentDateOnly > lastDateOnly
+        });
+
+        // Block status update if current date is AFTER the last date
+        // This blocks status updates after the last date
+        if (currentDateOnly > lastDateOnly) {
+          throw new Error(`Status update deadline has passed. The last date for status updates was ${lastDateSetting.value}.`);
+        }
+      } else {
+        console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
+        throw new Error('Invalid date format in status update deadline');
+      }
+    } catch (dateError) {
+      // If date parsing fails, log and block status update for safety
+      console.error('Error parsing status update deadline date:', dateError);
+      // Re-throw the error to block status update if date parsing fails
+      throw dateError;
+    }
+  } else {
+    console.log('No status update deadline setting found - allowing status update');
+  }
+
   // Use transaction to ensure atomicity and prevent race conditions
   return await prisma.$transaction(async (tx) => {
     // Verify the temple admin exists and has the correct role
@@ -1072,6 +1276,72 @@ async function getEventParticipants(eventId) {
 }
 
 async function updateTeamRegistration(registrationId, member_user_ids, temple_admin_id) {
+  // Check if team event registration deadline has passed
+  const lastDateSetting = await prisma.settings.findUnique({
+    where: { name: 'REG_LAST_DATE_TEAM' }
+  });
+
+  console.log('Team update deadline check:', {
+    settingFound: !!lastDateSetting,
+    settingValue: lastDateSetting?.value
+  });
+
+  if (lastDateSetting && lastDateSetting.value) {
+    try {
+      // Parse the date string (format: 'YYYY-MM-DD' or 'YYYY-M-D')
+      // Create date in local timezone to avoid timezone issues
+      const dateParts = lastDateSetting.value.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        
+        // Validate parsed values
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+          console.error('Invalid date values:', { year, month, day, original: lastDateSetting.value });
+          throw new Error('Invalid date format in team registration deadline');
+        }
+        
+        // Compare dates at day level (ignore time) using local timezone
+        // Create dates in local timezone to avoid timezone conversion issues
+        const lastDateOnly = new Date(year, month, day);
+        lastDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        const currentDateOnly = new Date();
+        currentDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        // Format dates for logging (YYYY-MM-DD)
+        const lastDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const currentDateStr = `${currentDateOnly.getFullYear()}-${String(currentDateOnly.getMonth() + 1).padStart(2, '0')}-${String(currentDateOnly.getDate()).padStart(2, '0')}`;
+        
+        console.log('Team update date comparison:', {
+          lastDateString: lastDateSetting.value,
+          lastDateParsed: lastDateStr,
+          currentDateStr: currentDateStr,
+          lastDateTimestamp: lastDateOnly.getTime(),
+          currentDateTimestamp: currentDateOnly.getTime(),
+          isAfterDeadline: currentDateOnly > lastDateOnly
+        });
+
+        // Block team update if current date is AFTER the last date
+        // This blocks team updates after the last date
+        if (currentDateOnly > lastDateOnly) {
+          throw new Error(`Team registration update closed. The last date for team registration was ${lastDateSetting.value}.`);
+        }
+      } else {
+        console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
+        throw new Error('Invalid date format in team registration deadline');
+      }
+    } catch (dateError) {
+      // If date parsing fails, log and block team update for safety
+      console.error('Error parsing team registration deadline date:', dateError);
+      // Re-throw the error to block team update if date parsing fails
+      throw dateError;
+    }
+  } else {
+    console.log('No team registration deadline setting found - allowing team update');
+  }
+
   try {
     console.log('updateTeamRegistration called with:', { registrationId, member_user_ids, temple_admin_id });
 
