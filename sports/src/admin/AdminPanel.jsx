@@ -4,7 +4,7 @@ import TempleManagement from '../components/TempleManagement.jsx';
 import Schedule from '../components/Schedule.jsx';
 import Results from '../components/Results.jsx';
 import Champions from '../components/Champions.jsx';
-import { authAPI, userAPI, eventAPI, participantAPI, teamAPI, templeAPI, reportAPI } from '../utils/api.js';
+import { authAPI, userAPI, eventAPI, participantAPI, teamAPI, templeAPI, reportAPI, systemAPI } from '../utils/api.js';
 import authManager from '../utils/authManager';
 // Icons temporarily disabled due to import issues
 // import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
@@ -1792,54 +1792,180 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
 
 
 // System settings section//
+// Define the settings we want to display
+const SETTING_KEYS = [
+  'lane_count',
+  'AGE_CALC_CUTOFF_DATE',
+  'HOST_TEMPLE',
+  'SEASON',
+  'EVENT_DATE',
+  'REG_LAST_DATE_TEAM',
+  'REG_LAST_DATE_INDIVIDUAL',
+  'LAST_DATE_STATUS_UPDATE'
+];
+
 const SystemSettings = () => {
-  const [settings, setSettings] = useState({
-    hostTempleName: 'MULKI',
-    eventDate: '2025-12-28',
-    season: 'season33',
-    cutoffDate: '2025-12-28',
-    contact: {
-      name: '',
-      email: '',
-      phone: '',
-      address: ''
-    }
-  });
+
+  const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Helper function to determine input type
+  const getInputType = (key) => {
+    if (key.includes('DATE') || key === 'EVENT_DATE') {
+      return 'date';
+    }
+    if (key === 'lane_count') {
+      return 'number';
+    }
+    return 'text';
+  };
+
+  // Helper function to format date for HTML date input (YYYY-MM-DD)
+  const formatDateForInput = (dateValue) => {
+    if (!dateValue) return '';
+    // If it's already in YYYY-MM-DD format, return as is
+    if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+      return dateValue.split('T')[0]; // Remove time part if present
+    }
+    // Try to parse and format
+    try {
+      const date = new Date(dateValue);
+      if (isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        setFetching(true);
+        const settingsData = await systemAPI.getSettings();
+        
+        // Convert array to object keyed by name
+        const settingsObj = {};
+        settingsData.forEach(setting => {
+          if (SETTING_KEYS.includes(setting.name)) {
+            // Format date values for date inputs
+            if (getInputType(setting.name) === 'date') {
+              settingsObj[setting.name] = formatDateForInput(setting.value);
+            } else {
+              settingsObj[setting.name] = setting.value;
+            }
+          }
+        });
+        
+        console.log('Fetched settings:', settingsObj);
+        setSettings(settingsObj);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching settings:', err);
+        setError('Failed to load settings. Please try again.');
+      } finally {
+        setFetching(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
 
   const handleSettingChange = (key, value) => {
-    if (key === 'contact') {
-      setSettings(prev => ({
-        ...prev,
-        contact: { ...prev.contact, ...value }
-      }));
-    } else {
-      setSettings(prev => ({
-        ...prev,
-        [key]: value
-      }));
-    }
+    setSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
     setSaved(false);
   };
 
   const handleSave = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Here you would typically save to backend
-      // await settingsAPI.updateSettings(settings);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update each setting individually
+      const updatePromises = Object.entries(settings).map(([key, value]) => {
+        if (SETTING_KEYS.includes(key)) {
+          return systemAPI.updateSetting(key, value);
+        }
+        return Promise.resolve();
+      });
+
+      await Promise.all(updatePromises);
       
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
-    } catch (error) {
-      console.error('Error saving settings:', error);
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setError('Failed to save settings. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
+  // Helper function to get setting label
+  const getSettingLabel = (key) => {
+    const labels = {
+      'lane_count': 'Lane Count',
+      'AGE_CALC_CUTOFF_DATE': 'Age Calculation Cut-off Date',
+      'HOST_TEMPLE': 'Host Temple',
+      'SEASON': 'Season',
+      'EVENT_DATE': 'Event Date',
+      'REG_LAST_DATE_TEAM': 'Registration Last Date (Team)',
+      'REG_LAST_DATE_INDIVIDUAL': 'Registration Last Date (Individual)',
+      'LAST_DATE_STATUS_UPDATE': 'Last Date for Status Update (Temple Admins)'
+    };
+    return labels[key] || key;
+  };
+
+  // Helper function to get setting description
+  const getSettingDescription = (key) => {
+    const descriptions = {
+      'lane_count': 'Number of lanes available',
+      'AGE_CALC_CUTOFF_DATE': 'Date for calculating participant ages',
+      'HOST_TEMPLE': 'Primary temple hosting the event',
+      'SEASON': 'Current event season',
+      'EVENT_DATE': 'Main event date',
+      'REG_LAST_DATE_TEAM': 'Last date for team registrations',
+      'REG_LAST_DATE_INDIVIDUAL': 'Last date for individual registrations',
+      'LAST_DATE_STATUS_UPDATE': 'Last date to update registration status'
+    };
+    return descriptions[key] || '';
+  };
+
+  // Helper function to get icon
+  const getIcon = (key) => {
+    if (key === 'HOST_TEMPLE') return '🏛️';
+    if (key.includes('DATE')) return '📅';
+    if (key === 'SEASON') return '🏆';
+    if (key === 'lane_count') return '🏃';
+    return '⚙️';
+  };
+
+  // Helper function to get icon color
+  const getIconColor = (key) => {
+    if (key === 'HOST_TEMPLE') return 'bg-blue-100 text-blue-600';
+    if (key.includes('DATE')) return 'bg-green-100 text-green-600';
+    if (key === 'SEASON') return 'bg-purple-100 text-purple-600';
+    if (key === 'lane_count') return 'bg-orange-100 text-orange-600';
+    return 'bg-gray-100 text-gray-600';
+  };
+
+  if (fetching) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-[#5A5A5A]">Loading settings...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -1859,182 +1985,62 @@ const SystemSettings = () => {
           }`}
         >
           {loading ? 'Saving...' : saved ? '✓ Saved!' : 'Save Changes'}
-      </button>
-    </div>
+        </button>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-red-800">{error}</p>
+        </div>
+      )}
 
       {/* Settings Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* 1. Host Temple Name */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-blue-600 text-xl">🏛️</span>
+        {SETTING_KEYS.map((key) => (
+          <div key={key} className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center mb-4">
+              <div className={`w-10 h-10 ${getIconColor(key)} rounded-lg flex items-center justify-center mr-3`}>
+                <span className="text-xl">{getIcon(key)}</span>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-[#2A2A2A]">{getSettingLabel(key)}</h4>
+                <p className="text-sm text-[#5A5A5A]">{getSettingDescription(key)}</p>
+              </div>
             </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Host Temple Name</h4>
-              <p className="text-sm text-[#5A5A5A]">Primary temple hosting the event</p>
-            </div>
-          </div>
-          <input
-            type="text"
-            value={settings.hostTempleName}
-            onChange={(e) => handleSettingChange('hostTempleName', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            placeholder="Enter temple name"
-          />
-        </div>
-
-        {/* 2. Event Date */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-green-600 text-xl">📅</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Event Date</h4>
-              <p className="text-sm text-[#5A5A5A]">Main event date</p>
-            </div>
-          </div>
-          <input
-            type="date"
-            value={settings.eventDate}
-            onChange={(e) => handleSettingChange('eventDate', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-          />
-        </div>
-
-        {/* 3. Season */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-purple-600 text-xl">🏆</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Season</h4>
-              <p className="text-sm text-[#5A5A5A]">Current event season</p>
-            </div>
-          </div>
-          <input
-            type="text"
-            value={settings.season}
-            onChange={(e) => handleSettingChange('season', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-            placeholder="Enter season name"
-          />
-        </div>
-
-        {/* 4. Cut-off Date */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-orange-600 text-xl">🎂</span>
-            </div>
-            <div>
-              <h4 className="text-lg font-semibold text-[#2A2A2A]">Age Cut-off Date</h4>
-              <p className="text-sm text-[#5A5A5A]">Date for calculating participant ages</p>
-            </div>
-          </div>
-          <input
-            type="date"
-            value={settings.cutoffDate}
-            onChange={(e) => handleSettingChange('cutoffDate', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      {/* 5. Contact Information - Full Width */}
-      <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-        <div className="flex items-center mb-6">
-          <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
-            <span className="text-red-600 text-xl">📞</span>
-          </div>
-          <div>
-            <h4 className="text-lg font-semibold text-[#2A2A2A]">Contact Information</h4>
-            <p className="text-sm text-[#5A5A5A]">Primary contact details for the event</p>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Contact Name</label>
             <input
-              type="text"
-              value={settings.contact.name}
-              onChange={(e) => handleSettingChange('contact', { name: e.target.value })}
+              type={getInputType(key)}
+              value={getInputType(key) === 'date' ? formatDateForInput(settings[key]) : (settings[key] || '')}
+              onChange={(e) => handleSettingChange(key, e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter contact name"
+              placeholder={`Enter ${getSettingLabel(key).toLowerCase()}`}
+              min={key === 'lane_count' ? '1' : undefined}
             />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Email Address</label>
-            <input
-              type="email"
-              value={settings.contact.email}
-              onChange={(e) => handleSettingChange('contact', { email: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter email address"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Phone Number</label>
-            <input
-              type="tel"
-              value={settings.contact.phone}
-              onChange={(e) => handleSettingChange('contact', { phone: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter phone number"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-[#5A5A5A] mb-2">Address</label>
-            <input
-              type="text"
-              value={settings.contact.address}
-              onChange={(e) => handleSettingChange('contact', { address: e.target.value })}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
-              placeholder="Enter address"
-            />
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* Settings Summary */}
       <div className="bg-gray-50 rounded-lg p-6">
         <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">📋 Current Settings Summary</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Host Temple:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.hostTempleName}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Event Date:</span>
-            <span className="ml-2 text-[#2A2A2A]">{new Date(settings.eventDate).toLocaleDateString()}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Season:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.season}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Age Cut-off:</span>
-            <span className="ml-2 text-[#2A2A2A]">{new Date(settings.cutoffDate).toLocaleDateString()}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Contact:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.contact.name || 'Not set'}</span>
-          </div>
-          <div className="bg-white p-3 rounded border">
-            <span className="font-medium text-[#5A5A5A]">Email:</span>
-            <span className="ml-2 text-[#2A2A2A]">{settings.contact.email || 'Not set'}</span>
-          </div>
+          {SETTING_KEYS.map((key) => {
+            const value = settings[key] || 'Not set';
+            const displayValue = getInputType(key) === 'date' && value !== 'Not set' 
+              ? new Date(value).toLocaleDateString() 
+              : value;
+            
+            return (
+              <div key={key} className="bg-white p-3 rounded border">
+                <span className="font-medium text-[#5A5A5A]">{getSettingLabel(key)}:</span>
+                <span className="ml-2 text-[#2A2A2A]">{displayValue}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
-  </div>
-);
+    </div>
+  );
 };
 
 export default AdminPanel; 

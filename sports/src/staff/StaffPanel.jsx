@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, memo } from 'react';
 import { eventAPI, reportAPI } from '../utils/api';
 import TempleManagement from '../components/TempleManagement.jsx';
 import Schedule from '../components/Schedule.jsx';
@@ -30,15 +30,6 @@ const StaffPanel = () => {
   // For collapsible event states
   const [collapsibleStates, setCollapsibleStates] = useState({});
   
-  // Map of eventId -> ref to scroll into view on open
-  const eventRefs = useRef({});
-  const getEventRef = (eventId) => {
-    if (!eventRefs.current[eventId]) {
-      eventRefs.current[eventId] = React.createRef();
-    }
-    return eventRefs.current[eventId];
-  };
-  
   // For event participants data
   const [eventParticipantsData, setEventParticipantsData] = useState({});
   const [loadingParticipants, setLoadingParticipants] = useState({});
@@ -59,25 +50,10 @@ const StaffPanel = () => {
   };
 
   const setCollapsibleState = (eventId, isOpen) => {
-    // Store current scroll position before opening
-    const currentScrollY = window.scrollY;
-    
     setCollapsibleStates(prev => ({
       ...prev,
       [eventId]: isOpen
     }));
-
-    // If opening, focus on the event container and restore scroll position
-    if (isOpen) {
-      setTimeout(() => {
-        const ref = getEventRef(eventId);
-        if (ref && ref.current) {
-          ref.current.focus();
-          // Restore the original scroll position to prevent auto-scroll
-          window.scrollTo(0, currentScrollY);
-        }
-      }, 0);
-    }
   };
 
   // Helper functions for participants data management
@@ -1016,7 +992,6 @@ const StaffPanel = () => {
     gender, 
     isOpen, 
     setIsOpen,
-    containerRef,
     getEventParticipants,
     setEventParticipants,
     getLoadingParticipants,
@@ -1052,7 +1027,7 @@ const StaffPanel = () => {
     const isHeatEvent = () => {
       const eventName = title.toLowerCase();
       const isHeat = eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
-      console.log(`Event: "${title}" -> EventName: "${eventName}" -> IsHeatEvent: ${isHeat}`);
+      // console.log(`Event: "${title}" -> EventName: "${eventName}" -> IsHeatEvent: ${isHeat}`);
       return isHeat;
     };
 
@@ -1638,12 +1613,24 @@ const StaffPanel = () => {
       }
     };
 
-    const handleToggle = () => {
+    const handleToggle = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Preserve scroll position to prevent jumping to top
+      const scrollY = window.scrollY;
+      
       if (!isOpen) {
         fetchEventParticipants();
         fetchTrials(); // Fetch trial data for trial events
       }
       setIsOpen(!isOpen);
+      
+      // Restore scroll position after React updates the DOM
+      // Use setTimeout to ensure DOM has been updated
+      setTimeout(() => {
+        window.scrollTo(0, scrollY);
+      }, 0);
     };
 
     // Auto-fetch heats when heat event is opened
@@ -1667,12 +1654,11 @@ const StaffPanel = () => {
 
     return (
       <div 
-        ref={containerRef} 
-        className="border border-gray-200 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:ring-offset-2 transition-all duration-200"
-        tabIndex={-1}
+        className="border border-gray-200 rounded-lg mb-4 transition-all duration-200"
       >
         <div className="flex justify-between items-center">
           <button
+            type="button"
             className="flex-1 px-4 py-3 text-left bg-[#F8DFBE] hover:bg-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#D35D38] rounded-lg flex justify-between items-center"
             onClick={handleToggle}
           >
@@ -1952,7 +1938,7 @@ const StaffPanel = () => {
                                 }`}
                                 title={`Update all selected results (${Object.keys(getRankChanges(eventId)).length} pending)`}
                               >
-                                Update All {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
+                                Update Results {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
                               </button>
                             </div>
                           </th>
@@ -2222,7 +2208,6 @@ const StaffPanel = () => {
                         gender={gender}
                         isOpen={getCollapsibleState(event.id)}
                         setIsOpen={(isOpen) => setCollapsibleState(event.id, isOpen)}
-                        containerRef={getEventRef(event.id)}
                         getEventParticipants={getEventParticipants}
                         setEventParticipants={setEventParticipants}
                         getLoadingParticipants={getLoadingParticipants}
