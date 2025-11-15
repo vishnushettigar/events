@@ -1126,31 +1126,31 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   const { event_id, heat_number, timings } = req.body;
 
   try {
-    // Update timings for each participant - only update if timing has a valid value
-    const updatePromises = timings.map(timing => {
-      // Helper function to parse timing values
-      const parseTiming = (timingValue) => {
-        // Handle null, undefined, or empty values
-        if (timingValue === null || timingValue === undefined || timingValue === '') {
-          return null;
-        }
-        
-        // Convert to string and trim
-        const stringValue = String(timingValue).trim();
-        if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
-          return null;
-        }
-        
-        // Parse as float
-        const parsedTime = parseFloat(stringValue);
-        if (!isNaN(parsedTime) && parsedTime > 0) {
-          return parsedTime;
-        }
-        
-        // Return null for invalid values
+    // Helper function to parse timing values
+    const parseTiming = (timingValue) => {
+      // Handle null, undefined, or empty values
+      if (timingValue === null || timingValue === undefined || timingValue === '') {
         return null;
-      };
+      }
+      
+      // Convert to string and trim
+      const stringValue = String(timingValue).trim();
+      if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
+        return null;
+      }
+      
+      // Parse as float
+      const parsedTime = parseFloat(stringValue);
+      if (!isNaN(parsedTime) && parsedTime > 0) {
+        return parsedTime;
+      }
+      
+      // Return null for invalid values
+      return null;
+    };
 
+    // Update timings for each participant - only update if timing has a valid value
+    const updatePromises = timings.map(async (timing) => {
       // Parse all three performance values
       const performance1 = parseTiming(timing.performance_1);
       const performance2 = parseTiming(timing.performance_2);
@@ -1158,19 +1158,41 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        const updateData = {};
-        if (performance1 !== null) updateData.performance_1 = performance1;
-        if (performance2 !== null) updateData.performance_2 = performance2;
-        if (performance3 !== null) updateData.performance_3 = performance3;
+        try {
+          // Try with new schema first (performance_1, performance_2, performance_3)
+          const updateData = {};
+          if (performance1 !== null) updateData.performance_1 = performance1;
+          if (performance2 !== null) updateData.performance_2 = performance2;
+          if (performance3 !== null) updateData.performance_3 = performance3;
 
-        return prisma.event_performance.updateMany({
-          where: {
-            event_id: event_id,
-            heat_number: heat_number,
-            registration_id: timing.registration_id
-          },
-          data: updateData
-        });
+          return await prisma.event_performance.updateMany({
+            where: {
+              event_id: event_id,
+              heat_number: heat_number,
+              registration_id: timing.registration_id
+            },
+            data: updateData
+          });
+        } catch (error) {
+          // If new schema fails, try with old schema (heat_time)
+          if (error.message && error.message.includes('performance_1')) {
+            try {
+              // For old schema, only performance_1 maps to heat_time
+              if (performance1 !== null) {
+                return await prisma.$executeRawUnsafe(`
+                  UPDATE event_performance
+                  SET heat_time = ?
+                  WHERE event_id = ? AND heat_number = ? AND registration_id = ?
+                `, performance1, event_id, heat_number, timing.registration_id);
+              }
+            } catch (oldSchemaError) {
+              console.error('Error updating with old schema:', oldSchemaError);
+              throw oldSchemaError;
+            }
+          } else {
+            throw error;
+          }
+        }
       } else {
         // Return a resolved promise for invalid timings (don't update)
         return Promise.resolve();
@@ -1213,31 +1235,31 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
   const { event_id, timings } = req.body;
 
   try {
-    // Update timings for each participant - only update if timing has a valid value
-    const updatePromises = timings.map(timing => {
-      // Helper function to parse timing values
-      const parseTiming = (timingValue) => {
-        // Handle null, undefined, or empty values
-        if (timingValue === null || timingValue === undefined || timingValue === '') {
-          return null;
-        }
-        
-        // Convert to string and trim
-        const stringValue = String(timingValue).trim();
-        if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
-          return null;
-        }
-        
-        // Parse as float
-        const parsedTime = parseFloat(stringValue);
-        if (!isNaN(parsedTime) && parsedTime > 0) {
-          return parsedTime;
-        }
-        
-        // Return null for invalid values
+    // Helper function to parse timing values
+    const parseTiming = (timingValue) => {
+      // Handle null, undefined, or empty values
+      if (timingValue === null || timingValue === undefined || timingValue === '') {
         return null;
-      };
+      }
+      
+      // Convert to string and trim
+      const stringValue = String(timingValue).trim();
+      if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
+        return null;
+      }
+      
+      // Parse as float
+      const parsedTime = parseFloat(stringValue);
+      if (!isNaN(parsedTime) && parsedTime > 0) {
+        return parsedTime;
+      }
+      
+      // Return null for invalid values
+      return null;
+    };
 
+    // Update timings for each participant - only update if timing has a valid value
+    const updatePromises = timings.map(async (timing) => {
       // Parse all three performance values
       const performance1 = parseTiming(timing.performance_1);
       const performance2 = parseTiming(timing.performance_2);
@@ -1245,19 +1267,41 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        const updateData = {};
-        if (performance1 !== null) updateData.performance_1 = performance1;
-        if (performance2 !== null) updateData.performance_2 = performance2;
-        if (performance3 !== null) updateData.performance_3 = performance3;
+        try {
+          // Try with new schema first (performance_1, performance_2, performance_3)
+          const updateData = {};
+          if (performance1 !== null) updateData.performance_1 = performance1;
+          if (performance2 !== null) updateData.performance_2 = performance2;
+          if (performance3 !== null) updateData.performance_3 = performance3;
 
-        return prisma.event_performance.updateMany({
-          where: {
-            event_id: event_id,
-            registration_id: timing.registration_id
-            // No heat_number filter for final heat updates
-          },
-          data: updateData
-        });
+          return await prisma.event_performance.updateMany({
+            where: {
+              event_id: event_id,
+              registration_id: timing.registration_id
+              // No heat_number filter for final heat updates
+            },
+            data: updateData
+          });
+        } catch (error) {
+          // If new schema fails, try with old schema (heat_time)
+          if (error.message && error.message.includes('performance')) {
+            try {
+              // For old schema, only performance_1 maps to heat_time
+              if (performance1 !== null) {
+                return await prisma.$executeRawUnsafe(`
+                  UPDATE event_performance
+                  SET heat_time = ?
+                  WHERE event_id = ? AND registration_id = ?
+                `, performance1, event_id, timing.registration_id);
+              }
+            } catch (oldSchemaError) {
+              console.error('Error updating with old schema:', oldSchemaError);
+              throw oldSchemaError;
+            }
+          } else {
+            throw error;
+          }
+        }
       } else {
         // Return a resolved promise for invalid timings (don't update)
         return Promise.resolve();
@@ -1310,23 +1354,46 @@ async function ensureTrialPerformanceRecords(eventId) {
   const existingRegistrationIds = new Set(existingRecords.map(r => r.registration_id));
   
   // Create performance records for participants that don't have them
-  const newRecords = acceptedParticipants
-    .filter(p => !existingRegistrationIds.has(p.id))
-    .map(participant => ({
-      year: new Date().getFullYear(),
-      registration_id: participant.id,
-      event_id: parseInt(eventId),
-      heat_number: null, // Trial events don't have heats
-      performance_1: null,
-      performance_2: null,
-      performance_3: null
-    }));
+  const participantsToCreate = acceptedParticipants.filter(p => !existingRegistrationIds.has(p.id));
 
-  if (newRecords.length > 0) {
-    console.log(`Creating ${newRecords.length} trial performance records for event ${eventId}`);
-    await prisma.event_performance.createMany({
-      data: newRecords
-    });
+  if (participantsToCreate.length > 0) {
+    console.log(`Creating ${participantsToCreate.length} trial performance records for event ${eventId}`);
+    
+    try {
+      // Try with new schema first
+      const newRecords = participantsToCreate.map(participant => ({
+        year: new Date().getFullYear(),
+        registration_id: participant.id,
+        event_id: parseInt(eventId),
+        heat_number: null, // Trial events don't have heats
+        performance_1: null,
+        performance_2: null,
+        performance_3: null
+      }));
+
+      await prisma.event_performance.createMany({
+        data: newRecords
+      });
+    } catch (error) {
+      // If new schema fails, try with old schema
+      if (error.message && error.message.includes('performance')) {
+        try {
+          // Use raw SQL to create records with old schema
+          const currentYear = new Date().getFullYear();
+          for (const participant of participantsToCreate) {
+            await prisma.$executeRawUnsafe(`
+              INSERT INTO event_performance (year, registration_id, event_id, heat_number, heat_time, created_at, updated_at)
+              VALUES (?, ?, ?, NULL, NULL, datetime('now'), datetime('now'))
+            `, currentYear, participant.id, parseInt(eventId));
+          }
+        } catch (oldSchemaError) {
+          console.error('Error creating records with old schema:', oldSchemaError);
+          throw oldSchemaError;
+        }
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
@@ -1411,31 +1478,31 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
     // First ensure all accepted participants have performance records
     await ensureTrialPerformanceRecords(event_id);
 
-    // Update trial measurements for each participant - only update if trial has a valid value
-    const updatePromises = trials.map(trial => {
-      // Helper function to parse trial values
-      const parseTrial = (trialValue) => {
-        // Handle null, undefined, or empty values
-        if (trialValue === null || trialValue === undefined || trialValue === '') {
-          return null;
-        }
-        
-        // Convert to string and trim
-        const stringValue = String(trialValue).trim();
-        if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
-          return null;
-        }
-        
-        // Parse as float
-        const parsedTrial = parseFloat(stringValue);
-        if (!isNaN(parsedTrial) && parsedTrial > 0) {
-          return parsedTrial;
-        }
-        
-        // Return null for invalid values
+    // Helper function to parse trial values
+    const parseTrial = (trialValue) => {
+      // Handle null, undefined, or empty values
+      if (trialValue === null || trialValue === undefined || trialValue === '') {
         return null;
-      };
+      }
+      
+      // Convert to string and trim
+      const stringValue = String(trialValue).trim();
+      if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
+        return null;
+      }
+      
+      // Parse as float
+      const parsedTrial = parseFloat(stringValue);
+      if (!isNaN(parsedTrial) && parsedTrial > 0) {
+        return parsedTrial;
+      }
+      
+      // Return null for invalid values
+      return null;
+    };
 
+    // Update trial measurements for each participant - only update if trial has a valid value
+    const updatePromises = trials.map(async (trial) => {
       // Parse all three performance values
       const performance1 = parseTrial(trial.performance_1);
       const performance2 = parseTrial(trial.performance_2);
@@ -1443,18 +1510,41 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid trial value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        const updateData = {};
-        if (performance1 !== null) updateData.performance_1 = performance1;
-        if (performance2 !== null) updateData.performance_2 = performance2;
-        if (performance3 !== null) updateData.performance_3 = performance3;
+        try {
+          // Try with new schema first (performance_1, performance_2, performance_3)
+          const updateData = {};
+          if (performance1 !== null) updateData.performance_1 = performance1;
+          if (performance2 !== null) updateData.performance_2 = performance2;
+          if (performance3 !== null) updateData.performance_3 = performance3;
 
-        return prisma.event_performance.updateMany({
-          where: {
-            event_id: event_id,
-            registration_id: trial.registration_id
-          },
-          data: updateData
-        });
+          return await prisma.event_performance.updateMany({
+            where: {
+              event_id: event_id,
+              registration_id: trial.registration_id
+            },
+            data: updateData
+          });
+        } catch (error) {
+          // If new schema fails, try with old schema (heat_time)
+          if (error.message && error.message.includes('performance')) {
+            try {
+              // For old schema, only performance_1 maps to heat_time
+              // Note: Trials typically only use performance_1 in old schema
+              if (performance1 !== null) {
+                return await prisma.$executeRawUnsafe(`
+                  UPDATE event_performance
+                  SET heat_time = ?
+                  WHERE event_id = ? AND registration_id = ?
+                `, performance1, event_id, trial.registration_id);
+              }
+            } catch (oldSchemaError) {
+              console.error('Error updating with old schema:', oldSchemaError);
+              throw oldSchemaError;
+            }
+          } else {
+            throw error;
+          }
+        }
       } else {
         // Return a resolved promise for invalid trials (don't update)
         return Promise.resolve();
