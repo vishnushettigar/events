@@ -1176,14 +1176,7 @@ async function getEventParticipants(eventId) {
             }
           },
           event_result: true,
-          performances: {
-            select: {
-              performance_1: true,
-              performance_2: true,
-              performance_3: true,
-              heat_number: true
-            }
-          }
+          performances: true  // Include all fields to support both old and new schemas
         }
       });
 
@@ -1193,6 +1186,32 @@ async function getEventParticipants(eventId) {
       participants = individualRegistrations.map(reg => {
         // Get the first performance record if available (or use null)
         const performance = reg.performances && reg.performances.length > 0 ? reg.performances[0] : null;
+        
+        // Handle both old schema (heat_time) and new schema (performance_1, performance_2, performance_3)
+        let performance_1 = null;
+        let performance_2 = null;
+        let performance_3 = null;
+        let timing = null;
+        
+        if (performance) {
+          // New schema: has performance_1, performance_2, performance_3
+          if (performance.performance_1 !== undefined && performance.performance_1 !== null) {
+            performance_1 = String(performance.performance_1);
+            timing = performance_1;
+          }
+          if (performance.performance_2 !== undefined && performance.performance_2 !== null) {
+            performance_2 = String(performance.performance_2);
+          }
+          if (performance.performance_3 !== undefined && performance.performance_3 !== null) {
+            performance_3 = String(performance.performance_3);
+          }
+          
+          // Old schema: has heat_time (fallback if new schema fields don't exist)
+          if (!performance_1 && performance.heat_time !== undefined && performance.heat_time !== null) {
+            performance_1 = String(performance.heat_time);
+            timing = performance_1;
+          }
+        }
         
         return {
           id: reg.id,
@@ -1209,11 +1228,11 @@ async function getEventParticipants(eventId) {
             points: reg.event_result.points
           } : null,
           registered_at: reg.created_at,
-          performance_1: performance?.performance_1 ? String(performance.performance_1) : null,
-          performance_2: performance?.performance_2 ? String(performance.performance_2) : null,
-          performance_3: performance?.performance_3 ? String(performance.performance_3) : null,
+          performance_1: performance_1,
+          performance_2: performance_2,
+          performance_3: performance_3,
           heat_number: performance?.heat_number || null,
-          timing: performance?.performance_1 ? String(performance.performance_1) : null // Alias for compatibility with existing code
+          timing: timing // Alias for compatibility with existing code
         };
       });
 

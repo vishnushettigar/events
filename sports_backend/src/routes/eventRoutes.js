@@ -1059,14 +1059,36 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
       if (!groupedHeats[heatNumber]) {
         groupedHeats[heatNumber] = [];
       }
+      
+      // Handle both old schema (heat_time) and new schema (performance_1, performance_2, performance_3)
+      let performance_1 = null;
+      let performance_2 = null;
+      let performance_3 = null;
+      
+      // New schema: has performance_1, performance_2, performance_3
+      if (heat.performance_1 !== undefined && heat.performance_1 !== null) {
+        performance_1 = heat.performance_1;
+      }
+      if (heat.performance_2 !== undefined && heat.performance_2 !== null) {
+        performance_2 = heat.performance_2;
+      }
+      if (heat.performance_3 !== undefined && heat.performance_3 !== null) {
+        performance_3 = heat.performance_3;
+      }
+      
+      // Old schema: has heat_time (fallback if new schema fields don't exist)
+      if (!performance_1 && heat.heat_time !== undefined && heat.heat_time !== null) {
+        performance_1 = heat.heat_time;
+      }
+      
       groupedHeats[heatNumber].push({
         id: heat.registration.id,
         participant_name: heat.registration.user.first_name + ' ' + (heat.registration.user.last_name || ''),
         temple_name: heat.registration.user.temple.name,
         aadhar_number: heat.registration.user.aadhar_number,
-        performance_1: heat.performance_1,
-        performance_2: heat.performance_2,
-        performance_3: heat.performance_3,
+        performance_1: performance_1,
+        performance_2: performance_2,
+        performance_3: performance_3,
         result: heat.registration.event_result ? {
           rank: heat.registration.event_result.rank,
           points: heat.registration.event_result.points
@@ -1312,26 +1334,41 @@ router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, r
     // First ensure all accepted participants have performance records
     await ensureTrialPerformanceRecords(eventId);
 
-    // Fetch trial performance data for the event
+    // Fetch trial performance data for the event (include all fields to support both old and new schemas)
     const trialData = await prisma.event_performance.findMany({
       where: {
         event_id: parseInt(eventId)
-      },
-      select: {
-        registration_id: true,
-        performance_1: true,
-        performance_2: true,
-        performance_3: true
       }
     });
 
-    // Convert to a more usable format
+    // Convert to a more usable format - handle both old and new schemas
     const trialsMap = {};
     trialData.forEach(trial => {
+      // Handle both old schema (heat_time) and new schema (performance_1, performance_2, performance_3)
+      let performance_1 = null;
+      let performance_2 = null;
+      let performance_3 = null;
+      
+      // New schema: has performance_1, performance_2, performance_3
+      if (trial.performance_1 !== undefined && trial.performance_1 !== null) {
+        performance_1 = trial.performance_1;
+      }
+      if (trial.performance_2 !== undefined && trial.performance_2 !== null) {
+        performance_2 = trial.performance_2;
+      }
+      if (trial.performance_3 !== undefined && trial.performance_3 !== null) {
+        performance_3 = trial.performance_3;
+      }
+      
+      // Old schema: has heat_time (fallback if new schema fields don't exist)
+      if (!performance_1 && trial.heat_time !== undefined && trial.heat_time !== null) {
+        performance_1 = trial.heat_time;
+      }
+      
       trialsMap[trial.registration_id] = {
-        performance_1: trial.performance_1,
-        performance_2: trial.performance_2,
-        performance_3: trial.performance_3
+        performance_1: performance_1,
+        performance_2: performance_2,
+        performance_3: performance_3
       };
     });
 
