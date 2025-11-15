@@ -1126,6 +1126,15 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   const { event_id, heat_number, timings } = req.body;
 
   try {
+    // Detect which schema is available
+    const schema = await detectPerformanceSchema();
+    
+    if (schema === 'none') {
+      return res.status(500).json({ 
+        error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
+      });
+    }
+
     // Helper function to parse timing values
     const parseTiming = (timingValue) => {
       // Handle null, undefined, or empty values
@@ -1158,8 +1167,8 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        try {
-          // Try with new schema first (performance_1, performance_2, performance_3)
+        if (schema === 'new') {
+          // Use new schema (performance_1, performance_2, performance_3)
           const updateData = {};
           if (performance1 !== null) updateData.performance_1 = performance1;
           if (performance2 !== null) updateData.performance_2 = performance2;
@@ -1173,24 +1182,14 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
             },
             data: updateData
           });
-        } catch (error) {
-          // If new schema fails, try with old schema (heat_time)
-          if (error.message && error.message.includes('performance_1')) {
-            try {
-              // For old schema, only performance_1 maps to heat_time
-              if (performance1 !== null) {
-                return await prisma.$executeRawUnsafe(`
-                  UPDATE event_performance
-                  SET heat_time = ?
-                  WHERE event_id = ? AND heat_number = ? AND registration_id = ?
-                `, performance1, event_id, heat_number, timing.registration_id);
-              }
-            } catch (oldSchemaError) {
-              console.error('Error updating with old schema:', oldSchemaError);
-              throw oldSchemaError;
-            }
-          } else {
-            throw error;
+        } else if (schema === 'old') {
+          // Use old schema (heat_time) - only performance_1 maps to heat_time
+          if (performance1 !== null) {
+            return await prisma.$executeRawUnsafe(`
+              UPDATE event_performance
+              SET heat_time = ?
+              WHERE event_id = ? AND heat_number = ? AND registration_id = ?
+            `, performance1, event_id, heat_number, timing.registration_id);
           }
         }
       } else {
@@ -1235,6 +1234,15 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
   const { event_id, timings } = req.body;
 
   try {
+    // Detect which schema is available
+    const schema = await detectPerformanceSchema();
+    
+    if (schema === 'none') {
+      return res.status(500).json({ 
+        error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
+      });
+    }
+
     // Helper function to parse timing values
     const parseTiming = (timingValue) => {
       // Handle null, undefined, or empty values
@@ -1267,8 +1275,8 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        try {
-          // Try with new schema first (performance_1, performance_2, performance_3)
+        if (schema === 'new') {
+          // Use new schema (performance_1, performance_2, performance_3)
           const updateData = {};
           if (performance1 !== null) updateData.performance_1 = performance1;
           if (performance2 !== null) updateData.performance_2 = performance2;
@@ -1282,24 +1290,14 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
             },
             data: updateData
           });
-        } catch (error) {
-          // If new schema fails, try with old schema (heat_time)
-          if (error.message && error.message.includes('performance')) {
-            try {
-              // For old schema, only performance_1 maps to heat_time
-              if (performance1 !== null) {
-                return await prisma.$executeRawUnsafe(`
-                  UPDATE event_performance
-                  SET heat_time = ?
-                  WHERE event_id = ? AND registration_id = ?
-                `, performance1, event_id, timing.registration_id);
-              }
-            } catch (oldSchemaError) {
-              console.error('Error updating with old schema:', oldSchemaError);
-              throw oldSchemaError;
-            }
-          } else {
-            throw error;
+        } else if (schema === 'old') {
+          // Use old schema (heat_time) - only performance_1 maps to heat_time
+          if (performance1 !== null) {
+            return await prisma.$executeRawUnsafe(`
+              UPDATE event_performance
+              SET heat_time = ?
+              WHERE event_id = ? AND registration_id = ?
+            `, performance1, event_id, timing.registration_id);
           }
         }
       } else {
@@ -1317,6 +1315,59 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
     res.status(500).json({ error: error.message || 'Failed to save final heat timings' });
   }
 });
+
+// Helper function to detect which schema columns are available
+async function detectPerformanceSchema() {
+  try {
+    // Try to query table schema to check which columns exist
+    // SQLite PRAGMA table_info returns column information
+    const tableInfo = await prisma.$queryRawUnsafe(`
+      PRAGMA table_info(event_performance)
+    `);
+    
+    const columnNames = tableInfo.map(col => col.name.toLowerCase());
+    const hasNewSchema = columnNames.includes('performance_1') && 
+                         columnNames.includes('performance_2') && 
+                         columnNames.includes('performance_3');
+    const hasOldSchema = columnNames.includes('heat_time');
+    
+    if (hasNewSchema) {
+      return 'new'; // New schema with performance_1, performance_2, performance_3
+    } else if (hasOldSchema) {
+      return 'old'; // Old schema with heat_time
+    } else {
+      // Neither schema exists - database is in inconsistent state
+      console.error('Database schema error: Neither performance_1/2/3 nor heat_time columns exist');
+      console.error('Available columns:', columnNames);
+      return 'none';
+    }
+  } catch (error) {
+    console.error('Error detecting schema:', error);
+    // Fallback: try querying with new schema
+    try {
+      await prisma.$queryRawUnsafe(`
+        SELECT performance_1 FROM event_performance LIMIT 1
+      `);
+      return 'new';
+    } catch (newError) {
+      if (newError.message && newError.message.includes('performance')) {
+        // Try old schema
+        try {
+          await prisma.$queryRawUnsafe(`
+            SELECT heat_time FROM event_performance LIMIT 1
+          `);
+          return 'old';
+        } catch (oldError) {
+          if (oldError.message && oldError.message.includes('heat_time')) {
+            return 'none';
+          }
+          throw oldError;
+        }
+      }
+      throw newError;
+    }
+  }
+}
 
 // Helper function to ensure trial performance records exist for all accepted participants
 async function ensureTrialPerformanceRecords(eventId) {
@@ -1475,6 +1526,15 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
   const { event_id, trials } = req.body;
 
   try {
+    // Detect which schema is available
+    const schema = await detectPerformanceSchema();
+    
+    if (schema === 'none') {
+      return res.status(500).json({ 
+        error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
+      });
+    }
+
     // First ensure all accepted participants have performance records
     await ensureTrialPerformanceRecords(event_id);
 
@@ -1510,8 +1570,8 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid trial value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        try {
-          // Try with new schema first (performance_1, performance_2, performance_3)
+        if (schema === 'new') {
+          // Use new schema (performance_1, performance_2, performance_3)
           const updateData = {};
           if (performance1 !== null) updateData.performance_1 = performance1;
           if (performance2 !== null) updateData.performance_2 = performance2;
@@ -1524,25 +1584,15 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
             },
             data: updateData
           });
-        } catch (error) {
-          // If new schema fails, try with old schema (heat_time)
-          if (error.message && error.message.includes('performance')) {
-            try {
-              // For old schema, only performance_1 maps to heat_time
-              // Note: Trials typically only use performance_1 in old schema
-              if (performance1 !== null) {
-                return await prisma.$executeRawUnsafe(`
-                  UPDATE event_performance
-                  SET heat_time = ?
-                  WHERE event_id = ? AND registration_id = ?
-                `, performance1, event_id, trial.registration_id);
-              }
-            } catch (oldSchemaError) {
-              console.error('Error updating with old schema:', oldSchemaError);
-              throw oldSchemaError;
-            }
-          } else {
-            throw error;
+        } else if (schema === 'old') {
+          // Use old schema (heat_time) - only performance_1 maps to heat_time
+          // Note: Trials typically only use performance_1 in old schema
+          if (performance1 !== null) {
+            return await prisma.$executeRawUnsafe(`
+              UPDATE event_performance
+              SET heat_time = ?
+              WHERE event_id = ? AND registration_id = ?
+            `, performance1, event_id, trial.registration_id);
           }
         }
       } else {
