@@ -1168,7 +1168,7 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
         if (schema === 'new') {
-          // Use new schema (performance_1, performance_2, performance_3)
+          // Use Prisma with new schema (performance_1, performance_2, performance_3)
           const updateData = {};
           if (performance1 !== null) updateData.performance_1 = performance1;
           if (performance2 !== null) updateData.performance_2 = performance2;
@@ -1182,6 +1182,31 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
             },
             data: updateData
           });
+        } else if (schema === 'new_raw') {
+          // Database has new schema, but Prisma doesn't support it - use raw SQL
+          const updates = [];
+          const params = [];
+          if (performance1 !== null) {
+            updates.push('performance_1 = ?');
+            params.push(performance1);
+          }
+          if (performance2 !== null) {
+            updates.push('performance_2 = ?');
+            params.push(performance2);
+          }
+          if (performance3 !== null) {
+            updates.push('performance_3 = ?');
+            params.push(performance3);
+          }
+          
+          if (updates.length > 0) {
+            params.push(event_id, heat_number, timing.registration_id);
+            return await prisma.$executeRawUnsafe(`
+              UPDATE event_performance
+              SET ${updates.join(', ')}
+              WHERE event_id = ? AND heat_number = ? AND registration_id = ?
+            `, ...params);
+          }
         } else if (schema === 'old') {
           // Use old schema (heat_time) - only performance_1 maps to heat_time
           if (performance1 !== null) {
@@ -1276,7 +1301,7 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
         if (schema === 'new') {
-          // Use new schema (performance_1, performance_2, performance_3)
+          // Use Prisma with new schema (performance_1, performance_2, performance_3)
           const updateData = {};
           if (performance1 !== null) updateData.performance_1 = performance1;
           if (performance2 !== null) updateData.performance_2 = performance2;
@@ -1290,6 +1315,31 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
             },
             data: updateData
           });
+        } else if (schema === 'new_raw') {
+          // Database has new schema, but Prisma doesn't support it - use raw SQL
+          const updates = [];
+          const params = [];
+          if (performance1 !== null) {
+            updates.push('performance_1 = ?');
+            params.push(performance1);
+          }
+          if (performance2 !== null) {
+            updates.push('performance_2 = ?');
+            params.push(performance2);
+          }
+          if (performance3 !== null) {
+            updates.push('performance_3 = ?');
+            params.push(performance3);
+          }
+          
+          if (updates.length > 0) {
+            params.push(event_id, timing.registration_id);
+            return await prisma.$executeRawUnsafe(`
+              UPDATE event_performance
+              SET ${updates.join(', ')}
+              WHERE event_id = ? AND registration_id = ?
+            `, ...params);
+          }
         } else if (schema === 'old') {
           // Use old schema (heat_time) - only performance_1 maps to heat_time
           if (performance1 !== null) {
@@ -1317,48 +1367,76 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
 });
 
 // Helper function to detect which schema columns are available
+// This checks both what Prisma client supports AND what the database has
 async function detectPerformanceSchema() {
   try {
-    // Try to query table schema to check which columns exist
-    // SQLite PRAGMA table_info returns column information
+    // First, check what the database actually has using PRAGMA
     const tableInfo = await prisma.$queryRawUnsafe(`
       PRAGMA table_info(event_performance)
     `);
     
     const columnNames = tableInfo.map(col => col.name.toLowerCase());
-    const hasNewSchema = columnNames.includes('performance_1') && 
-                         columnNames.includes('performance_2') && 
-                         columnNames.includes('performance_3');
-    const hasOldSchema = columnNames.includes('heat_time');
+    const dbHasNewSchema = columnNames.includes('performance_1') && 
+                           columnNames.includes('performance_2') && 
+                           columnNames.includes('performance_3');
+    const dbHasOldSchema = columnNames.includes('heat_time');
     
-    if (hasNewSchema) {
-      return 'new'; // New schema with performance_1, performance_2, performance_3
-    } else if (hasOldSchema) {
-      return 'old'; // Old schema with heat_time
+    // Now check what Prisma client supports by trying a simple query
+    // If Prisma doesn't support performance_1, it will throw an error
+    let prismaSupportsNew = false;
+    try {
+      // Try to use Prisma with new schema - this will fail if Prisma client doesn't support it
+      await prisma.event_performance.findFirst({
+        select: {
+          performance_1: true,
+          performance_2: true,
+          performance_3: true
+        }
+      });
+      prismaSupportsNew = true;
+    } catch (prismaError) {
+      if (prismaError.message && prismaError.message.includes('Unknown argument') && 
+          prismaError.message.includes('performance_1')) {
+        prismaSupportsNew = false;
+      } else {
+        // Some other error, might be table is empty - that's okay
+        // If Prisma supports it, the query structure is valid
+        prismaSupportsNew = true;
+      }
+    }
+    
+    // Decision logic:
+    // 1. If Prisma supports new schema AND database has new schema -> use new
+    // 2. If database has old schema -> use old (with raw SQL)
+    // 3. If database has new schema but Prisma doesn't -> use new (with raw SQL)
+    // 4. If neither exists -> return 'none'
+    
+    if (prismaSupportsNew && dbHasNewSchema) {
+      return 'new'; // Use Prisma with new schema
+    } else if (dbHasNewSchema) {
+      return 'new_raw'; // Database has new schema, but use raw SQL (Prisma doesn't support it)
+    } else if (dbHasOldSchema) {
+      return 'old'; // Use old schema with raw SQL
     } else {
-      // Neither schema exists - database is in inconsistent state
       console.error('Database schema error: Neither performance_1/2/3 nor heat_time columns exist');
       console.error('Available columns:', columnNames);
       return 'none';
     }
   } catch (error) {
     console.error('Error detecting schema:', error);
-    // Fallback: try querying with new schema
+    // Fallback: try raw SQL queries
     try {
-      await prisma.$queryRawUnsafe(`
-        SELECT performance_1 FROM event_performance LIMIT 1
-      `);
-      return 'new';
+      await prisma.$queryRawUnsafe(`SELECT performance_1 FROM event_performance LIMIT 1`);
+      return 'new_raw'; // Database has it, but use raw SQL
     } catch (newError) {
-      if (newError.message && newError.message.includes('performance')) {
-        // Try old schema
+      if (newError.message && newError.message.includes('performance') || 
+          newError.message && newError.message.includes('no such column')) {
         try {
-          await prisma.$queryRawUnsafe(`
-            SELECT heat_time FROM event_performance LIMIT 1
-          `);
+          await prisma.$queryRawUnsafe(`SELECT heat_time FROM event_performance LIMIT 1`);
           return 'old';
         } catch (oldError) {
-          if (oldError.message && oldError.message.includes('heat_time')) {
+          if (oldError.message && (oldError.message.includes('heat_time') || 
+              oldError.message.includes('no such column'))) {
             return 'none';
           }
           throw oldError;
@@ -1571,7 +1649,7 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
       // Only update if we have at least one valid trial value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
         if (schema === 'new') {
-          // Use new schema (performance_1, performance_2, performance_3)
+          // Use Prisma with new schema (performance_1, performance_2, performance_3)
           const updateData = {};
           if (performance1 !== null) updateData.performance_1 = performance1;
           if (performance2 !== null) updateData.performance_2 = performance2;
@@ -1584,6 +1662,31 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
             },
             data: updateData
           });
+        } else if (schema === 'new_raw') {
+          // Database has new schema, but Prisma doesn't support it - use raw SQL
+          const updates = [];
+          const params = [];
+          if (performance1 !== null) {
+            updates.push('performance_1 = ?');
+            params.push(performance1);
+          }
+          if (performance2 !== null) {
+            updates.push('performance_2 = ?');
+            params.push(performance2);
+          }
+          if (performance3 !== null) {
+            updates.push('performance_3 = ?');
+            params.push(performance3);
+          }
+          
+          if (updates.length > 0) {
+            params.push(event_id, trial.registration_id);
+            return await prisma.$executeRawUnsafe(`
+              UPDATE event_performance
+              SET ${updates.join(', ')}
+              WHERE event_id = ? AND registration_id = ?
+            `, ...params);
+          }
         } else if (schema === 'old') {
           // Use old schema (heat_time) - only performance_1 maps to heat_time
           // Note: Trials typically only use performance_1 in old schema
