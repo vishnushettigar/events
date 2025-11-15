@@ -1030,27 +1030,52 @@ router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), 
 router.get('/heats/:eventId', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
+    const currentYear = new Date().getFullYear();
     
-    const heats = await prisma.event_performance.findMany({
-      where: { 
-        event_id: parseInt(eventId),
-        year: new Date().getFullYear()  // Only show current year heats
-      },
-      include: {
-        registration: {
-          include: {
-            user: {
-              include: { temple: true }
-            },
-            event_result: true
-          }
-        }
-      },
-      orderBy: [
-        { heat_number: 'asc' },
-        { id: 'asc' }
-      ]
-    });
+    // Use raw query to handle schema differences
+    let heats = [];
+    try {
+      // Try with new schema first
+      heats = await prisma.$queryRawUnsafe(`
+        SELECT ep.id, ep.registration_id, ep.event_id, ep.heat_number,
+               ep.performance_1, ep.performance_2, ep.performance_3,
+               ir.id as reg_id,
+               u.first_name, u.last_name, u.aadhar_number,
+               t.name as temple_name,
+               er.rank, er.points
+        FROM event_performance ep
+        INNER JOIN Ind_event_registration ir ON ep.registration_id = ir.id
+        INNER JOIN Profile u ON ir.user_id = u.id
+        INNER JOIN Mst_temple t ON u.temple_id = t.id
+        LEFT JOIN Mst_event_result er ON ir.event_result_id = er.id
+        WHERE ep.event_id = ? AND ep.year = ?
+        ORDER BY ep.heat_number ASC, ep.id ASC
+      `, parseInt(eventId), currentYear);
+    } catch (error1) {
+      // If that fails, try with old schema
+      try {
+        heats = await prisma.$queryRawUnsafe(`
+          SELECT ep.id, ep.registration_id, ep.event_id, ep.heat_number,
+                 ep.heat_time as performance_1,
+                 NULL as performance_2,
+                 NULL as performance_3,
+                 ir.id as reg_id,
+                 u.first_name, u.last_name, u.aadhar_number,
+                 t.name as temple_name,
+                 er.rank, er.points
+          FROM event_performance ep
+          INNER JOIN Ind_event_registration ir ON ep.registration_id = ir.id
+          INNER JOIN Profile u ON ir.user_id = u.id
+          INNER JOIN Mst_temple t ON u.temple_id = t.id
+          LEFT JOIN Mst_event_result er ON ir.event_result_id = er.id
+          WHERE ep.event_id = ? AND ep.year = ?
+          ORDER BY ep.heat_number ASC, ep.id ASC
+        `, parseInt(eventId), currentYear);
+      } catch (error2) {
+        console.error('Error fetching heats with both schemas:', error2.message);
+        return res.status(500).json({ error: 'Failed to fetch heats: ' + error2.message });
+      }
+    }
 
     // Group by heat number
     const groupedHeats = {};
@@ -1060,38 +1085,17 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         groupedHeats[heatNumber] = [];
       }
       
-      // Handle both old schema (heat_time) and new schema (performance_1, performance_2, performance_3)
-      let performance_1 = null;
-      let performance_2 = null;
-      let performance_3 = null;
-      
-      // New schema: has performance_1, performance_2, performance_3
-      if (heat.performance_1 !== undefined && heat.performance_1 !== null) {
-        performance_1 = heat.performance_1;
-      }
-      if (heat.performance_2 !== undefined && heat.performance_2 !== null) {
-        performance_2 = heat.performance_2;
-      }
-      if (heat.performance_3 !== undefined && heat.performance_3 !== null) {
-        performance_3 = heat.performance_3;
-      }
-      
-      // Old schema: has heat_time (fallback if new schema fields don't exist)
-      if (!performance_1 && heat.heat_time !== undefined && heat.heat_time !== null) {
-        performance_1 = heat.heat_time;
-      }
-      
       groupedHeats[heatNumber].push({
-        id: heat.registration.id,
-        participant_name: heat.registration.user.first_name + ' ' + (heat.registration.user.last_name || ''),
-        temple_name: heat.registration.user.temple.name,
-        aadhar_number: heat.registration.user.aadhar_number,
-        performance_1: performance_1,
-        performance_2: performance_2,
-        performance_3: performance_3,
-        result: heat.registration.event_result ? {
-          rank: heat.registration.event_result.rank,
-          points: heat.registration.event_result.points
+        id: heat.reg_id,
+        participant_name: (heat.first_name || '') + ' ' + (heat.last_name || ''),
+        temple_name: heat.temple_name,
+        aadhar_number: heat.aadhar_number,
+        performance_1: heat.performance_1,
+        performance_2: heat.performance_2,
+        performance_3: heat.performance_3,
+        result: heat.rank ? {
+          rank: heat.rank,
+          points: heat.points
         } : null
       });
     });
@@ -1334,41 +1338,39 @@ router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, r
     // First ensure all accepted participants have performance records
     await ensureTrialPerformanceRecords(eventId);
 
-    // Fetch trial performance data for the event (include all fields to support both old and new schemas)
-    const trialData = await prisma.event_performance.findMany({
-      where: {
-        event_id: parseInt(eventId)
+    // Fetch trial performance data using raw query to handle schema differences
+    let trialData = [];
+    try {
+      // Try with new schema first
+      trialData = await prisma.$queryRawUnsafe(`
+        SELECT registration_id, performance_1, performance_2, performance_3
+        FROM event_performance
+        WHERE event_id = ?
+      `, parseInt(eventId));
+    } catch (error1) {
+      // If that fails, try with old schema
+      try {
+        trialData = await prisma.$queryRawUnsafe(`
+          SELECT registration_id, 
+                 heat_time as performance_1,
+                 NULL as performance_2,
+                 NULL as performance_3
+          FROM event_performance
+          WHERE event_id = ?
+        `, parseInt(eventId));
+      } catch (error2) {
+        console.error('Error fetching trials with both schemas:', error2.message);
+        return res.status(500).json({ error: 'Failed to fetch trials: ' + error2.message });
       }
-    });
+    }
 
-    // Convert to a more usable format - handle both old and new schemas
+    // Convert to a more usable format
     const trialsMap = {};
     trialData.forEach(trial => {
-      // Handle both old schema (heat_time) and new schema (performance_1, performance_2, performance_3)
-      let performance_1 = null;
-      let performance_2 = null;
-      let performance_3 = null;
-      
-      // New schema: has performance_1, performance_2, performance_3
-      if (trial.performance_1 !== undefined && trial.performance_1 !== null) {
-        performance_1 = trial.performance_1;
-      }
-      if (trial.performance_2 !== undefined && trial.performance_2 !== null) {
-        performance_2 = trial.performance_2;
-      }
-      if (trial.performance_3 !== undefined && trial.performance_3 !== null) {
-        performance_3 = trial.performance_3;
-      }
-      
-      // Old schema: has heat_time (fallback if new schema fields don't exist)
-      if (!performance_1 && trial.heat_time !== undefined && trial.heat_time !== null) {
-        performance_1 = trial.heat_time;
-      }
-      
       trialsMap[trial.registration_id] = {
-        performance_1: performance_1,
-        performance_2: performance_2,
-        performance_3: performance_3
+        performance_1: trial.performance_1,
+        performance_2: trial.performance_2,
+        performance_3: trial.performance_3
       };
     });
 

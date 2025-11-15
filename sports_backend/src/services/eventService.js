@@ -1175,43 +1175,87 @@ async function getEventParticipants(eventId) {
               }
             }
           },
-          event_result: true,
-          performances: true  // Include all fields to support both old and new schemas
+          event_result: true
+          // Note: performances are fetched separately to handle schema differences
         }
       });
 
       console.log('Individual registrations found:', individualRegistrations.length);
       console.log('First registration sample:', individualRegistrations[0] || 'None');
 
-      participants = individualRegistrations.map(reg => {
-        // Get the first performance record if available (or use null)
-        const performance = reg.performances && reg.performances.length > 0 ? reg.performances[0] : null;
-        
-        // Handle both old schema (heat_time) and new schema (performance_1, performance_2, performance_3)
-        let performance_1 = null;
-        let performance_2 = null;
-        let performance_3 = null;
-        let timing = null;
-        
-        if (performance) {
-          // New schema: has performance_1, performance_2, performance_3
-          if (performance.performance_1 !== undefined && performance.performance_1 !== null) {
-            performance_1 = String(performance.performance_1);
-            timing = performance_1;
-          }
-          if (performance.performance_2 !== undefined && performance.performance_2 !== null) {
-            performance_2 = String(performance.performance_2);
-          }
-          if (performance.performance_3 !== undefined && performance.performance_3 !== null) {
-            performance_3 = String(performance.performance_3);
+      // Fetch performances separately to handle schema differences gracefully
+      const registrationIds = individualRegistrations.map(reg => reg.id);
+      let performancesMap = {};
+      
+      if (registrationIds.length > 0) {
+        try {
+          // Use raw query to handle schema differences - try new schema first
+          const currentYear = new Date().getFullYear();
+          let performances = [];
+          
+          try {
+            // Try with new schema (performance_1, performance_2, performance_3)
+            performances = await prisma.$queryRawUnsafe(`
+              SELECT registration_id, 
+                     performance_1,
+                     performance_2,
+                     performance_3,
+                     heat_number
+              FROM event_performance
+              WHERE registration_id IN (${registrationIds.map((_, i) => '?').join(',')})
+                AND year = ?
+            `, ...registrationIds, currentYear);
+          } catch (error1) {
+            // If that fails, try with old schema (heat_time)
+            try {
+              performances = await prisma.$queryRawUnsafe(`
+                SELECT registration_id, 
+                       heat_time as performance_1,
+                       NULL as performance_2,
+                       NULL as performance_3,
+                       heat_number
+                FROM event_performance
+                WHERE registration_id IN (${registrationIds.map((_, i) => '?').join(',')})
+                  AND year = ?
+              `, ...registrationIds, currentYear);
+            } catch (error2) {
+              // If both fail, check what columns actually exist
+              console.warn('Error fetching performances with both schemas:', error2.message);
+              // Continue without performance data
+              performances = [];
+            }
           }
           
-          // Old schema: has heat_time (fallback if new schema fields don't exist)
-          if (!performance_1 && performance.heat_time !== undefined && performance.heat_time !== null) {
-            performance_1 = String(performance.heat_time);
-            timing = performance_1;
-          }
+          // Build map of registration_id -> performance
+          performances.forEach(perf => {
+            if (!performancesMap[perf.registration_id]) {
+              performancesMap[perf.registration_id] = [];
+            }
+            performancesMap[perf.registration_id].push(perf);
+          });
+        } catch (error) {
+          console.warn('Error fetching performances, continuing without performance data:', error.message);
+          // Continue without performance data
         }
+      }
+
+      participants = individualRegistrations.map(reg => {
+        // Get the first performance record if available (or use null)
+        const performance = performancesMap[reg.id] && performancesMap[reg.id].length > 0 
+          ? performancesMap[reg.id][0] 
+          : null;
+        
+        // Performance data is already normalized by raw query (handles both schemas)
+        const performance_1 = performance?.performance_1 !== undefined && performance?.performance_1 !== null 
+          ? String(performance.performance_1) 
+          : null;
+        const performance_2 = performance?.performance_2 !== undefined && performance?.performance_2 !== null 
+          ? String(performance.performance_2) 
+          : null;
+        const performance_3 = performance?.performance_3 !== undefined && performance?.performance_3 !== null 
+          ? String(performance.performance_3) 
+          : null;
+        const timing = performance_1; // Alias for compatibility
         
         return {
           id: reg.id,
