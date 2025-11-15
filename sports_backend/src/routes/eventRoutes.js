@@ -1128,12 +1128,16 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   try {
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
+    console.log('Schema detection result for update-timings:', schema);
     
     if (schema === 'none') {
       return res.status(500).json({ 
         error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
       });
     }
+    
+    // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
+    const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
     // Helper function to parse timing values
     const parseTiming = (timingValue) => {
@@ -1167,22 +1171,8 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        if (schema === 'new') {
-          // Use Prisma with new schema (performance_1, performance_2, performance_3)
-          const updateData = {};
-          if (performance1 !== null) updateData.performance_1 = performance1;
-          if (performance2 !== null) updateData.performance_2 = performance2;
-          if (performance3 !== null) updateData.performance_3 = performance3;
-
-          return await prisma.event_performance.updateMany({
-            where: {
-              event_id: event_id,
-              heat_number: heat_number,
-              registration_id: timing.registration_id
-            },
-            data: updateData
-          });
-        } else if (schema === 'new_raw') {
+        if (effectiveSchema === 'new' || effectiveSchema === 'new_raw') {
+          // Use raw SQL for new schema (always use raw SQL to avoid Prisma client mismatch)
           // Database has new schema, but Prisma doesn't support it - use raw SQL
           const updates = [];
           const params = [];
@@ -1207,7 +1197,7 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
               WHERE event_id = ? AND heat_number = ? AND registration_id = ?
             `, ...params);
           }
-        } else if (schema === 'old') {
+        } else if (effectiveSchema === 'old') {
           // Use old schema (heat_time) - only performance_1 maps to heat_time
           if (performance1 !== null) {
             return await prisma.$executeRawUnsafe(`
@@ -1261,12 +1251,16 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
   try {
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
+    console.log('Schema detection result for update-final-timings:', schema);
     
     if (schema === 'none') {
       return res.status(500).json({ 
         error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
       });
     }
+    
+    // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
+    const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
     // Helper function to parse timing values
     const parseTiming = (timingValue) => {
@@ -1300,22 +1294,8 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid timing value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        if (schema === 'new') {
-          // Use Prisma with new schema (performance_1, performance_2, performance_3)
-          const updateData = {};
-          if (performance1 !== null) updateData.performance_1 = performance1;
-          if (performance2 !== null) updateData.performance_2 = performance2;
-          if (performance3 !== null) updateData.performance_3 = performance3;
-
-          return await prisma.event_performance.updateMany({
-            where: {
-              event_id: event_id,
-              registration_id: timing.registration_id
-              // No heat_number filter for final heat updates
-            },
-            data: updateData
-          });
-        } else if (schema === 'new_raw') {
+        if (effectiveSchema === 'new' || effectiveSchema === 'new_raw') {
+          // Use raw SQL for new schema (always use raw SQL to avoid Prisma client mismatch)
           // Database has new schema, but Prisma doesn't support it - use raw SQL
           const updates = [];
           const params = [];
@@ -1340,7 +1320,7 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
               WHERE event_id = ? AND registration_id = ?
             `, ...params);
           }
-        } else if (schema === 'old') {
+        } else if (effectiveSchema === 'old') {
           // Use old schema (heat_time) - only performance_1 maps to heat_time
           if (performance1 !== null) {
             return await prisma.$executeRawUnsafe(`
@@ -1381,41 +1361,20 @@ async function detectPerformanceSchema() {
                            columnNames.includes('performance_3');
     const dbHasOldSchema = columnNames.includes('heat_time');
     
-    // Now check what Prisma client supports by trying a simple query
-    // If Prisma doesn't support performance_1, it will throw an error
-    let prismaSupportsNew = false;
-    try {
-      // Try to use Prisma with new schema - this will fail if Prisma client doesn't support it
-      await prisma.event_performance.findFirst({
-        select: {
-          performance_1: true,
-          performance_2: true,
-          performance_3: true
-        }
-      });
-      prismaSupportsNew = true;
-    } catch (prismaError) {
-      if (prismaError.message && prismaError.message.includes('Unknown argument') && 
-          prismaError.message.includes('performance_1')) {
-        prismaSupportsNew = false;
-      } else {
-        // Some other error, might be table is empty - that's okay
-        // If Prisma supports it, the query structure is valid
-        prismaSupportsNew = true;
-      }
-    }
-    
     // Decision logic:
-    // 1. If Prisma supports new schema AND database has new schema -> use new
+    // Since Prisma client might not be regenerated even if database has new columns,
+    // we'll always use raw SQL when database has new schema columns to be safe.
+    // This avoids issues where Prisma client doesn't match the actual database schema.
+    // 1. If database has new schema -> always use raw SQL (new_raw) to be safe
     // 2. If database has old schema -> use old (with raw SQL)
-    // 3. If database has new schema but Prisma doesn't -> use new (with raw SQL)
-    // 4. If neither exists -> return 'none'
+    // 3. If neither exists -> return 'none'
     
-    if (prismaSupportsNew && dbHasNewSchema) {
-      return 'new'; // Use Prisma with new schema
-    } else if (dbHasNewSchema) {
-      return 'new_raw'; // Database has new schema, but use raw SQL (Prisma doesn't support it)
+    if (dbHasNewSchema) {
+      // Always use raw SQL for new schema to avoid Prisma client mismatch issues
+      console.log('Detected new schema (performance_1/2/3) - using raw SQL');
+      return 'new_raw';
     } else if (dbHasOldSchema) {
+      console.log('Detected old schema (heat_time) - using raw SQL');
       return 'old'; // Use old schema with raw SQL
     } else {
       console.error('Database schema error: Neither performance_1/2/3 nor heat_time columns exist');
@@ -1488,40 +1447,28 @@ async function ensureTrialPerformanceRecords(eventId) {
   if (participantsToCreate.length > 0) {
     console.log(`Creating ${participantsToCreate.length} trial performance records for event ${eventId}`);
     
-    try {
-      // Try with new schema first
-      const newRecords = participantsToCreate.map(participant => ({
-        year: new Date().getFullYear(),
-        registration_id: participant.id,
-        event_id: parseInt(eventId),
-        heat_number: null, // Trial events don't have heats
-        performance_1: null,
-        performance_2: null,
-        performance_3: null
-      }));
-
-      await prisma.event_performance.createMany({
-        data: newRecords
-      });
-    } catch (error) {
-      // If new schema fails, try with old schema
-      if (error.message && error.message.includes('performance')) {
-        try {
-          // Use raw SQL to create records with old schema
-          const currentYear = new Date().getFullYear();
-          for (const participant of participantsToCreate) {
-            await prisma.$executeRawUnsafe(`
-              INSERT INTO event_performance (year, registration_id, event_id, heat_number, heat_time, created_at, updated_at)
-              VALUES (?, ?, ?, NULL, NULL, datetime('now'), datetime('now'))
-            `, currentYear, participant.id, parseInt(eventId));
-          }
-        } catch (oldSchemaError) {
-          console.error('Error creating records with old schema:', oldSchemaError);
-          throw oldSchemaError;
-        }
-      } else {
-        throw error;
+    // Detect schema to use appropriate method
+    const schema = await detectPerformanceSchema();
+    const currentYear = new Date().getFullYear();
+    
+    if (schema === 'new' || schema === 'new_raw') {
+      // Use raw SQL for new schema (always use raw SQL to avoid Prisma client mismatch)
+      for (const participant of participantsToCreate) {
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO event_performance (year, registration_id, event_id, heat_number, performance_1, performance_2, performance_3, created_at, updated_at)
+          VALUES (?, ?, ?, NULL, NULL, NULL, NULL, datetime('now'), datetime('now'))
+        `, currentYear, participant.id, parseInt(eventId));
       }
+    } else if (schema === 'old') {
+      // Use raw SQL for old schema
+      for (const participant of participantsToCreate) {
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO event_performance (year, registration_id, event_id, heat_number, heat_time, created_at, updated_at)
+          VALUES (?, ?, ?, NULL, NULL, datetime('now'), datetime('now'))
+        `, currentYear, participant.id, parseInt(eventId));
+      }
+    } else {
+      throw new Error('Cannot create performance records: Database schema is inconsistent');
     }
   }
 }
@@ -1606,12 +1553,16 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
   try {
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
+    console.log('Schema detection result for update-trials:', schema);
     
     if (schema === 'none') {
       return res.status(500).json({ 
         error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
       });
     }
+    
+    // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
+    const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
     // First ensure all accepted participants have performance records
     await ensureTrialPerformanceRecords(event_id);
@@ -1648,21 +1599,8 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
 
       // Only update if we have at least one valid trial value
       if (performance1 !== null || performance2 !== null || performance3 !== null) {
-        if (schema === 'new') {
-          // Use Prisma with new schema (performance_1, performance_2, performance_3)
-          const updateData = {};
-          if (performance1 !== null) updateData.performance_1 = performance1;
-          if (performance2 !== null) updateData.performance_2 = performance2;
-          if (performance3 !== null) updateData.performance_3 = performance3;
-
-          return await prisma.event_performance.updateMany({
-            where: {
-              event_id: event_id,
-              registration_id: trial.registration_id
-            },
-            data: updateData
-          });
-        } else if (schema === 'new_raw') {
+        if (effectiveSchema === 'new' || effectiveSchema === 'new_raw') {
+          // Use raw SQL for new schema (always use raw SQL to avoid Prisma client mismatch)
           // Database has new schema, but Prisma doesn't support it - use raw SQL
           const updates = [];
           const params = [];
@@ -1687,7 +1625,7 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
               WHERE event_id = ? AND registration_id = ?
             `, ...params);
           }
-        } else if (schema === 'old') {
+        } else if (effectiveSchema === 'old') {
           // Use old schema (heat_time) - only performance_1 maps to heat_time
           // Note: Trials typically only use performance_1 in old schema
           if (performance1 !== null) {
