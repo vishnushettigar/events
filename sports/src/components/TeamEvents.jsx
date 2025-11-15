@@ -795,8 +795,8 @@ const TeamEvents = () => {
                             <CollapsibleList title="Volleyball (9 Players)">
                                 <TeamForm eventName="Volleyball" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
                         </CollapsibleList>
-                            <CollapsibleList title="Tug of War (9 Players)">
-                                <TeamForm eventName="Tug of War" playerCount={9} gender="MALE" buttonColor="bg-[#D35D38]" />
+                            <CollapsibleList title="Tug of War (10 Players)">
+                                <TeamForm eventName="Tug of War" playerCount={10} gender="MALE" buttonColor="bg-[#D35D38]" />
                         </CollapsibleList>
                             <CollapsibleList title="Relay - 100 X 4 (4 Players)">
                                 <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="MALE" buttonColor="bg-[#D35D38]" />
@@ -811,8 +811,8 @@ const TeamEvents = () => {
                         <CollapsibleList title="Throwball (10 Players)">
                                 <TeamForm eventName="Throwball" playerCount={10} gender="FEMALE" buttonColor="bg-[#D35D38]" />
                             </CollapsibleList>
-                            <CollapsibleList title="Tug of War (9 Players)">
-                                <TeamForm eventName="Tug of War" playerCount={9} gender="FEMALE" buttonColor="bg-[#D35D38]" />
+                            <CollapsibleList title="Tug of War (10 Players)">
+                                <TeamForm eventName="Tug of War" playerCount={10} gender="FEMALE" buttonColor="bg-[#D35D38]" />
                         </CollapsibleList>
                             <CollapsibleList title="Relay - 100 X 4 (4 Players)">
                                 <TeamForm eventName="Relay - 100 X 4" playerCount={4} gender="FEMALE" buttonColor="bg-[#D35D38]" />
