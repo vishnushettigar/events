@@ -64,8 +64,8 @@ const TempleManagement = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">Temple Management</h3>
-          <p className="text-[#5A5A5A]">View and manage all temples and their statistics</p>
+          <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">Temple points Table</h3>
+          <p className="text-[#5A5A5A]">View all temples and their statistics</p>
         </div>
         <button
           onClick={fetchTempleData}

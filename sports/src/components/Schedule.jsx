@@ -108,7 +108,7 @@ const Schedule = ({
       {/* Header */}
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-[#2A2A2A]">📅 Complete Event Schedule</h1>
-        <p className="text-[#5A5A5A] mt-1">All individual and team events organized by age category and gender</p>
+        {/* <p className="text-[#5A5A5A] mt-1">All individual and team events organized by age category and gender</p> */}
       </div>
 
       {/* Individual Events Section */}

@@ -290,15 +290,19 @@ const UpdateIndividualResult = () => {
           const updatedData = await eventAPI.getEventParticipants(eventId);
           setEventParticipants(eventId, updatedData);
           
-          // Also refresh heats data if this is a heat event
-          // Check if the current event is a heat event by looking at the event data
+          // Also refresh heats data if this is a heat event (needed for final heat rank updates)
           const currentEvent = events.find(e => e.id === parseInt(eventId));
           if (currentEvent && currentEvent.event_type && currentEvent.event_type.name) {
             const eventName = currentEvent.event_type.name.toLowerCase();
             const isHeat = eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
             if (isHeat) {
               console.log('Refreshing heats data for heat event:', eventId);
-              // Note: fetchHeats is inside CollapsibleEvent, so we'll need to trigger a refresh there
+              try {
+                const updatedHeatsData = await eventAPI.getHeats(eventId);
+                setHeatsData(eventId, updatedHeatsData); // Update parent state, which will trigger useEffect in CollapsibleEvent
+              } catch (heatsError) {
+                console.error('Error refreshing heats data after individual update:', heatsError);
+              }
             }
           }
           
@@ -417,14 +421,19 @@ const UpdateIndividualResult = () => {
       const updatedData = await eventAPI.getEventParticipants(eventId);
       setEventParticipants(eventId, updatedData);
       
-      // Also refresh heats data if this is a heat event
+      // Also refresh heats data if this is a heat event (needed for final heat rank updates)
       const currentEvent = events.find(e => e.id === parseInt(eventId));
       if (currentEvent && currentEvent.event_type && currentEvent.event_type.name) {
         const eventName = currentEvent.event_type.name.toLowerCase();
         const isHeat = eventName.includes('running - 100 mts') || eventName.includes('running - 200 mts');
         if (isHeat) {
           console.log('Bulk update - refreshing heats data for heat event:', eventId);
-          // Note: fetchHeats is inside CollapsibleEvent, so we'll need to trigger a refresh there
+          try {
+            const updatedHeatsData = await eventAPI.getHeats(eventId);
+            setHeatsData(eventId, updatedHeatsData); // Update parent state, which will trigger useEffect in CollapsibleEvent
+          } catch (heatsError) {
+            console.error('Error refreshing heats data after bulk update:', heatsError);
+          }
         }
       }
       
@@ -531,13 +540,15 @@ const UpdateIndividualResult = () => {
       }
     }, [finalHeatParticipants]);
 
+    // Use ref to track previous parent heats data to detect changes
+    const prevParentHeatsRef = React.useRef({});
+    
     // Sync local heats state with parent state when eventId changes
-    // This ensures that when switching between events, we get the correct heats data
     React.useEffect(() => {
       const parentHeats = getHeatsData(eventId);
-      // Only update if parent has data
       if (Object.keys(parentHeats).length > 0) {
         setHeats(parentHeats);
+        prevParentHeatsRef.current[eventId] = parentHeats;
         
         // Also ensure selectedHeat is set if it's the first time loading
         // But don't reset if Final Heat is currently selected
@@ -552,7 +563,20 @@ const UpdateIndividualResult = () => {
       // Sync showFinalHeat with parent's finalHeatSelected state
       const isFinalSelected = isFinalHeatSelected(eventId);
       setShowFinalHeat(isFinalSelected);
-    }, [eventId]); // Sync when eventId changes - getHeatsData is stable in behavior
+    }, [eventId]); // Run when eventId changes
+    
+    // Check for parent heats data changes on every render (for rank updates)
+    React.useEffect(() => {
+      const parentHeats = getHeatsData(eventId);
+      const parentHeatsStr = JSON.stringify(parentHeats);
+      const prevParentHeatsStr = JSON.stringify(prevParentHeatsRef.current[eventId] || {});
+      
+      // Update if parent heats data changed (e.g., after rank update)
+      if (Object.keys(parentHeats).length > 0 && parentHeatsStr !== prevParentHeatsStr) {
+        setHeats(parentHeats);
+        prevParentHeatsRef.current[eventId] = parentHeats;
+      }
+    }); // Run on every render to detect parent heats data changes
 
     // Auto-populate top participants (based on lane_count) when Final Heat is shown and finalHeatParticipants is empty
     React.useEffect(() => {
@@ -561,10 +585,60 @@ const UpdateIndividualResult = () => {
         if (participantsWithTimings.length > 0) {
           const sortedParticipants = participantsWithTimings.sort((a, b) => a.timingSeconds - b.timingSeconds);
           const topParticipants = sortedParticipants.slice(0, laneCount);
-          setFinalHeatParticipants([...topParticipants]);
+          // Merge rank data from eventParticipants (where ranks are stored)
+          const participantsWithRanks = topParticipants.map(p => {
+            const participantWithRank = eventParticipants.find(ep => String(ep.id) === String(p.id));
+            return {
+              ...p,
+              result: participantWithRank?.result || p.result
+            };
+          });
+          setFinalHeatParticipants([...participantsWithRanks]);
         }
       }
-    }, [showFinalHeat, heats, laneCount]); // Run when showFinalHeat changes or heats data changes
+    }, [showFinalHeat, heats, eventParticipants, laneCount]); // Run when showFinalHeat changes or heats/eventParticipants data changes
+
+    // Update finalHeatParticipants with refreshed rank data when heats data or eventParticipants changes and final heat is shown
+    React.useEffect(() => {
+      if (showFinalHeat && finalHeatParticipants.length > 0 && (Object.keys(heats).length > 0 || eventParticipants.length > 0)) {
+        // Update existing final heat participants with fresh data from heats and eventParticipants (including updated ranks)
+        setFinalHeatParticipants(prevParticipants => {
+          return prevParticipants.map(prevParticipant => {
+            let updatedParticipant = null;
+            let foundHeatNumber = null;
+            
+            // First, search through all heats to find this participant with updated data
+            for (const [heatNumber, heatParticipants] of Object.entries(heats)) {
+              const found = heatParticipants.find(p => String(p.id) === String(prevParticipant.id));
+              if (found) {
+                updatedParticipant = found;
+                foundHeatNumber = parseInt(heatNumber);
+                break;
+              }
+            }
+            
+            // Also check eventParticipants for rank data (result.rank) - this is where ranks are stored
+            const participantWithRank = eventParticipants.find(p => String(p.id) === String(prevParticipant.id));
+            
+            // Merge data: use heats data for performance/timing, but use eventParticipants for rank data
+            if (updatedParticipant || participantWithRank) {
+              return {
+                ...(updatedParticipant || prevParticipant),
+                // Merge rank data from eventParticipants if available (this is where ranks are stored)
+                result: participantWithRank?.result || updatedParticipant?.result || prevParticipant.result,
+                // Preserve timing and heatNumber
+                timing: prevParticipant.timing || updatedParticipant?.performance_1 || '',
+                timingSeconds: prevParticipant.timingSeconds || parseTiming(updatedParticipant?.performance_1),
+                heatNumber: prevParticipant.heatNumber || foundHeatNumber
+              };
+            }
+            
+            // If not found, return original participant
+            return prevParticipant;
+          });
+        });
+      }
+    }, [heats, eventParticipants, showFinalHeat]); // Run when heats data or eventParticipants changes and final heat is shown
 
     // Check if this event requires trial measurements
     const isTrialEvent = () => {
@@ -1110,7 +1184,11 @@ const UpdateIndividualResult = () => {
         // Set the final heat participants directly
         // Create a new array to ensure React detects the change
         // Preserve all original properties and ensure ID is consistent
+        // Also merge rank data from eventParticipants (where ranks are stored)
         const newFinalHeatParticipants = topParticipants.map(p => {
+          // Find corresponding participant in eventParticipants to get rank data
+          const participantWithRank = eventParticipants.find(ep => String(ep.id) === String(p.id));
+          
           const participant = {
             ...p,
             // Ensure ID is preserved as-is (could be string or number)
@@ -1119,7 +1197,9 @@ const UpdateIndividualResult = () => {
             temple_name: p.temple_name,
             timing: p.timing,
             timingSeconds: p.timingSeconds,
-            heatNumber: p.heatNumber
+            heatNumber: p.heatNumber,
+            // Merge rank data from eventParticipants (this is where ranks are stored)
+            result: participantWithRank?.result || p.result
           };
           return participant;
         });
