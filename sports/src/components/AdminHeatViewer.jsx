@@ -18,29 +18,29 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
   // Fetch heats from backend
   const fetchHeats = async () => {
     if (!isHeatEvent()) {
-      console.log('Not a heat event, skipping heat fetch');
+      // console.log('Not a heat event, skipping heat fetch');
       return;
     }
     
     try {
-      console.log(`Fetching heats for eventId: ${eventId}`);
+      // console.log(`Fetching heats for eventId: ${eventId}`);
       setLoadingHeats(true);
       setHeatError(null);
       const heatsData = await eventAPI.getHeats(eventId);
-      console.log('Heats data received:', heatsData);
+      // console.log('Heats data received:', heatsData);
       setHeats(heatsData);
       
       // Set first heat as selected if available
       const heatNumbers = Object.keys(heatsData).map(Number).sort((a, b) => a - b);
-      console.log('Heat numbers found:', heatNumbers);
+      // console.log('Heat numbers found:', heatNumbers);
       if (heatNumbers.length > 0) {
         setSelectedHeat(heatNumbers[0]);
-        console.log(`Set selected heat to: ${heatNumbers[0]}`);
+        // console.log(`Set selected heat to: ${heatNumbers[0]}`);
       } else {
-        console.log('No heats found in the data');
+        // console.log('No heats found in the data');
       }
     } catch (error) {
-      console.error('Error fetching heats:', error);
+      // console.error('Error fetching heats:', error);
       setHeatError(error.message || 'Failed to fetch heats');
     } finally {
       setLoadingHeats(false);
@@ -99,7 +99,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
     const participantsWithTimings = getAllParticipantsWithTimings();
     
     if (participantsWithTimings.length === 0) {
-      console.log('No participants with timings found');
+      // console.log('No participants with timings found');
       return;
     }
     

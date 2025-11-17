@@ -379,6 +379,7 @@ const UpdateTeamResult = () => {
   const printTeamParticipants = async (temple, eventName, registrationIds) => {
     try {
       const participants = await fetchTeamParticipants(registrationIds);
+      const isTugOfWar = eventName && eventName.toUpperCase().includes('TUG OF WAR');
       
       const printContent = `
         <!DOCTYPE html>
@@ -455,7 +456,7 @@ const UpdateTeamResult = () => {
                 <th>MEMBER NAME</th>
                 <th>AADHAAR NUMBER</th>
                 <th>PHONE</th>
-                <th>EMAIL</th>
+                ${isTugOfWar ? '<th>WEIGHT</th>' : ''}
               </tr>
             </thead>
             <tbody>
@@ -465,7 +466,7 @@ const UpdateTeamResult = () => {
                   <td>${participant.first_name} ${participant.last_name || ''}</td>
                   <td>${participant.aadhar_number || 'N/A'}</td>
                   <td>${participant.phone || 'N/A'}</td>
-                  <td>${participant.email || 'N/A'}</td>
+                  ${isTugOfWar ? '<td></td>' : ''}
                 </tr>
               `).join('')}
             </tbody>
@@ -481,8 +482,8 @@ const UpdateTeamResult = () => {
       printWindow.print();
       printWindow.close();
     } catch (error) {
-      console.error('Error printing team participants:', error);
-      alert('Error loading team participant details for printing');
+      // console.error('Error printing team participants:', error);
+      // alert('Error loading team participant details for printing');
     }
   };
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { userAPI, eventAPI } from '../utils/api.js';
-import PointsTable from './PointsTable';
+import { userAPI, eventAPI, systemAPI } from '../utils/api.js';
 
 const AvailableEvents = () => {
   const [events, setEvents] = useState([]);
@@ -13,7 +12,8 @@ const AvailableEvents = () => {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [eventToUnregister, setEventToUnregister] = useState(null);
   const [cancelSuccess, setCancelSuccess] = useState(false);
-  const [showPointsTable, setShowPointsTable] = useState(false);
+  const [templeTotalPoints, setTempleTotalPoints] = useState(null);
+  const [lastRegistrationDate, setLastRegistrationDate] = useState(null);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [pendingEvent, setPendingEvent] = useState(null);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -22,6 +22,8 @@ const AvailableEvents = () => {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [selectedTeamRegistration, setSelectedTeamRegistration] = useState(null);
   const [teamParticipants, setTeamParticipants] = useState([]);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,6 +44,36 @@ const AvailableEvents = () => {
         
         setUserInfo(profileData);
 
+        // Fetch temple points
+        try {
+          const templesData = await userAPI.getAllTemples();
+          const userTemple = templesData.find(temple => temple.id === profileData.temple_id);
+          if (userTemple) {
+            setTempleTotalPoints(userTemple.total_points || 0);
+          }
+        } catch (pointsError) {
+          // console.error('Error fetching temple points:', pointsError);
+          // Don't fail the entire component if points fetch fails
+        }
+
+        // Fetch last registration date from settings
+        try {
+          const setting = await systemAPI.getSetting('REG_LAST_DATE_INDIVIDUAL');
+          if (setting && setting.value) {
+            // Format date from YYYY-MM-DD to DD-MM-YYYY
+            const dateParts = setting.value.split('-');
+            if (dateParts.length === 3) {
+              const formattedDate = `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+              setLastRegistrationDate(formattedDate);
+            } else {
+              setLastRegistrationDate(setting.value);
+            }
+          }
+        } catch (dateError) {
+          // console.error('Error fetching last registration date:', dateError);
+          // Don't fail the entire component if date fetch fails
+        }
+
         // Then fetch available events
         const eventsData = await eventAPI.getAvailableEvents();
         setEvents(eventsData.events);
@@ -51,14 +83,14 @@ const AvailableEvents = () => {
           const teamData = await userAPI.getTeamRegistrations();
           setTeamRegistrations(teamData.registrations);
         } catch (teamError) {
-          console.error('Error fetching team registrations:', teamError);
+          // console.error('Error fetching team registrations:', teamError);
           // Don't fail the entire component if team registrations fail
           setTeamRegistrations([]);
         }
 
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching data:', err);
+        // console.error('Error fetching data:', err);
         if (err.message.includes('401') || err.message.includes('Unauthorized')) {
           localStorage.removeItem('token');
           navigate('/login');
@@ -80,7 +112,7 @@ const AvailableEvents = () => {
   const handleConfirm = async () => {
     if (selectedEvent) {
       if (!userInfo || !userInfo.id) {
-        alert('User information not available. Please try refreshing the page.');
+        handleShowError('User information not available. Please try refreshing the page.');
         return;
       }
 
@@ -110,15 +142,15 @@ const AvailableEvents = () => {
           setShowPendingModal(true);
         }
       } catch (error) {
-        console.error('Registration error:', error.message);
+        // console.error('Registration error:', error.message);
         
         // Handle specific error cases
         if (error.message.includes('403')) {
-          alert('You can only register for events from your own temple');
+          handleShowError('You can only register for events from your own temple');
         } else if (error.message.includes('404')) {
-          alert('Event or user not found. Please try refreshing the page.');
+          handleShowError('Event or user not found. Please try refreshing the page.');
         } else {
-          alert(error.message || 'Failed to register for event. Please try again.');
+          handleShowError(error.message || 'Failed to register for event. Please try again.');
         }
       }
     }
@@ -158,8 +190,8 @@ const AvailableEvents = () => {
         }
         
       } catch (error) {
-        console.error('Cancellation error:', error);
-        alert('Failed to cancel registration. Please try again.');
+        // console.error('Cancellation error:', error);
+        handleShowError(error.message || 'Failed to cancel registration. Please try again.');
       }
     }
   };
@@ -198,7 +230,7 @@ const AvailableEvents = () => {
       const participants = await eventAPI.getTeamParticipants(teamRegistration.id);
       setTeamParticipants(participants);
     } catch (error) {
-      console.error('Error fetching team participants:', error);
+      // console.error('Error fetching team participants:', error);
       setTeamParticipants([]);
     }
   };
@@ -207,6 +239,16 @@ const AvailableEvents = () => {
     setShowTeamModal(false);
     setSelectedTeamRegistration(null);
     setTeamParticipants([]);
+  };
+
+  const handleShowError = (message) => {
+    setErrorMessage(message);
+    setShowErrorModal(true);
+  };
+
+  const handleCloseErrorModal = () => {
+    setShowErrorModal(false);
+    setErrorMessage('');
   };
 
   const getStatusDisplay = (status) => {
@@ -305,29 +347,19 @@ const AvailableEvents = () => {
               <p className="font-semibold text-[#2A2A2A]">{userInfo.temple || 'Not specified'}</p>
             </div>
           </div>
-          <div className='mt-4'>
+          {/* Last Date and Temple Total Points */}
+          <div className='mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
             <h4 className='text-[#D35D38] font-semibold bg-yellow-200 px-4 py-2 rounded-lg border-l-4 border-[#D35D38] shadow-md animate-pulse'>Last Date for Registration:{' '}
-              <span style={{ whiteSpace: 'nowrap' }}>18-12-2025 </span>
-            </h4> 
+              <span style={{ whiteSpace: 'nowrap' }}>{lastRegistrationDate || 'Loading...'}</span>
+            </h4>
+            
+            {/* Temple Total Points */}
+            {templeTotalPoints !== null && (
+              <div className='text-black font-semibold sm:text-right'>
+                <span>Total Points: {templeTotalPoints}</span>
+              </div>
+            )}
           </div>
-          
-          {/* Points Table Button */}
-          <div className='mt-4 flex justify-center'>
-            <button
-              onClick={() => setShowPointsTable(!showPointsTable)}
-              className='bg-[#D35D38] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#B84A2A] transition-colors shadow-md flex items-center gap-2'
-            >
-              
-              {showPointsTable ? 'Hide Points Table' : 'View Points Table'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Points Table Section */}
-      {showPointsTable && (
-        <div className="mb-8">
-          <PointsTable />
         </div>
       )}
 
@@ -710,6 +742,27 @@ const AvailableEvents = () => {
                 className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+          <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-md">
+            <div className="text-center">
+              <div className="text-red-500 text-4xl mb-4">⚠️</div>
+              <h2 className="text-lg font-semibold mb-4 text-red-600">Error</h2>
+              <p className="text-gray-700 mb-6">
+                {errorMessage}
+              </p>
+              <button
+                onClick={handleCloseErrorModal}
+                className="bg-[#D35D38] text-white px-6 py-2 rounded hover:bg-[#B84A2E] transition"
+              >
+                OK
               </button>
             </div>
           </div>

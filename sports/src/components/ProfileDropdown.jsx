@@ -34,10 +34,10 @@ const ProfileDropdown = () => {
 
   // Fetch user profile when authenticated
   useEffect(() => {
-    console.log('ProfileDropdown - isLoggedIn:', isLoggedIn);
-    console.log('ProfileDropdown - user:', user);
-    console.log('ProfileDropdown - userInfo:', userInfo);
-    console.log('ProfileDropdown - isAuthenticated():', isAuthenticated());
+    // console.log('ProfileDropdown - isLoggedIn:', isLoggedIn);
+    // console.log('ProfileDropdown - user:', user);
+    // console.log('ProfileDropdown - userInfo:', userInfo);
+    // console.log('ProfileDropdown - isAuthenticated():', isAuthenticated());
     
     // Use both useAuth hook and direct token check as fallback
     const isActuallyLoggedIn = isLoggedIn || isAuthenticated();
@@ -55,7 +55,7 @@ const ProfileDropdown = () => {
   // Listen for global logout events
   useEffect(() => {
     const handleAuthLogout = () => {
-      console.log('ProfileDropdown: Received authLogout event');
+      // console.log('ProfileDropdown: Received authLogout event');
       setUserInfo(null);
       setIsLoadingProfile(false);
     };
@@ -69,7 +69,7 @@ const ProfileDropdown = () => {
       const data = await userAPI.getProfile();
       setUserInfo(data);
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      // console.error('Error fetching user profile:', error);
       if (error.message.includes('401') || error.message.includes('Unauthorized')) {
         // Token is invalid or expired - the useAuth hook will handle this
         setUserInfo(null);

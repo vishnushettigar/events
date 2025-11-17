@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { templeAPI, viewerAPI, userAPI } from '../utils/api.js';
+import { templeAPI, viewerAPI, userAPI, systemAPI } from '../utils/api.js';
 
 const TempleManagement = ({ 
   apiSource = 'admin', // 'admin', 'viewer', or 'staff'
@@ -11,9 +11,11 @@ const TempleManagement = ({
   const [temples, setTemples] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [registeredUsersCount, setRegisteredUsersCount] = useState(0);
 
   useEffect(() => {
     fetchTempleData();
+    fetchRegisteredUsersCount();
   }, [apiSource]);
 
   const fetchTempleData = async () => {
@@ -56,6 +58,17 @@ const TempleManagement = ({
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRegisteredUsersCount = async () => {
+    try {
+      const data = await systemAPI.getRegisteredUsersCount();
+      setRegisteredUsersCount(data.totalRegisteredUsers || 0);
+    } catch (err) {
+      console.error('Error fetching registered users count:', err);
+      // Don't set error state for this, just log it
+      setRegisteredUsersCount(0);
     }
   };
 
@@ -208,7 +221,7 @@ const TempleManagement = ({
 
       {/* Summary Cards */}
       {showSummaryCards && !loading && !error && temples.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
@@ -224,9 +237,9 @@ const TempleManagement = ({
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-[#5A5A5A]">Total Participants</p>
+                <p className="text-sm font-medium text-[#5A5A5A]">Registered Users</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">
-                  {temples.reduce((sum, temple) => sum + temple.total_participants, 0)}
+                  {registeredUsersCount}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -240,25 +253,11 @@ const TempleManagement = ({
               <div>
                 <p className="text-sm font-medium text-[#5A5A5A]">Total Points</p>
                 <p className="text-2xl font-bold text-[#2A2A2A]">
-                  {temples.reduce((sum, temple) => sum + temple.total_points, 0)}
+                  {temples.reduce((sum, temple) => sum + (Number(temple.total_points) || 0), 0)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
                 <span className="text-yellow-600 text-xl">🏆</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[#5A5A5A]">Accepted</p>
-                <p className="text-2xl font-bold text-[#2A2A2A]">
-                  {temples.reduce((sum, temple) => sum + temple.accepted_participants, 0)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <span className="text-purple-600 text-xl">✅</span>
               </div>
             </div>
           </div>

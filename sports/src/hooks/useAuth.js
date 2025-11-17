@@ -15,20 +15,20 @@ export const useAuth = (enablePeriodicCheck = false, checkInterval = 30000) => {
 
   const checkAuthStatus = () => {
     const isUserAuthenticated = isAuthenticated();
-    console.log('useAuth - isUserAuthenticated:', isUserAuthenticated);
+    // console.log('useAuth - isUserAuthenticated:', isUserAuthenticated);
     
     setIsLoggedIn(isUserAuthenticated);
     
     if (isUserAuthenticated) {
       const currentUser = getCurrentUser();
-      console.log('useAuth - currentUser:', currentUser);
+      // console.log('useAuth - currentUser:', currentUser);
       setUser(currentUser);
     } else {
       setUser(null);
       // Clear any invalid/expired tokens
       const token = localStorage.getItem('token');
       if (token) {
-        console.log('useAuth - clearing invalid token');
+        // console.log('useAuth - clearing invalid token');
         clearAuthData();
       }
     }

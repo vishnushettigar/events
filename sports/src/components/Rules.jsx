@@ -80,7 +80,7 @@ const Rules = () => {
                                                 </tr>
                                                 <tr className="hover:bg-gray-50">
                                                     <td className="border border-gray-400 px-4 py-3 font-medium">
-                                                        {isEnglish ? "Throwball (Women)" : "ಥ್ರೋಬಾಲ್ (ಮಹಿಳೆಯರು)"}
+                                                        {isEnglish ? "Throwball (Women)" : "ತ್ರೋಬಾಲ್ (ಮಹಿಳೆಯರು)"}
                                                     </td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-green-600">10</td>
                                                     <td className="border border-gray-400 px-4 py-3 text-center font-bold text-blue-600">5</td>

@@ -15,7 +15,7 @@ export const decodeToken = (token) => {
     const payload = JSON.parse(atob(parts[1]));
     return payload;
   } catch (error) {
-    console.error('Error decoding token:', error);
+    // console.error('Error decoding token:', error);
     return null;
   }
 };
@@ -35,7 +35,7 @@ export const isTokenExpired = (token) => {
     const currentTime = Math.floor(Date.now() / 1000);
     return payload.exp < currentTime;
   } catch (error) {
-    console.error('Error checking token expiration:', error);
+    // console.error('Error checking token expiration:', error);
     return true;
   }
 };
@@ -81,7 +81,7 @@ export const clearAuthData = () => {
  */
 export const isAuthenticated = () => {
   const user = getCurrentUser();
-  console.log('isAuthenticated - user:', user);
+  // console.log('isAuthenticated - user:', user);
   return user !== null;
 };
 

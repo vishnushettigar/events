@@ -20,7 +20,7 @@ class AuthManager {
       try {
         callback(isLoggedIn, user);
       } catch (error) {
-        console.error('Error in auth listener:', error);
+        // console.error('Error in auth listener:', error);
       }
     });
   }
@@ -34,7 +34,7 @@ class AuthManager {
     this.isLoggingOut = true;
     
     try {
-      console.log('AuthManager: Performing global logout', redirectToLogin ? '(with redirect)' : '(no redirect)');
+      // console.log('AuthManager: Performing global logout', redirectToLogin ? '(with redirect)' : '(no redirect)');
       
       // Clear all authentication data
       clearAuthData();
@@ -54,7 +54,7 @@ class AuthManager {
       }
       
     } catch (error) {
-      console.error('Error during logout:', error);
+      // console.error('Error during logout:', error);
     } finally {
       this.isLoggingOut = false;
     }
@@ -62,13 +62,13 @@ class AuthManager {
 
   // Handle 401 Unauthorized response
   handleUnauthorized() {
-    console.log('AuthManager: Handling 401 Unauthorized response');
+    // console.log('AuthManager: Handling 401 Unauthorized response');
     this.logout(true);
   }
 
   // Handle successful login
   handleLogin(user) {
-    console.log('AuthManager: Handling successful login');
+    // console.log('AuthManager: Handling successful login');
     this.notifyListeners(true, user);
     window.dispatchEvent(new CustomEvent('authLogin', { detail: user }));
   }

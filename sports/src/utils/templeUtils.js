@@ -13,7 +13,7 @@ export const getTempleById = async (templeId) => {
         const response = await userAPI.getTempleById(templeId);
         return response;
     } catch (error) {
-        console.error('Error fetching temple:', error);
+        // console.error('Error fetching temple:', error);
         throw error;
     }
 };
@@ -45,7 +45,7 @@ export const getCurrentUserTemple = async () => {
             name: data.temple
         };
     } catch (error) {
-        console.error('Error fetching current user temple:', error);
+        // console.error('Error fetching current user temple:', error);
         throw error;
     }
 };
@@ -58,7 +58,7 @@ export const getAllTemples = async () => {
     try {
         return await userAPI.getAllTemples();
     } catch (error) {
-        console.error('Error fetching temples:', error);
+        // console.error('Error fetching temples:', error);
         throw error;
     }
 };
@@ -72,7 +72,7 @@ export const getTempleNames = async () => {
         const temples = await getAllTemples();
         return temples.map(temple => temple.name);
     } catch (error) {
-        console.error('Error fetching temple names:', error);
+        // console.error('Error fetching temple names:', error);
         // Fallback to hardcoded list if API fails
         return [
             'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',

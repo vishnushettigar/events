@@ -809,8 +809,8 @@ const TeamsManagement = () => {
                   {/* Male Events */}
                   {maleEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-[#e0e0e0] px-6 py-3 rounded-lg">
-                        <h3 className="text-xl font-bold text-black flex items-center">
+                      <div className="bg-gray-600 px-6 py-3 rounded-lg">
+                        <h3 className="text-xl font-bold text-white flex items-center">
                           <FaMars className="mr-2" />
                           Male Events ({maleEvents.length})
                         </h3>
@@ -840,8 +840,8 @@ const TeamsManagement = () => {
                   {/* Mixed Gender Events */}
                   {mixedEvents.length > 0 && (
                     <div className="space-y-6">
-                      <div className="bg-[#e0e0e0] px-6 py-3 rounded-lg">
-                        <h3 className="text-xl font-bold text-black flex items-center">
+                      <div className="bg-gray-600 px-6 py-3 rounded-lg">
+                        <h3 className="text-xl font-bold text-white flex items-center">
                           <FaUsers className="mr-2" />
                           Mixed Gender Events ({mixedEvents.length})
                         </h3>
@@ -1047,7 +1047,7 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
         <div className="flex items-center justify-between">
           <div>
             <h4 className="text-xl font-bold text-black">{event.eventName}</h4>
-            <div className="flex items-center space-x-4 mt-1 text-[#F8DFBE]">
+            <div className="flex items-center space-x-4 mt-1 text-[#2A2A2A]">
               <span className="text-sm">
                 {event.ageCategory?.name || 'All Ages'} • {gender === "female" ? "Female" : "Male"}
               </span>
@@ -1073,7 +1073,7 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
               {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Code</th> */}
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Teams</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Members</th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status Breakdown</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status Breakdown</th> */}
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Points</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
             </tr>
@@ -1081,7 +1081,7 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
           <tbody className="bg-white divide-y divide-gray-100">
             {event.temples.map((temple, templeIndex) => (
               <tr key={temple.temple_id} className={`${hoverColor} transition`}>
-                <td className="px-6 py-4 font-semibold text-[#D35D38]">{templeIndex + 1}</td>
+                <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{templeIndex + 1}</td>
                 <td className="px-6 py-4">
                   <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
                 </td>
@@ -1092,7 +1092,7 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
                 <td className="px-6 py-4 text-center">
                   <div className="font-bold text-lg text-[#2A2A2A]">{temple.totalMembers}</div>
                 </td>
-                <td className="px-6 py-4">
+                {/* <td className="px-6 py-4">
                   <div className="flex space-x-2">
                     {temple.acceptedTeams > 0 && (
                       <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
@@ -1110,7 +1110,7 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
                       </span>
                     )}
                   </div>
-                </td>
+                </td> */}
                 <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">
                   {temple.totalPoints}
                 </td>
@@ -1213,7 +1213,7 @@ const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => 
 
   return (
     <tr className="hover:bg-orange-50 transition">
-      <td className="px-6 py-4 font-semibold text-[#D35D38]">{index + 1}</td>
+      <td className="px-6 py-4 font-semibold text-[#2A2A2A]">{index + 1}</td>
       <td className="px-6 py-4">
         <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
         {/* <div className="text-sm text-gray-600">{temple.temple_code}</div> */}

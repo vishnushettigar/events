@@ -150,9 +150,15 @@ const Schedule = ({
                       {event.gender || 'N/A'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                        Pending
-                      </span>
+                      {event.has_results ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                          Pending
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -203,9 +209,15 @@ const Schedule = ({
                       {event.gender || 'N/A'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                        Pending
-                      </span>
+                      {event.has_results ? (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                          Pending
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

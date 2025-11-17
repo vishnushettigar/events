@@ -13,9 +13,10 @@ class ApiService {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Don't include Authorization header for login and register endpoints
+    // Don't include Authorization header for login, register, and public endpoints
     const isAuthEndpoint = endpoint === '/users/login' || endpoint === '/users/register';
-    const headers = isAuthEndpoint 
+    const isPublicEndpoint = endpoint === '/system/registered-users-count';
+    const headers = (isAuthEndpoint || isPublicEndpoint)
       ? { 'Content-Type': 'application/json' }
       : getAuthHeaders();
     
@@ -70,6 +71,34 @@ class ApiService {
       return data;
     } catch (error) {
       logError(`API Error: ${url}`, error);
+      
+      // Handle network errors and abort errors with user-friendly messages
+      const errorName = error?.name || '';
+      const errorMessage = error?.message || '';
+      
+      // Check for abort errors (timeout or manual abort)
+      if (errorName === 'AbortError' || 
+          errorMessage.toLowerCase().includes('aborted') ||
+          errorMessage.toLowerCase().includes('signal is aborted')) {
+        throw new Error('Network request timed out. Please check your internet connection and try again.');
+      }
+      
+      // Check for network errors (failed to fetch, no internet, etc.)
+      if (errorName === 'TypeError' && 
+          (errorMessage.toLowerCase().includes('failed to fetch') ||
+           errorMessage.toLowerCase().includes('networkerror') ||
+           errorMessage.toLowerCase().includes('network error'))) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      
+      // Check for other network-related errors
+      if (errorMessage.toLowerCase().includes('network') ||
+          errorMessage.toLowerCase().includes('connection') ||
+          errorMessage.toLowerCase().includes('fetch')) {
+        throw new Error('Network error. Please check your internet connection and try again.');
+      }
+      
+      // Re-throw the original error if it's not a network error
       throw error;
     }
   }
@@ -221,6 +250,7 @@ export const systemAPI = {
   getSettings: () => apiService.get('/system/settings'),
   getSetting: (name) => apiService.get(`/system/settings/${name}`),
   updateSetting: (name, value) => apiService.put(`/system/settings/${name}`, { value }),
+  getRegisteredUsersCount: () => apiService.get('/system/registered-users-count'),
 };
 
 export default apiService; 

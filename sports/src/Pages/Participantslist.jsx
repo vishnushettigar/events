@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { getCurrentUserTemple } from '../utils/templeUtils'
-import { userAPI } from '../utils/api'
+import { userAPI, eventAPI } from '../utils/api'
 import authManager from '../utils/authManager'
 
 const Participantslist = () => {
@@ -10,6 +10,9 @@ const Participantslist = () => {
   const [loading, setLoading] = useState(true);
   const [participants, setParticipants] = useState([]);
   const [participantsLoading, setParticipantsLoading] = useState(true);
+  const [ageCategories, setAgeCategories] = useState([]);
+  const [genderOptions, setGenderOptions] = useState([]);
+  const [filtersLoading, setFiltersLoading] = useState(true);
 
   // Function to format date from YYYY-MM-DD to DD/MM/YYYY
   const formatDate = (dateString) => {
@@ -63,6 +66,28 @@ const Participantslist = () => {
       }
     };
 
+    const fetchFilterOptions = async () => {
+      try {
+        const data = await eventAPI.getParticipantData({});
+        // Format age categories to match the format used in participants (from_age-to_age)
+        const formattedAgeCategories = data.ageCategories.map(cat => ({
+          id: cat.id,
+          name: cat.name,
+          value: `${cat.from_age}-${cat.to_age}`,
+          from_age: cat.from_age,
+          to_age: cat.to_age
+        }));
+        setAgeCategories(formattedAgeCategories);
+        // Filter out 'ALL' option from gender options for the filter dropdown
+        const filteredGenders = data.genderOptions.filter(g => g.value !== 'ALL');
+        setGenderOptions(filteredGenders);
+        setFiltersLoading(false);
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+        setFiltersLoading(false);
+      }
+    };
+
     // Set viewport meta tag to prevent zoom
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
@@ -71,6 +96,7 @@ const Participantslist = () => {
 
     fetchTempleName();
     fetchParticipants();
+    fetchFilterOptions();
 
     // Listen for global logout events
     const handleAuthLogout = () => {
@@ -155,18 +181,15 @@ const Participantslist = () => {
                 id="ageCategory"
                 value={selectedAgeCategory}
                 onChange={(e) => setSelectedAgeCategory(e.target.value)}
-                className="w-full px-4 py-2 md:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+                disabled={filtersLoading}
+                className="w-full px-4 py-2 md:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">All Ages</option>
-                <option value="0-5">0-5</option>
-                <option value="6-10">6-10</option>
-                <option value="11-14">11-14</option>
-                <option value="15-18">15-18</option>
-                <option value="19-24">19-24</option>
-                <option value="25-35">25-35</option>
-                <option value="36-48">36-48</option>
-                <option value="49-60">49-60</option>
-                <option value="61-90">61-90</option>
+                {ageCategories.map((category) => (
+                  <option key={category.id} value={category.value}>
+                    {category.value}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -178,11 +201,15 @@ const Participantslist = () => {
                 id="gender"
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value)}
-                className="w-full px-4 py-2 md:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+                disabled={filtersLoading}
+                className="w-full px-4 py-2 md:py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
                 <option value="">All Genders</option>
-                <option value="MALE">Male</option>
-                <option value="FEMALE">Female</option>
+                {genderOptions.map((gender) => (
+                  <option key={gender.id} value={gender.value}>
+                    {gender.name}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

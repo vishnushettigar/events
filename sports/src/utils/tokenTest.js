@@ -16,49 +16,49 @@ import {
  * This can be called from browser console for testing
  */
 export const testTokenExpiration = () => {
-  console.log('=== JWT Token Expiration Test ===');
+  // console.log('=== JWT Token Expiration Test ===');
   
   const token = localStorage.getItem('token');
   
   if (!token) {
-    console.log('❌ No token found in localStorage');
+    // console.log('❌ No token found in localStorage');
     return;
   }
   
-  console.log('🔍 Token found:', token.substring(0, 50) + '...');
+  // console.log('🔍 Token found:', token.substring(0, 50) + '...');
   
   // Test token decoding
   const decoded = decodeToken(token);
-  console.log('📋 Decoded payload:', decoded);
+  // console.log('📋 Decoded payload:', decoded);
   
   // Test expiration check
   const expired = isTokenExpired(token);
-  console.log('⏰ Token expired:', expired);
+  // console.log('⏰ Token expired:', expired);
   
   // Test validation
   const user = validateToken(token);
-  console.log('👤 Valid user:', user);
+  // console.log('👤 Valid user:', user);
   
   // Test authentication status
   const authenticated = isAuthenticated();
-  console.log('🔐 Is authenticated:', authenticated);
+  // console.log('🔐 Is authenticated:', authenticated);
   
   // Test expiration time
   const expirationTime = getTokenExpirationTime(token);
-  console.log('📅 Expiration time:', expirationTime);
+  // console.log('📅 Expiration time:', expirationTime);
   
   // Test time remaining
   const timeRemaining = getTokenTimeRemaining(token);
-  console.log('⏱️ Time remaining (seconds):', timeRemaining);
+  // console.log('⏱️ Time remaining (seconds):', timeRemaining);
   
   if (timeRemaining > 0) {
     const hours = Math.floor(timeRemaining / 3600);
     const minutes = Math.floor((timeRemaining % 3600) / 60);
     const seconds = timeRemaining % 60;
-    console.log(`⏱️ Time remaining: ${hours}h ${minutes}m ${seconds}s`);
+    // console.log(`⏱️ Time remaining: ${hours}h ${minutes}m ${seconds}s`);
   }
   
-  console.log('=== Test Complete ===');
+  // console.log('=== Test Complete ===');
 };
 
 /**
@@ -80,8 +80,8 @@ export const createTestToken = (expirationMinutes = 1) => {
   
   const testToken = `${header}.${payload}.${signature}`;
   
-  console.log(`🧪 Created test token expiring in ${expirationMinutes} minute(s)`);
-  console.log('⚠️ WARNING: This is a test token and will not work with the backend');
+  // console.log(`🧪 Created test token expiring in ${expirationMinutes} minute(s)`);
+  // console.log('⚠️ WARNING: This is a test token and will not work with the backend');
   
   return testToken;
 };

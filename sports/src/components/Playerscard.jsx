@@ -139,13 +139,13 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
                     {/* Show message for PENDING participants when limit is reached */}
                     {participant.status === 'PENDING' && !canAcceptMore && (
                         <div className="text-sm text-gray-500 italic">
-                            Limit reached (3/3)
+                            {/* Limit reached (3/3) */}
                         </div>
                     )}
                     {/* Show message for REJECTED participants when limit is reached */}
                     {participant.status === 'DECLINED' && !canAcceptMore && (
                         <div className="text-sm text-gray-500 italic">
-                            Limit reached (3/3)
+                            {/* Limit reached (3/3) */}
                         </div>
                     )}
                 </div>

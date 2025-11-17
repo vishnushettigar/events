@@ -40,6 +40,12 @@ const TeamEvents = () => {
     const [userProfile, setUserProfile] = useState(null);
     const [events, setEvents] = useState([]);
     const [registeredTeams, setRegisteredTeams] = useState([]);
+    
+    // Modal states
+    const [showModal, setShowModal] = useState(false);
+    const [modalType, setModalType] = useState('error'); // 'success', 'error', 'info', 'confirm'
+    const [modalTitle, setModalTitle] = useState('');
+    const [modalMessage, setModalMessage] = useState('');
 
     // Fetch user profile, events, and registered teams on component mount
     useEffect(() => {
@@ -65,6 +71,32 @@ const TeamEvents = () => {
         fetchData();
     }, []);
 
+    // Modal helper functions
+    const showErrorModal = (title, message) => {
+        setModalType('error');
+        setModalTitle(title);
+        setModalMessage(message);
+        setShowModal(true);
+    };
+
+    const showSuccessModal = (title, message) => {
+        setModalType('success');
+        setModalTitle(title);
+        setModalMessage(message);
+        setShowModal(true);
+        
+        // Auto-close success modal after 3 seconds
+        setTimeout(() => {
+            closeModal();
+        }, 3000);
+    };
+
+    const closeModal = () => {
+        setShowModal(false);
+        setModalTitle('');
+        setModalMessage('');
+    };
+
     const handleSubmit = async (eventName, gender, players, registrationId = null) => {
         try {
             setLoading(true);
@@ -75,7 +107,8 @@ const TeamEvents = () => {
             // Require all player fields to be filled
             const allFieldsFilled = players.every(player => player.name && player.aadharNumber && player.profileId);
             if (!allFieldsFilled) {
-                setError('Please fill in all player fields before submitting.');
+                showErrorModal('Validation Error', 'Please fill in all player fields before submitting.');
+                setLoading(false);
                 return;
             }
 
@@ -83,19 +116,22 @@ const TeamEvents = () => {
             const validPlayers = players.filter(player => player.name && player.profileId);
 
             if (validPlayers.length === 0) {
-                setError('Please add at least one player');
+                showErrorModal('Validation Error', 'Please add at least one player');
+                setLoading(false);
                 return;
             }
 
             if (!userProfile) {
-                setError('User profile not found. Please refresh the page.');
+                showErrorModal('Error', 'User profile not found. Please refresh the page.');
+                setLoading(false);
                 return;
             }
 
             // Get event ID based on event name and gender
             const eventId = getEventId(eventName, gender);
             if (!eventId) {
-                setError('Invalid event');
+                showErrorModal('Error', 'Invalid event');
+                setLoading(false);
                 return;
             }
 
@@ -104,7 +140,7 @@ const TeamEvents = () => {
                 const response = await eventAPI.updateTeam(registrationId, {
                     member_user_ids: validPlayers.map(player => player.profileId)
                 });
-                setSuccess('Team updated successfully!');
+                showSuccessModal('Success', 'Team updated successfully!');
             } else {
                 // Register new team
             const response = await eventAPI.registerTeam({
@@ -112,14 +148,14 @@ const TeamEvents = () => {
                 event_id: eventId,
                     member_user_ids: validPlayers.map(player => player.profileId)
             });
-            setSuccess('Team registered successfully!');
+            showSuccessModal('Success', 'Team registered successfully!');
             }
             
             // Refresh registered teams
             const teamsResponse = await eventAPI.getTempleTeams();
             setRegisteredTeams(teamsResponse);
         } catch (err) {
-            setError(err.message || 'Error processing team');
+            showErrorModal('Error', err.message || 'Error processing team');
         } finally {
             setLoading(false);
         }
@@ -473,7 +509,7 @@ const TeamEvents = () => {
             const uniqueAadharNumbers = new Set(aadharNumbers);
             
             if (aadharNumbers.length !== uniqueAadharNumbers.size) {
-                setError('Team cannot have duplicate members. Please remove duplicates before submitting.');
+                showErrorModal('Validation Error', 'Team cannot have duplicate members. Please remove duplicates before submitting.');
                 return;
             }
 
@@ -482,7 +518,7 @@ const TeamEvents = () => {
             if (gender === 'ALL') {
                 const validPlayers = players.filter(player => player.aadharNumber && player.profileId);
                 if (validPlayers.length !== 2) {
-                    setError('Mixed gender events must have exactly 2 participants.');
+                    showErrorModal('Validation Error', 'Mixed gender events must have exactly 2 participants.');
                     return;
                 }
 
@@ -493,7 +529,7 @@ const TeamEvents = () => {
                     return teamAadhaars === thisTeamAadhaars && (!editMode || team.id !== editingTeamId);
                 });
                 if (duplicateTeam) {
-                    setError('This team is already registered for this event.');
+                    showErrorModal('Registration Error', 'This team is already registered for this event.');
                     return;
                 }
 
@@ -501,7 +537,7 @@ const TeamEvents = () => {
                 const allRegisteredAadhaars = registeredTeams.flatMap(team => team.members.map(m => m.aadhar_number));
                 const duplicatePlayer = validPlayers.some(p => allRegisteredAadhaars.includes(p.aadharNumber) && (!editMode || !registeredTeams.some(team => team.id === editingTeamId && team.members.some(m => m.aadhar_number === p.aadharNumber))));
                 if (duplicatePlayer) {
-                    setError('One or both participants are already registered in another team for this event.');
+                    showErrorModal('Registration Error', 'One or both participants are already registered in another team for this event.');
                     return;
                 }
 
@@ -515,17 +551,17 @@ const TeamEvents = () => {
                         const playerGenders = responses.map(response => response.gender);
                         // Check that first player is MALE and second player is FEMALE
                         if (playerGenders[0] !== 'MALE') {
-                            setError('First participant must be MALE.');
+                            showErrorModal('Validation Error', 'First participant must be MALE.');
                             return;
                         }
                         if (playerGenders[1] !== 'FEMALE') {
-                            setError('Second participant must be FEMALE.');
+                            showErrorModal('Validation Error', 'Second participant must be FEMALE.');
                             return;
                         }
                         // If validation passes, proceed with submission
                         handleSubmit(eventName, gender, players, editingTeamId);
                     } catch (error) {
-                        setError('Error validating participant genders. Please try again.');
+                        showErrorModal('Error', 'Error validating participant genders. Please try again.');
                     }
                 };
                 validateMixedGender();
@@ -766,8 +802,104 @@ const TeamEvents = () => {
         );
     }
 
+    // Modal Component
+    const Modal = () => {
+        if (!showModal) return null;
+
+        const getModalIcon = () => {
+            switch (modalType) {
+                case 'success':
+                    return (
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                    );
+                case 'error':
+                    return (
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                    );
+                case 'info':
+                    return (
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                            <svg className="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                    );
+                default:
+                    return null;
+            }
+        };
+
+        const getModalButtonColor = () => {
+            switch (modalType) {
+                case 'success':
+                    return 'bg-green-600 hover:bg-green-700';
+                case 'error':
+                    return 'bg-red-600 hover:bg-red-700';
+                case 'info':
+                    return 'bg-blue-600 hover:bg-blue-700';
+                default:
+                    return 'bg-[#D35D38] hover:bg-[#B84A2E]';
+            }
+        };
+
+        return (
+            <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-white/10 z-50">
+                <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-md">
+                    <div className="flex items-center mb-4">
+                        {getModalIcon()}
+                        <h3 className={`text-lg font-semibold ml-3 ${
+                            modalType === 'success' ? 'text-green-900' : 
+                            modalType === 'error' ? 'text-red-900' : 
+                            'text-blue-900'
+                        }`}>
+                            {modalTitle}
+                        </h3>
+                    </div>
+                    
+                    <p className={`text-sm mb-4 ${
+                        modalType === 'success' ? 'text-green-700' : 
+                        modalType === 'error' ? 'text-red-700' : 
+                        'text-blue-700'
+                    }`}>
+                        {modalMessage}
+                    </p>
+                    
+                    {/* Close button for error and info modals */}
+                    {(modalType === 'info' || modalType === 'error') && (
+                        <div className="flex justify-end">
+                            <button
+                                onClick={closeModal}
+                                className={`${getModalButtonColor()} text-white px-4 py-2 rounded-lg hover:opacity-90 transition`}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    )}
+                    
+                    {/* Show auto-close message for success modals */}
+                    {modalType === 'success' && (
+                        <div className="text-center text-xs text-gray-500 mt-2">
+                            This message will close automatically...
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    };
+
     return (
         <section className="min-h-screen bg-[#F0F0F0]">
+            {/* Modal */}
+            <Modal />
+            
             <div className="px-4 py-6 max-w-6xl mx-auto  m-4">
                 <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Group Events Registration</h2>
                 <p className='font-extrabold text-[#D35D38] pb-4'>**Participants in team events must register before the temple admin adds their names.**</p>

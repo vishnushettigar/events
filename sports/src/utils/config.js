@@ -54,12 +54,12 @@ export const getAuthHeaders = () => {
 
 export const logDebug = (message, data = null) => {
   if (config.DEBUG_MODE) {
-    console.log(`[DEBUG] ${message}`, data);
+    // console.log(`[DEBUG] ${message}`, data);
   }
 };
 
 export const logError = (message, error = null) => {
-  console.error(`[ERROR] ${message}`, error);
+  // console.error(`[ERROR] ${message}`, error);
   if (config.ERROR_REPORTING_ENABLED) {
     // Add error reporting logic here (e.g., Sentry)
   }
