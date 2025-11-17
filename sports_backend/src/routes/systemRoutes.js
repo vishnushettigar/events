@@ -2,8 +2,47 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import * as systemService from '../services/systemService.js';
+import prisma from '../utils/prismaClient.js';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/system/registered-users-count:
+ *   get:
+ *     tags: [System]
+ *     summary: Get total count of registered users
+ *     description: Public endpoint to get the total number of registered users (non-deleted profiles). No authentication required.
+ *     responses:
+ *       200:
+ *         description: Registered users count retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalRegisteredUsers:
+ *                   type: integer
+ *                   description: Total number of registered users
+ *       500:
+ *         description: Server error
+ */
+router.get('/registered-users-count', async (req, res) => {
+  try {
+    const totalRegisteredUsers = await prisma.profile.count({
+      where: {
+        is_deleted: false
+      }
+    });
+
+    res.json({
+      totalRegisteredUsers
+    });
+  } catch (error) {
+    console.error('Error fetching registered users count:', error);
+    res.status(500).json({ error: 'Failed to fetch registered users count' });
+  }
+});
 
 /**
  * @swagger
@@ -47,6 +86,45 @@ router.get('/settings', authenticate, requireRole('ADMIN'), async (req, res) => 
   } catch (error) {
     console.error('Error fetching system settings:', error);
     res.status(500).json({ error: 'Failed to fetch system settings' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/system/settings/{name}:
+ *   get:
+ *     tags: [System]
+ *     summary: Get a specific system setting
+ *     description: Retrieve a specific system setting by name (accessible to all authenticated users)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: name
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Name of the setting
+ *     responses:
+ *       200:
+ *         description: Setting retrieved successfully
+ *       404:
+ *         description: Setting not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.get('/settings/:name', authenticate, async (req, res) => {
+  try {
+    const setting = await systemService.getSystemSetting(req.params.name);
+    if (!setting) {
+      return res.status(404).json({ error: 'Setting not found' });
+    }
+    res.json(setting);
+  } catch (error) {
+    console.error('Error fetching system setting:', error);
+    res.status(500).json({ error: 'Failed to fetch system setting' });
   }
 });
 

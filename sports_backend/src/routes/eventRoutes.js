@@ -110,6 +110,9 @@ router.delete('/unregister-participant/:eventId', authenticate, async (req, res)
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
+    if (error.message.includes('cancellation closed') || error.message.includes('deadline')) {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message || 'Failed to cancel registration' });
   }
 });
@@ -590,10 +593,18 @@ router.get('/all-events', authenticate, async (req, res) => {
         event_type: true,
         age_category: true,
         registrations: {
-          where: { is_deleted: false }
+          where: { is_deleted: false },
+          select: {
+            id: true,
+            event_result_id: true
+          }
         },
         team_registrations: {
-          where: { is_deleted: false }
+          where: { is_deleted: false },
+          select: {
+            id: true,
+            event_result_id: true
+          }
         }
       },
       orderBy: [
@@ -605,18 +616,28 @@ router.get('/all-events', authenticate, async (req, res) => {
     });
 
     // Transform events to include registration counts and categorize
-    const transformedEvents = events.map(event => ({
-      id: event.id,
-      name: event.event_type.name,
-      event_type: event.event_type,
-      age_category: event.age_category,
-      gender: event.gender,
-      is_closed: event.is_closed,
-      participant_count: event.event_type.participant_count,
-      registrations_count: event.registrations.length,
-      team_registrations_count: event.team_registrations.length,
-      total_registrations: event.registrations.length + event.team_registrations.length
-    }));
+    const transformedEvents = events.map(event => {
+      // Check if any individual registration has results
+      const hasIndividualResults = event.registrations.some(reg => reg.event_result_id !== null);
+      // Check if any team registration has results
+      const hasTeamResults = event.team_registrations.some(reg => reg.event_result_id !== null);
+      // Event has results if either individual or team registrations have results
+      const has_results = hasIndividualResults || hasTeamResults;
+
+      return {
+        id: event.id,
+        name: event.event_type.name,
+        event_type: event.event_type,
+        age_category: event.age_category,
+        gender: event.gender,
+        is_closed: event.is_closed,
+        participant_count: event.event_type.participant_count,
+        registrations_count: event.registrations.length,
+        team_registrations_count: event.team_registrations.length,
+        total_registrations: event.registrations.length + event.team_registrations.length,
+        has_results: has_results
+      };
+    });
 
     // Separate individual and team events
     const individualEvents = transformedEvents.filter(event => event.event_type.type === 'INDIVIDUAL');

@@ -6,7 +6,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { Gender } from '@prisma/client';
 import { authLimiter, registrationLimiter } from '../middleware/rateLimiter.js';
-import { calculateAge, getAgeCategory } from '../utils/ageUtils.js';
+import { calculateAgeWithSettings, getAgeCategory } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
 const router = express.Router();
 
@@ -26,9 +26,7 @@ const router = express.Router();
  *             required:
  *               - username
  *               - password
- *               - email
  *               - first_name
- *               - last_name
  *               - dob
  *               - gender
  *               - temple_name
@@ -78,7 +76,7 @@ const router = express.Router();
 router.post('/register', /* registrationLimiter, */ [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('email').isEmail().withMessage('Valid email is required'),
+  body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email is required if provided'),
   body('first_name').notEmpty().withMessage('First name is required'),
   body('dob').isDate().withMessage('Valid date of birth is required'),
   body('gender').isIn(['MALE', 'FEMALE']).withMessage('Valid gender is required'),
@@ -393,8 +391,8 @@ router.get('/profile', authenticate, async (req, res) => {
             return res.status(404).json({ error: 'Profile not found' });
         }
 
-        // Calculate age using December 1st cutoff
-        const age = calculateAge(user.profile.dob);
+        // Calculate age using cutoff date from settings
+        const age = await calculateAgeWithSettings(user.profile.dob);
 
         // Get all age categories and find matching one
         const ageCategories = await prisma.mst_age_category.findMany({
@@ -473,8 +471,8 @@ router.get('/available-events', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User profile not found' });
     }
 
-    // Calculate user's age using December 1st cutoff
-    const age = calculateAge(userProfile.dob);
+    // Calculate user's age using cutoff date from settings
+    const age = await calculateAgeWithSettings(userProfile.dob);
 
     // Get all age categories
     const ageCategories = await prisma.mst_age_category.findMany({
@@ -779,9 +777,9 @@ router.get('/templeusers', authenticate, async (req, res) => {
             }
         });
 
-        // Calculate age category for each participant using December 1st cutoff
-        const participantsWithAgeCategory = participants.map(participant => {
-            const age = calculateAge(participant.dob);
+        // Calculate age category for each participant using cutoff date from settings
+        const participantsWithAgeCategory = await Promise.all(participants.map(async (participant) => {
+            const age = await calculateAgeWithSettings(participant.dob);
             const ageCategory = getAgeCategory(age);
 
             return {
@@ -793,7 +791,7 @@ router.get('/templeusers', authenticate, async (req, res) => {
                 gender: participant.gender,
                 phone_number: participant.phone
             };
-        });
+        }));
 
         res.json(participantsWithAgeCategory);
     } catch (error) {

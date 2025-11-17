@@ -1348,7 +1348,18 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
         event_type: true,
         age_category: true,
         registrations: {
-          where: { is_deleted: false }
+          where: { is_deleted: false },
+          select: {
+            id: true,
+            event_result_id: true
+          }
+        },
+        team_registrations: {
+          where: { is_deleted: false },
+          select: {
+            id: true,
+            event_result_id: true
+          }
         }
       },
       orderBy: [
@@ -1358,16 +1369,26 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
       ]
     });
 
-    // Transform events to include registration count
-    const transformedEvents = events.map(event => ({
-      id: event.id,
-      name: event.event_type.name,
-      event_type: event.event_type,
-      age_category: event.age_category,
-      gender: event.gender,
-      is_closed: event.is_closed,
-      registrations_count: event.registrations.length
-    }));
+    // Transform events to include registration count and has_results flag
+    const transformedEvents = events.map(event => {
+      // Check if any individual registration has results
+      const hasIndividualResults = event.registrations.some(reg => reg.event_result_id !== null);
+      // Check if any team registration has results
+      const hasTeamResults = event.team_registrations.some(reg => reg.event_result_id !== null);
+      // Event has results if either individual or team registrations have results
+      const has_results = hasIndividualResults || hasTeamResults;
+
+      return {
+        id: event.id,
+        name: event.event_type.name,
+        event_type: event.event_type,
+        age_category: event.age_category,
+        gender: event.gender,
+        is_closed: event.is_closed,
+        registrations_count: event.registrations.length,
+        has_results: has_results
+      };
+    });
 
     res.json({ events: transformedEvents });
   } catch (error) {

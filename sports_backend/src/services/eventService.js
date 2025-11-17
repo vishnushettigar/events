@@ -58,7 +58,8 @@ async function registerParticipant(user_id, event_id, temple_id) {
         // Block registration if current date is AFTER or EQUAL TO the last date
         // This blocks registration on the last date itself and after
         if (currentDateOnly > lastDateOnly) {
-          throw new Error(`Individual event registration closed. The last date for registration was ${lastDateSetting.value}.`);
+          const formattedDate = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
+          throw new Error(`Individual event registration closed. The last date for registration was ${formattedDate}.`);
         }
       } else {
         console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
@@ -199,6 +200,73 @@ async function registerParticipant(user_id, event_id, temple_id) {
 async function unregisterParticipant(user_id, event_id) {
   try {
     console.log('Unregistering participant:', { user_id, event_id });
+
+    // Check if individual event cancellation deadline has passed
+    const lastDateSetting = await prisma.settings.findUnique({
+      where: { name: 'REG_LAST_DATE_INDIVIDUAL' }
+    });
+
+    console.log('Cancellation deadline check:', {
+      settingFound: !!lastDateSetting,
+      settingValue: lastDateSetting?.value
+    });
+
+    if (lastDateSetting && lastDateSetting.value) {
+      try {
+        // Parse the date string (format: 'YYYY-MM-DD' or 'YYYY-M-D')
+        // Create date in local timezone to avoid timezone issues
+        const dateParts = lastDateSetting.value.split('-');
+        if (dateParts.length === 3) {
+          const year = parseInt(dateParts[0], 10);
+          const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+          const day = parseInt(dateParts[2], 10);
+          
+          // Validate parsed values
+          if (isNaN(year) || isNaN(month) || isNaN(day)) {
+            console.error('Invalid date values:', { year, month, day, original: lastDateSetting.value });
+            throw new Error('Invalid date format in cancellation deadline');
+          }
+          
+          // Compare dates at day level (ignore time) using local timezone
+          // Create dates in local timezone to avoid timezone conversion issues
+          const lastDateOnly = new Date(year, month, day);
+          lastDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+          
+          const currentDateOnly = new Date();
+          currentDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+          
+          // Format dates for logging (YYYY-MM-DD)
+          const lastDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const currentDateStr = `${currentDateOnly.getFullYear()}-${String(currentDateOnly.getMonth() + 1).padStart(2, '0')}-${String(currentDateOnly.getDate()).padStart(2, '0')}`;
+          
+          console.log('Date comparison:', {
+            lastDateString: lastDateSetting.value,
+            lastDateParsed: lastDateStr,
+            currentDateStr: currentDateStr,
+            lastDateTimestamp: lastDateOnly.getTime(),
+            currentDateTimestamp: currentDateOnly.getTime(),
+            isAfterDeadline: currentDateOnly > lastDateOnly
+          });
+
+          // Block cancellation if current date is AFTER the last date
+          // This blocks cancellation after the last date
+          if (currentDateOnly > lastDateOnly) {
+            const formattedDate = `${String(day).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
+            throw new Error(`Event registration cancellation closed. The last date for cancellation was ${formattedDate}.`);
+          }
+        } else {
+          console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
+          throw new Error('Invalid date format in cancellation deadline');
+        }
+      } catch (dateError) {
+        // If date parsing fails, log and block cancellation for safety
+        console.error('Error parsing cancellation deadline date:', dateError);
+        // Re-throw the error to block cancellation if date parsing fails
+        throw dateError;
+      }
+    } else {
+      console.log('No cancellation deadline setting found - allowing cancellation');
+    }
 
     // Check if registration exists
     const existingRegistration = await prisma.ind_event_registration.findFirst({
