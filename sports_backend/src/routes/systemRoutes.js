@@ -179,7 +179,8 @@ router.put('/settings/:name', authenticate, requireRole('ADMIN'), [
   try {
     const setting = await systemService.updateSystemSetting(
       req.params.name,
-      req.body.value
+      req.body.value,
+      req.user?.id
     );
     res.json(setting);
   } catch (error) {

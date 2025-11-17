@@ -12,7 +12,7 @@ async function getSystemSettings() {
   return settings;
 }
 
-async function updateSystemSetting(name, value) {
+async function updateSystemSetting(name, value, userId = null) {
   const setting = await prisma.settings.update({
     where: { name },
     data: { value }
@@ -20,8 +20,11 @@ async function updateSystemSetting(name, value) {
 
   await prisma.audit_log.create({
     data: {
+      user_id: userId,
       action: 'UPDATE_SYSTEM_SETTING',
-      details: `Updated setting: ${setting.name} to ${value}`
+      table_name: 'Settings',
+      record_id: setting.id,
+      new_value: JSON.stringify({ name: setting.name, value: value })
     }
   });
 
@@ -68,7 +71,8 @@ async function createBackup() {
   await prisma.audit_log.create({
     data: {
       action: 'CREATE_BACKUP',
-      details: `Created backup: ${backupPath}`
+      table_name: 'System',
+      new_value: JSON.stringify({ backupPath })
     }
   });
 
@@ -115,7 +119,8 @@ async function restoreBackup(backupPath) {
     await prisma.audit_log.create({
       data: {
         action: 'RESTORE_BACKUP',
-      details: `Restored backup: ${backupPath}`
+        table_name: 'System',
+        new_value: JSON.stringify({ backupPath })
       }
     });
 
@@ -129,7 +134,8 @@ async function deleteBackup(backupPath) {
     await prisma.audit_log.create({
       data: {
         action: 'DELETE_BACKUP',
-        details: `Deleted backup: ${backupPath}`
+        table_name: 'System',
+        new_value: JSON.stringify({ backupPath })
       }
     });
 
