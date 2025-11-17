@@ -95,7 +95,8 @@ const Participantslist = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#F0F0F0] md:py-8 md:px-4" style={{ width: '100%', maxWidth: '100vw', overflowX: 'hidden', position: 'relative', transform: 'translateZ(0)' }}>
+    <div className="flex justify-center items-center bg-[#F0F0F0]">
+      <div className="min-h-screen bg-[#F0F0F0] md:py-8 md:px-4" style={{ width: '80%', maxWidth: '100vw', overflowX: 'hidden', position: 'relative', transform: 'translateZ(0)', margin: '0 auto' }}>
       <div className="max-w-7xl mx-auto w-full" style={{ width: '100%', maxWidth: '100%' }}>
         {/* Header Section */}
         <div className="hidden md:block text-center mb-8">
@@ -368,6 +369,8 @@ const Participantslist = () => {
         </div>
       </div>
     </div>
+    </div>
+    
   )
 }
 

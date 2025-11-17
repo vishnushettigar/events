@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { getTempleNames } from '../utils/templeUtils';
 import { authAPI } from '../utils/api';
 import { rules, rulesKannada } from '../constants/constants';
@@ -80,6 +82,213 @@ const Register = () => {
         setShowConfirmPassword(!showConfirmPassword);
     };
 
+    // Custom input component for DatePicker with auto-formatting
+    const CustomDateInput = React.forwardRef(({ value, onClick, placeholder }, ref) => {
+        const [displayValue, setDisplayValue] = useState('');
+        const [isTyping, setIsTyping] = useState(false);
+        const [isInvalidDate, setIsInvalidDate] = useState(false);
+        const typingTimeoutRef = React.useRef(null);
+        const lastCalendarValueRef = React.useRef(null);
+
+        // Initialize from formData on mount
+        useEffect(() => {
+            if (formData.dob && !displayValue) {
+                const [year, month, day] = formData.dob.split('-').map(Number);
+                const formatted = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+                setDisplayValue(formatted);
+            }
+        }, []);
+
+        // Sync with DatePicker value only when calendar is used (not when typing)
+        useEffect(() => {
+            if (!isTyping && value) {
+                try {
+                    // If value is a Date object from DatePicker (calendar selection)
+                    if (value instanceof Date && !isNaN(value.getTime())) {
+                        // Check if this is a new calendar selection (different from last one)
+                        if (value !== lastCalendarValueRef.current) {
+                            const day = String(value.getDate()).padStart(2, '0');
+                            const month = String(value.getMonth() + 1).padStart(2, '0');
+                            const year = value.getFullYear();
+                            const formatted = `${day}/${month}/${year}`;
+                            setDisplayValue(formatted);
+                            lastCalendarValueRef.current = value;
+                        }
+                    }
+                } catch (e) {
+                    // Ignore errors
+                }
+            }
+        }, [value, isTyping]);
+
+        const handleInputChange = (e) => {
+            const inputValue = e.target.value;
+            setIsTyping(true);
+            
+            // Clear previous timeout
+            if (typingTimeoutRef.current) {
+                clearTimeout(typingTimeoutRef.current);
+            }
+
+            // Remove all non-digits
+            let input = inputValue.replace(/\D/g, '');
+            
+            // Limit to 8 digits (DDMMYYYY)
+            if (input.length > 8) {
+                input = input.slice(0, 8);
+            }
+
+            // Format with slashes
+            let formatted = '';
+            if (input.length > 0) {
+                formatted = input.slice(0, 2); // DD
+                if (input.length > 2) {
+                    formatted += '/' + input.slice(2, 4); // DD/MM
+                }
+                if (input.length > 4) {
+                    formatted += '/' + input.slice(4, 8); // DD/MM/YYYY
+                }
+            }
+
+            setDisplayValue(formatted);
+
+            // Validate and update formData if valid date (DD/MM/YYYY format)
+            if (input.length === 8) {
+                const day = parseInt(input.slice(0, 2), 10);
+                const month = parseInt(input.slice(2, 4), 10);
+                const year = parseInt(input.slice(4, 8), 10);
+
+                let isValid = true;
+                let validationError = '';
+
+                // Validate month (1-12)
+                if (month < 1 || month > 12) {
+                    isValid = false;
+                    validationError = 'Invalid month. Month must be between 01 and 12.';
+                }
+                // Validate year (reasonable range)
+                else if (year < 1900 || year > new Date().getFullYear()) {
+                    isValid = false;
+                    validationError = `Invalid year. Year must be between 1900 and ${new Date().getFullYear()}.`;
+                }
+                // Validate day based on month and year
+                else {
+                    const daysInMonth = new Date(year, month, 0).getDate(); // Get last day of the month
+                    if (day < 1 || day > daysInMonth) {
+                        isValid = false;
+                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                          'July', 'August', 'September', 'October', 'November', 'December'];
+                        validationError = `Invalid day. ${monthNames[month - 1]} ${year} has only ${daysInMonth} days.`;
+                    }
+                }
+
+                // If basic validation passes, verify with Date object
+                if (isValid) {
+                    const date = new Date(year, month - 1, day);
+                    
+                    // Double-check: verify the date object matches what we expect
+                    if (
+                        date.getDate() === day &&
+                        date.getMonth() === month - 1 &&
+                        date.getFullYear() === year &&
+                        !isNaN(date.getTime())
+                    ) {
+                        // Valid date - store as YYYY-MM-DD for backend
+                        const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        setFormData(prev => ({
+                            ...prev,
+                            dob: formattedDate
+                        }));
+                        setIsInvalidDate(false);
+                        // Clear any existing date error
+                        setErrors(prev => {
+                            const newErrors = { ...prev };
+                            if (newErrors.dob && newErrors.dob.includes('Invalid')) {
+                                delete newErrors.dob;
+                            }
+                            return newErrors;
+                        });
+                    } else {
+                        isValid = false;
+                        validationError = 'Invalid date. Please check the day, month, and year.';
+                    }
+                }
+
+                // Set invalid date flag and error
+                if (!isValid) {
+                    setIsInvalidDate(true);
+                    setErrors(prev => ({
+                        ...prev,
+                        dob: validationError
+                    }));
+                    // Clear formData if date is invalid
+                    if (formData.dob) {
+                        setFormData(prev => ({
+                            ...prev,
+                            dob: ''
+                        }));
+                    }
+                } else {
+                    setIsInvalidDate(false);
+                }
+            } else if (input.length === 0) {
+                setFormData(prev => ({
+                    ...prev,
+                    dob: ''
+                }));
+                setIsInvalidDate(false);
+                // Clear date error when input is cleared
+                setErrors(prev => {
+                    const newErrors = { ...prev };
+                    if (newErrors.dob && newErrors.dob.includes('Invalid')) {
+                        delete newErrors.dob;
+                    }
+                    return newErrors;
+                });
+            } else {
+                // Partial input - clear invalid flag but keep display value
+                setIsInvalidDate(false);
+            }
+            
+            // Reset typing flag after user stops typing
+            typingTimeoutRef.current = setTimeout(() => {
+                setIsTyping(false);
+            }, 500);
+        };
+
+        // Cleanup timeout on unmount
+        useEffect(() => {
+            return () => {
+                if (typingTimeoutRef.current) {
+                    clearTimeout(typingTimeoutRef.current);
+                }
+            };
+        }, []);
+
+        return (
+            <div className="relative">
+                <input
+                    ref={ref}
+                    type="text"
+                    value={displayValue}
+                    onChange={handleInputChange}
+                    onClick={onClick}
+                    placeholder={placeholder}
+                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
+                        errors.dob || isInvalidDate ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'
+                    }`}
+                    maxLength={10}
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                </div>
+            </div>
+        );
+    });
+    CustomDateInput.displayName = 'CustomDateInput';
+
     const validateForm = async () => {
         const newErrors = {};
         setIsValidating(true);
@@ -103,9 +312,8 @@ const Register = () => {
         if (formData.aadhaar !== formData.confirmAadhaar) {
             newErrors.confirmAadhaar = 'Aadhaar numbers do not match';
         }
-        if (!formData.email.trim()) {
-            newErrors.email = 'Email is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        // Email is optional, but if provided, it must be valid
+        if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
         }
         if (!formData.password) {
@@ -184,7 +392,7 @@ const Register = () => {
             const requestData = {
                 username: formData.aadhaar,
                 password: formData.password,
-                email: formData.email,
+                email: formData.email.trim() || null, // Send null if email is empty
                 first_name: formData.firstName,
                 last_name: formData.lastName,
                 phone: formData.mobile,
@@ -371,17 +579,45 @@ const Register = () => {
                         {/* Date of Birth */}
                         <div>
                             <label htmlFor="dob" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Date of Birth *
+                                Date of Birth 
                             </label>
-                        <input
-                                type="date"
-                            id="dob"
-                            name="dob"
-                            value={formData.dob}
-                            onChange={handleChange}
-                                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
-                                    errors.dob ? 'border-red-300' : 'border-gray-300'
-                                }`}
+                            <DatePicker
+                                id="dob"
+                                selected={formData.dob ? (() => {
+                                    // Parse YYYY-MM-DD format to avoid timezone issues
+                                    const [year, month, day] = formData.dob.split('-').map(Number);
+                                    return new Date(year, month - 1, day);
+                                })() : null}
+                                onChange={(date) => {
+                                    // Only update if date is selected from calendar (not from typing)
+                                    if (date && date instanceof Date && !isNaN(date.getTime())) {
+                                        // Format as YYYY-MM-DD without timezone conversion
+                                        const year = date.getFullYear();
+                                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                                        const day = String(date.getDate()).padStart(2, '0');
+                                        const formattedDate = `${year}-${month}-${day}`;
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            dob: formattedDate
+                                        }));
+                                    } else if (!date) {
+                                        setFormData(prev => ({
+                                            ...prev,
+                                            dob: ''
+                                        }));
+                                    }
+                                }}
+                                dateFormat="dd/MM/yyyy"
+                                placeholderText="DD/MM/YYYY"
+                                maxDate={new Date()}
+                                strictParsing
+                                showYearDropdown
+                                showMonthDropdown
+                                dropdownMode="select"
+                                yearDropdownItemNumber={100}
+                                scrollableYearDropdown
+                                customInput={<CustomDateInput />}
+                                wrapperClassName="w-full"
                             />
                             {errors.dob && <p className="text-red-500 text-sm mt-1">{errors.dob}</p>}
                     </div>
@@ -428,7 +664,7 @@ const Register = () => {
                     {/* Email */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Email Address *
+                                Email Address
                             </label>
                         <input
                                 type="email"
