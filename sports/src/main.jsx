@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import 'react-datepicker/dist/react-datepicker.css'
 import Home from './Pages/Home.jsx';
 import SignInForm from './Pages/SignInForm.jsx';
 import Register from './Pages/Register.jsx';
