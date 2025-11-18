@@ -38,20 +38,14 @@ const Register = () => {
     useEffect(() => {
         const fetchTemples = async () => {
             try {
-                console.log('🔍 Fetching temples from backend...');
+                // console.log('🔍 Fetching temples from backend...');
                 const templeNames = await getTempleNames();
-                console.log('🔍 Temples fetched from backend:', templeNames);
+                // console.log('🔍 Temples fetched from backend:', templeNames);
                 setTemples(templeNames);
             } catch (error) {
-                console.error('❌ Failed to fetch temples:', error);
-                // Fallback to hardcoded list if API fails
-                const fallbackTemples = [
-                    'BARKUR', 'HALEYANGADI', 'HOSADURGA', 'KALYANPURA', 'KAPU', 'KARKALA',
-                    'KINNIMULKI', 'MANGALORE', 'MANJESHWARA', 'MULKI', 'PADUBIDRI',
-                    'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
-                ];
-                console.log('🔍 Using fallback temples:', fallbackTemples);
-                setTemples(fallbackTemples);
+                // console.error('❌ Failed to fetch temples:', error);
+                // Set empty array if API fails
+                setTemples([]);
             } finally {
                 setIsLoadingTemples(false);
             }
@@ -63,13 +57,13 @@ const Register = () => {
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
-        console.log(`🔍 Form field changed - ${name}:`, value);
+        // console.log(`🔍 Form field changed - ${name}:`, value);
         setFormData((prevState) => {
             const newState = {
                 ...prevState,
                 [name]: type === 'checkbox' ? checked : value,
             };
-            console.log('🔍 Updated form data:', newState);
+            // console.log('🔍 Updated form data:', newState);
             return newState;
         });
     };
@@ -341,7 +335,7 @@ const Register = () => {
                     newErrors.aadhaar = 'This Aadhaar number is already registered. Please use a different Aadhaar number or try logging in.';
                 }
             } catch (error) {
-                console.error('❌ Error checking Aadhaar:', error);
+                // console.error('❌ Error checking Aadhaar:', error);
                 // Don't block form submission if Aadhaar check fails
             }
         }
@@ -402,10 +396,10 @@ const Register = () => {
                 temple_name: formData.temple
             };
             
-            console.log('🔍 Registration Request Data:', requestData);
-            console.log('🔍 Form Data State:', formData);
-            console.log('🔍 Temple Selection:', formData.temple);
-            console.log('🔍 Gender Selection:', formData.gender);
+            // console.log('🔍 Registration Request Data:', requestData);
+            // console.log('🔍 Form Data State:', formData);
+            // console.log('🔍 Temple Selection:', formData.temple);
+            // console.log('🔍 Gender Selection:', formData.gender);
             
             const data = await authAPI.register(requestData);
 
@@ -415,13 +409,13 @@ const Register = () => {
             // Redirect to MyEvents page
             window.location.href = '/myevents';
         } catch (error) {
-            console.error('❌ Registration error:', error);
-            console.error('❌ Error details:', {
-                message: error.message,
-                errors: error.errors,
-                response: error.response?.data,
-                status: error.response?.status
-            });
+            // console.error('❌ Registration error:', error);
+            // console.error('❌ Error details:', {
+            //     message: error.message,
+            //     errors: error.errors,
+            //     response: error.response?.data,
+            //     status: error.response?.status
+            // });
             
             // Handle different types of errors
             let errorMessage = 'Registration failed. Please try again.';
@@ -435,7 +429,7 @@ const Register = () => {
                 errorMessage = error;
             }
             
-            console.log('🔍 Final error message:', errorMessage);
+            // console.log('🔍 Final error message:', errorMessage);
             
             setErrors(prev => ({
                 ...prev,
