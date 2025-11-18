@@ -4,20 +4,24 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Create node user directory and set ownership early
+RUN chown -R node:node /app
 
-# Install dependencies
+# Switch to node user before installing dependencies
+# This ensures all files are created with correct ownership
+USER node
+
+# Copy package files
+COPY --chown=node:node package*.json ./
+
+# Install dependencies (runs as node user, so files have correct ownership)
 RUN npm install
 
+# Create vite cache directory
+RUN mkdir -p /app/node_modules/.vite
+
 # Copy the rest of the application
-COPY . .
-
-# Create node_modules directory with proper permissions
-RUN mkdir -p /app/node_modules/.vite && chown -R node:node /app
-
-# Switch to node user
-USER node
+COPY --chown=node:node . .
 
 # Expose port
 EXPOSE 5173
