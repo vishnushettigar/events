@@ -579,7 +579,7 @@ const Register = () => {
                         {/* Date of Birth */}
                         <div>
                             <label htmlFor="dob" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Date of Birth 
+                                Date of Birth *
                             </label>
                             <DatePicker
                                 id="dob"
