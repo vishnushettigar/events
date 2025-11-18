@@ -50,7 +50,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/event-types', dataFetchLimiter, authenticate, requireRole('ADMIN'), [
+router.post('/event-types', authenticate, requireRole('ADMIN'), [
   body('name').notEmpty().withMessage('Event type name is required'),
   body('type').isIn(['TEAM', 'INDIVIDUAL']).withMessage('Invalid event type'),
   body('participant_count').isInt({ min: 1 }).withMessage('Participant count must be at least 1')
@@ -100,7 +100,7 @@ router.delete('/event-types/:id', authenticate, requireRole('ADMIN'), async (req
   }
 });
 
-router.get('/event-types', authenticate, async (req, res) => {
+router.get('/event-types', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const eventTypes = await eventManagementService.listEventTypes();
     res.json(eventTypes);
@@ -203,7 +203,7 @@ router.delete('/age-categories/:id', authenticate, requireRole('ADMIN'), async (
   }
 });
 
-router.get('/age-categories', authenticate, async (req, res) => {
+router.get('/age-categories', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const ageCategories = await eventManagementService.listAgeCategories();
     res.json(ageCategories);
@@ -319,7 +319,7 @@ router.delete('/events/:id', authenticate, requireRole('ADMIN'), async (req, res
   }
 });
 
-router.get('/events', authenticate, async (req, res) => {
+router.get('/events', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const filters = {
       temple_id: req.query.temple_id ? parseInt(req.query.temple_id) : undefined,
@@ -432,7 +432,7 @@ router.delete('/schedules/:id', authenticate, requireRole('ADMIN'), async (req, 
   }
 });
 
-router.get('/events/:event_id/schedules', authenticate, async (req, res) => {
+router.get('/events/:event_id/schedules', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     const schedules = await eventManagementService.listEventSchedules(parseInt(req.params.event_id));
     res.json(schedules);

@@ -5,7 +5,7 @@ import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { Gender } from '@prisma/client';
-import { authLimiter, registrationLimiter } from '../middleware/rateLimiter.js';
+import { authLimiter, registrationLimiter, sensitiveOperationLimiter, dataFetchLimiter } from '../middleware/rateLimiter.js';
 import { calculateAgeWithSettings, getAgeCategory } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
 const router = express.Router();
@@ -73,7 +73,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/register', /* registrationLimiter, */ [
+router.post('/register', registrationLimiter, [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
   body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email is required if provided'),
@@ -273,7 +273,7 @@ router.post('/check-email', async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.post('/login', /* authLimiter, */ [
+router.post('/login', authLimiter, [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required')
 ], async (req, res) => {
@@ -328,7 +328,7 @@ router.post('/login', /* authLimiter, */ [
  *       500:
  *         description: Server error
  */
-router.put('/update-role', authenticate, requireRole('ADMIN'), [
+router.put('/update-role', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), [
   body('user_id').isInt().withMessage('Valid user ID is required'),
   body('new_role_id').isInt().withMessage('Valid role ID is required')
 ], async (req, res) => {
@@ -457,7 +457,7 @@ router.get('/profile', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/available-events', authenticate, async (req, res) => {
+router.get('/available-events', dataFetchLimiter, authenticate, async (req, res) => {
   try {
     // Get user's profile
     const userProfile = await prisma.profile.findUnique({
@@ -1046,7 +1046,7 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
  *       500:
  *         description: Server error
  */
-router.get('/champions', authenticate, async (req, res) => {
+router.get('/champions', dataFetchLimiter, authenticate, async (req, res) => {
     try {
         // Get all individual events with results
         const individualRegistrations = await prisma.ind_event_registration.findMany({
@@ -1201,7 +1201,7 @@ router.get('/champions', authenticate, async (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/all-results', authenticate, async (req, res) => {
+router.get('/all-results', dataFetchLimiter, authenticate, async (req, res) => {
     try {
         // Get all individual events with results
         const individualRegistrations = await prisma.ind_event_registration.findMany({
