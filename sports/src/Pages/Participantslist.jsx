@@ -70,13 +70,16 @@ const Participantslist = () => {
       try {
         const data = await eventAPI.getParticipantData({});
         // Format age categories to match the format used in participants (from_age-to_age)
-        const formattedAgeCategories = data.ageCategories.map(cat => ({
-          id: cat.id,
-          name: cat.name,
-          value: `${cat.from_age}-${cat.to_age}`,
-          from_age: cat.from_age,
-          to_age: cat.to_age
-        }));
+        // Filter out 'ALL' option from backend
+        const formattedAgeCategories = data.ageCategories
+          .filter(cat => !cat.name.toUpperCase().includes('ALL'))
+          .map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            value: `${cat.from_age}-${cat.to_age}`,
+            from_age: cat.from_age,
+            to_age: cat.to_age
+          }));
         setAgeCategories(formattedAgeCategories);
         // Filter out 'ALL' option from gender options for the filter dropdown
         const filteredGenders = data.genderOptions.filter(g => g.value !== 'ALL');
@@ -187,7 +190,7 @@ const Participantslist = () => {
                 <option value="">All Ages</option>
                 {ageCategories.map((category) => (
                   <option key={category.id} value={category.value}>
-                    {category.value}
+                    {category.name}
                   </option>
                 ))}
               </select>

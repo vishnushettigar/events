@@ -58,10 +58,18 @@ const Register = () => {
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
         // console.log(`🔍 Form field changed - ${name}:`, value);
+        
+        // Filter out non-alphabetic characters (allow only letters and spaces) for firstName and lastName
+        let processedValue = value;
+        if ((name === 'firstName' || name === 'lastName') && type !== 'checkbox') {
+            // Only allow alphabets and spaces
+            processedValue = value.replace(/[^a-zA-Z\s]/g, '');
+        }
+        
         setFormData((prevState) => {
             const newState = {
                 ...prevState,
-                [name]: type === 'checkbox' ? checked : value,
+                [name]: type === 'checkbox' ? checked : processedValue,
             };
             // console.log('🔍 Updated form data:', newState);
             return newState;
@@ -268,6 +276,7 @@ const Register = () => {
                     onChange={handleInputChange}
                     onClick={onClick}
                     placeholder={placeholder}
+                    required
                     className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-10 sm:pr-12 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                         errors.dob || isInvalidDate ? 'border-red-300 bg-red-50' : 'border-gray-300 bg-white hover:border-gray-400'
                     }`}
@@ -289,7 +298,14 @@ const Register = () => {
         
 
         // Basic validation
-        if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
+        if (!formData.firstName.trim()) {
+            newErrors.firstName = 'First name is required';
+        } else if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) {
+            newErrors.firstName = 'First name should only contain alphabets';
+        }
+        if (formData.lastName.trim() && !/^[a-zA-Z\s]+$/.test(formData.lastName)) {
+            newErrors.lastName = 'Last name should only contain alphabets';
+        }
         if (!formData.mobile.trim()) {
             newErrors.mobile = 'Mobile number is required';
         } else if (!/^[0-9]{10}$/.test(formData.mobile)) {
@@ -474,6 +490,8 @@ const Register = () => {
                                     name="firstName"
                                     value={formData.firstName}
                                     onChange={handleChange}
+                                    pattern="[a-zA-Z\s]+"
+                                    title="First name should only contain alphabets"
                                     className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                         errors.firstName ? 'border-red-300' : 'border-gray-300'
                                     }`}
@@ -492,6 +510,8 @@ const Register = () => {
                                     name="lastName"
                                     value={formData.lastName}
                                     onChange={handleChange}
+                                    pattern="[a-zA-Z\s]+"
+                                    title="Last name should only contain alphabets"
                                     className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent text-base ${
                                         errors.lastName ? 'border-red-300' : 'border-gray-300'
                                     }`}

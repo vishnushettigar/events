@@ -96,7 +96,7 @@ const SignInForm = () => {
                 navigate('/myevents');
             }
         } catch (err) {
-            console.error('Login error:', err);
+            // console.error('Login error:', err);
             setErrors({ 
                 submit: err.message || 'An error occurred during login. Please try again.' 
             });
