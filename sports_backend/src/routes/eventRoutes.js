@@ -1604,7 +1604,7 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
       
       // Parse as float
       const parsedTrial = parseFloat(stringValue);
-      if (!isNaN(parsedTrial) && parsedTrial > 0) {
+      if (!isNaN(parsedTrial) && parsedTrial >= 0) {
         return parsedTrial;
       }
       
