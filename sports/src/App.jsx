@@ -9,7 +9,8 @@ function App() {
   const location = useLocation();
   
   // Hide footer when on Myevents page (where BottomBar appears)
-  const shouldHideFooter = location.pathname.startsWith('/myevents');
+  const shouldHideFooter = location.pathname.startsWith('/myevents')|| 
+  location.pathname.startsWith('/staffpanel');
 
   return (
     <LanguageProvider>
@@ -22,7 +23,9 @@ function App() {
       </main>
 
       {/* Footer - conditionally rendered */}
-      {!shouldHideFooter && <Footer />}
+      <div className={shouldHideFooter ? 'hidden md:block' : ''}>
+        <Footer />
+      </div>
     </div>
        {/* <SignInForm /> */}
        {/* <Register /> */}

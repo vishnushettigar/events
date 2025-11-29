@@ -14,24 +14,15 @@ const Templeparticipants = () => {
     const [events, setEvents] = useState([]);
     const [allParticipants, setAllParticipants] = useState([]);
 
-    // Age categories that should always show mixed gender
-    const mixedGenderAgeCategories = ['61-90'];
-
-    // Check if current age category should show mixed gender only
-    const shouldShowMixedGenderOnly = mixedGenderAgeCategories.includes(selectedAge);
-
     // Fetch all data when age category or gender changes
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
 
-                // If age category requires mixed gender, automatically set gender to MIXED
-                const genderToUse = shouldShowMixedGenderOnly ? 'MIXED' : selectedGender;
-
                 const data = await eventAPI.getParticipantData({
                     ageCategory: selectedAge,
-                    gender: genderToUse
+                    gender: selectedGender
                 });
                 
                 // Filter out the 'All' option from age groups
@@ -48,14 +39,7 @@ const Templeparticipants = () => {
         };
 
         fetchData();
-    }, [selectedAge, selectedGender, shouldShowMixedGenderOnly]);
-
-    // Update gender when age category changes to mixed gender categories
-    useEffect(() => {
-        if (shouldShowMixedGenderOnly) {
-            setSelectedGender('MIXED');
-        }
-    }, [selectedAge, shouldShowMixedGenderOnly]);
+    }, [selectedAge, selectedGender]);
 
     // Group events by age category and gender
     const groupedEvents = events.reduce((acc, event) => {
@@ -144,17 +128,11 @@ const Templeparticipants = () => {
                         <div className="flex flex-col">
                             <label className="mb-2 text-[#2A2A2A] font-medium">
                                 Filter by Gender
-                                {shouldShowMixedGenderOnly && (
-                                    <span className="text-sm text-gray-500 ml-2">(Mixed only for this age category)</span>
-                                )}
                             </label>
                             <select 
-                                className={`p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
-                                    shouldShowMixedGenderOnly ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                                }`}
+                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
                                 value={selectedGender}
                                 onChange={(e) => setSelectedGender(e.target.value)}
-                                disabled={shouldShowMixedGenderOnly}
                             >
                                 {genders && genders.length > 0 ? (
                                     genders.map((gender) => (

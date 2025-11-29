@@ -48,10 +48,17 @@ const UpdateIndividualResult = () => {
   };
 
   const setCollapsibleState = (eventId, isOpen) => {
-    setCollapsibleStates(prev => ({
+    setCollapsibleStates(prev => {
+      // If opening an event, close all others (accordion behavior)
+      if (isOpen) {
+        return { [eventId]: true };
+      }
+      // If closing, just close this one
+      return {
       ...prev,
-      [eventId]: isOpen
-    }));
+        [eventId]: false
+      };
+    });
   };
 
   // Helper functions for participants data management
@@ -520,6 +527,7 @@ const UpdateIndividualResult = () => {
     const [loadingHeats, setLoadingHeats] = useState(false);
     const [savingTimings, setSavingTimings] = useState(false);
     const [savingTrials, setSavingTrials] = useState(false);
+    const [expandedCard, setExpandedCard] = useState(null); // Track which card is expanded for mobile
 
     // Debug: Log when finalHeatParticipants changes
     React.useEffect(() => {
@@ -1457,21 +1465,21 @@ const UpdateIndividualResult = () => {
 
     return (
       <div 
-        className="border border-gray-200 rounded-lg mb-4 transition-all duration-200"
+        className="border border-gray-200 rounded-lg mb-3 transition-all duration-200"
       >
-        <div className="flex justify-between items-center">
+        <div className="sticky top-16 z-30 bg-[#F0F0F0]  flex justify-between items-center">
           <button
             type="button"
-            className="flex-1 px-4 py-3 text-left bg-[#F8DFBE] hover:bg-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#D35D38] rounded-lg flex justify-between items-center"
+            className="flex-1 px-2 py-1 md:px-4 md:py-3 text-left bg-[#F8DFBE] hover:bg-[#E0E0E0] focus:outline-none focus:ring-2 focus:ring-[#D35D38] rounded-lg flex justify-between items-center"
             onClick={handleToggle}
           >
-            <span className="font-medium text-[#2A2A2A]">{title}</span>
-            <span className="text-[#5A5A5A]">{isOpen ? '−' : '+'}</span>
+            <span className="font-medium text-sm md:text-base text-[#2A2A2A]">{title}</span>
+            <span className="text-lg md:text-xl text-[#5A5A5A]">{isOpen ? '−' : '+'}</span>
           </button>
           {isOpen && eventParticipants.length > 0 && (
             <button
               onClick={handlePrint}
-              className="ml-2 px-3 py-3 bg-[#D35D38] text-white rounded-lg hover:bg-[#B84A2E] focus:outline-none focus:ring-2 focus:ring-[#D35D38] transition"
+              className="hidden md:block ml-2 px-3 py-3 bg-[#D35D38] text-white rounded-lg hover:bg-[#B84A2E] focus:outline-none focus:ring-2 focus:ring-[#D35D38] transition"
               title="Print participants list"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1481,7 +1489,7 @@ const UpdateIndividualResult = () => {
           )}
         </div>
         {isOpen && (
-          <div className="p-4 mt-[2px] bg-white">
+          <div className="p-2 md:p-4 mt-[2px] bg-white">
             {loadingParticipants ? (
               <div className="flex justify-center items-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -1495,48 +1503,48 @@ const UpdateIndividualResult = () => {
               <div className="space-y-4">
                 {/* Heat Selection for Running Events */}
                 {isHeatEvent() && Object.keys(heats).length > 0 ? (
-                  <div className="bg-[#F8DFBE] p-4 rounded-lg">
-                    <div className="flex flex-wrap items-center gap-4 mb-4">
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium text-[#2A2A2A]">Select Heat:</label>
+                  <div className="bg-[#F8DFBE] p-3 md:p-4 rounded-lg">
+                    {/* Header Row - Label and Refresh Button */}
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm md:text-base font-semibold text-[#2A2A2A]">Select Heat:</label>
                         <button
                           onClick={() => fetchHeats(true)}
-                          className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                        className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
                           title="Refresh heats"
                         >
                           🔄 Refresh
                         </button>
-                        <div className="flex gap-2 flex-wrap">
+                    </div>
+                    
+                    {/* Heat Selection Chips - Horizontal Scrollable */}
+                    <div className="overflow-x-auto scrollbar-hide">
+                      <div className="flex gap-2 pb-2 pl-1 min-w-max">
                           {Object.keys(heats).map((heatNumber) => (
                             <button
                               key={heatNumber}
-                              onClick={() => {
-                                // Preserve scroll position to prevent jumping to top
-                                const scrollY = window.scrollY;
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 
                                 setSelectedHeatForEvent(eventId, parseInt(heatNumber));
                                 setShowFinalHeat(false);
                                 setFinalHeatSelectedForEvent(eventId, false);
-                                
-                                // Restore scroll position after React updates the DOM
-                                setTimeout(() => {
-                                  window.scrollTo(0, scrollY);
-                                }, 0);
                               }}
-                              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
                                 selectedHeat === parseInt(heatNumber) && !showFinalHeat
-                                  ? 'bg-[#D35D38] text-white'
-                                  : 'bg-white text-[#2A2A2A] hover:bg-gray-100'
+                                ? 'bg-[#D35D38] text-white shadow-md scale-105'
+                                : 'bg-white text-[#2A2A2A] hover:bg-gray-100 hover:shadow-sm border border-gray-200'
                               }`}
                             >
-                              Heat {heatNumber} ({heats[heatNumber].length} participants)
+                            Heat {heatNumber}
+                            <span className="ml-1 text-[10px] md:text-xs opacity-75">({heats[heatNumber].length})</span>
                             </button>
                           ))}
                           {Object.keys(heats).length > 0 && (
                             <button
-                              onClick={() => {
-                                // Preserve scroll position to prevent jumping to top
-                                const scrollY = window.scrollY;
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
                                 
                                 console.log('🏁 Final Heat button clicked');
                                 console.log('Current heats:', heats);
@@ -1550,26 +1558,23 @@ const UpdateIndividualResult = () => {
                                 // Immediately generate final heat - it will check for participants with timings
                                 console.log('Calling generateFinalHeat immediately...');
                                 generateFinalHeat();
-                                
-                                // Restore scroll position after React updates the DOM
-                                setTimeout(() => {
-                                  window.scrollTo(0, scrollY);
-                                }, 0);
                               }}
-                              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
                                 showFinalHeat
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-green-100 text-green-800 hover:bg-green-200'
+                                ? 'bg-green-600 text-white shadow-md scale-105'
+                                : 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-sm border border-green-300'
                               }`}
                             >
-                              🏁 Final Heat ({finalHeatParticipants.length}/{laneCount})
+                            🏁 Final Heat
+                            <span className="ml-1 text-[10px] md:text-xs opacity-75">({finalHeatParticipants.length}/{laneCount})</span>
                             </button>
                           )}
                         </div>
                       </div>
-                    </div>
+                    
+                    {/* Selected Heat Info */}
                     {selectedHeat && (
-                      <div className="text-sm text-[#5A5A5A]">
+                      <div className="hidden md:block mt-3 text-xs md:text-sm text-[#5A5A5A] bg-white p-2 rounded">
                         <strong>Heat {selectedHeat}:</strong> {heats[selectedHeat]?.length || 0} participants
                         {heats[selectedHeat]?.length > 0 && (
                           <span className="ml-2">
@@ -1579,7 +1584,7 @@ const UpdateIndividualResult = () => {
                       </div>
                     )}
                     {showFinalHeat && (
-                      <div className="text-sm text-[#5A5A5A]">
+                      <div className="hidden md:block mt-3 text-xs md:text-sm text-[#5A5A5A] bg-white p-2 rounded">
                         <strong>🏁 Final Heat:</strong> {finalHeatParticipants.length}/{laneCount} participants
                         {finalHeatParticipants.length > 0 && (
                           <span className="ml-2">
@@ -1597,12 +1602,12 @@ const UpdateIndividualResult = () => {
                   </div>
                 )}
 
-                {/* Final Heat Management */}
+                {/* Final Heat Management - Desktop Only */}
                 {isHeatEvent() && showFinalHeat && Object.keys(heats).length > 0 && (
-                  <div className="bg-[#E8F5E8] p-4 rounded-lg border-2 border-green-300">
+                  <div className="hidden md:block bg-[#E8F5E8] p-4 rounded-lg border-2 border-green-300">
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <h4 className="text-lg font-semibold text-[#2A2A2A]">🏁 Final Heat Management</h4>
+                        <h4 className="text-lg font-semibold text-[#2A2A2A]">🏁 Final Heat</h4>
                         <button
                           onClick={generateFinalHeat}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
@@ -1694,7 +1699,235 @@ const UpdateIndividualResult = () => {
                   </div>
                 )}
                  {/*  trial event code start from here */}
-                <div className="overflow-x-auto">
+                
+                {/* Action buttons for mobile - shown above cards */}
+                <div className="md:hidden sticky top-[100px] z-20 bg-white pt-2 pb-2 -mx-2 px-2 space-y-2">
+                  {/* All Buttons - Horizontal Layout */}
+                  <div className="flex gap-2">
+                    {/* Update Timings Button */}
+                    {isHeatEvent() && (selectedHeat || showFinalHeat) && (
+                      <button
+                        onClick={saveHeatTimings}
+                        disabled={savingTimings}
+                        className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                      >
+                        {savingTimings ? 'Updating...' : 'Update Timings'}
+                      </button>
+                    )}
+                    
+                    {/* Update Results Button */}
+                    {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                      <button
+                        onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
+                        className={`flex-1 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm ${
+                          Object.keys(getRankChanges(eventId)).length > 0
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+                        }`}
+                      >
+                        Update Results {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
+                      </button>
+                    )}
+                    
+                    {/* Save Trials Button */}
+                    {isTrialEvent() && (
+                      <button
+                        onClick={saveTrials}
+                        disabled={savingTrials}
+                        className="flex-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium text-sm"
+                      >
+                        {savingTrials ? 'Saving...' : 'Save Trials'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card View for Mobile */}
+                <div className="block md:hidden space-y-2">
+                  {(isHeatEvent() && showFinalHeat ? finalHeatParticipants : 
+                    isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] : 
+                    eventParticipants).map((participant, index) => {
+                      const isExpanded = expandedCard === participant.id;
+                      return (
+                      <div key={participant.id || index} className="bg-white border-2 border-[#F8DFBE] rounded-lg shadow-sm overflow-hidden">
+                        {/* Card Header - Always visible and clickable */}
+                        <div 
+                          className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                          onClick={() => setExpandedCard(isExpanded ? null : participant.id)}
+                        >
+                          <div className="space-y-2">
+                            {/* Participant Name Row */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-1">
+                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-black text-xs font-bold">
+                                 {index + 1}.
+                                </span>
+                                <h4 className=" text-[#2A2A2A] text-m">
+                                  {participant.participant_name || participant.team_name}
+                                </h4>
+                              </div>
+                              {/* Expand/Collapse indicator */}
+                              <span className="text-[#5A5A5A] text-lg">
+                                {isExpanded ? '−' : '+'}
+                              </span>
+                            </div>
+                            
+                            {/* Temple, Aadhar & Result Badge Row */}
+                            <div className="flex justify-between items-center gap-2">
+                              <div className="flex-1 space-y-1">
+                                <p className="text-xs text-[#5A5A5A]">{participant.temple_name}</p>
+                              </div>
+                              <div className="flex-1 space-y-1" >
+                                <p className="text-xs text-[#5A5A5A]">#{participant.aadhar_number || 'N/A'}</p>
+                              </div>
+                              {/* Result Badge - only show for non-heat events or final heat */}
+                              {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                                <div className="flex-shrink-0">
+                                  {(() => {
+                                    const currentRank = getRankChanges(eventId)[participant.id] || participant.result?.rank;
+                                    return currentRank ? (
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-lg ${
+                                        currentRank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                        currentRank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                        currentRank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                        'bg-green-100 text-green-800'
+                                      }`}>
+                                        {currentRank === 'FIRST' ? '🥇 1st' :
+                                         currentRank === 'SECOND' ? '🥈 2nd' :
+                                         currentRank === 'THIRD' ? '🥉 3rd' : currentRank}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-400 text-xs">No result</span>
+                                    );
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Body - Expandable content */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 pt-2 border-t border-[#F8DFBE] space-y-3">
+                            {/* Trial Measurements */}
+                            {isTrialEvent() && (
+                              <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                  <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 1</label>
+                                  <input
+                                    type="text"
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                    value={`${participant.id}_1` in trialMeasurements ? trialMeasurements[`${participant.id}_1`] : (participant.performance_1 || '')}
+                                    onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 2</label>
+                                  <input
+                                    type="text"
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                    value={`${participant.id}_2` in trialMeasurements ? trialMeasurements[`${participant.id}_2`] : (participant.performance_2 || '')}
+                                    onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 3</label>
+                                  <input
+                                    type="text"
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                    value={`${participant.id}_3` in trialMeasurements ? trialMeasurements[`${participant.id}_3`] : (participant.performance_3 || '')}
+                                    onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Timing Input */}
+                            {isHeatEvent() && (
+                              <div>
+                                <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">
+                                  {showFinalHeat ? 'Final Time' : 'Heat Time'}
+                                </label>
+                                {showFinalHeat ? (
+                                  <input
+                                    type="text"
+                                    placeholder="Final Time"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                    value={(() => {
+                                      const localTiming = timings[`${participant.id}_performance_2`];
+                                      const dbTiming = participant.performance_2;
+                                      return localTiming !== undefined ? localTiming : (dbTiming || '');
+                                    })()}
+                                    onChange={(e) => {
+                                      const newTimings = { ...timings };
+                                      newTimings[`${participant.id}_performance_2`] = e.target.value;
+                                      setTimings(newTimings);
+                                    }}
+                                  />
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="Heat Time"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                    value={(() => {
+                                      const localTiming = timings[participant.id];
+                                      const dbTiming = participant.performance_1;
+                                      return localTiming !== undefined ? localTiming : (dbTiming || '');
+                                    })()}
+                                    onChange={(e) => handleTimingInput(participant.id, e.target.value)}
+                                  />
+                                )}
+                              </div>
+                            )}
+
+                            {/* Result Selection */}
+                            {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                              <div>
+                                {/* <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Select Result</label> */}
+                                <select 
+                                  className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                                    getRankChanges(eventId)[participant.id] 
+                                      ? 'border-green-500 bg-green-50' 
+                                      : 'border-[#F8DFBE]'
+                                  }`}
+                                  value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
+                                  onChange={(e) => {
+                                    const scrollY = window.scrollY;
+                                    const newRank = e.target.value;
+                                    if (newRank) {
+                                      setRankChange(eventId, participant.id, newRank);
+                                    } else {
+                                      const currentChanges = getRankChanges(eventId);
+                                      const { [participant.id]: removed, ...rest } = currentChanges;
+                                      setRankChanges(prev => ({
+                                        ...prev,
+                                        [eventId]: rest
+                                      }));
+                                    }
+                                    setTimeout(() => window.scrollTo(0, scrollY), 0);
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <option value="">Select Rank</option>
+                                  <option value="FIRST">🥇 1st Place</option>
+                                  <option value="SECOND">🥈 2nd Place</option>
+                                  <option value="THIRD">🥉 3rd Place</option>
+                                  <option value="CLEAR">Clear Result</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Table View for Desktop */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="min-w-full divide-y divide-[#F8DFBE] border border-[#F8DFBE]">
                     <thead className="bg-white border-b border-[#F8DFBE]">
                       <tr>
@@ -1769,7 +2002,7 @@ const UpdateIndividualResult = () => {
                                   type="text"
                                   placeholder="0.00"
                                   className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={trialMeasurements[`${participant.id}_1`] || participant.performance_1 || ''}
+                                  value={`${participant.id}_1` in trialMeasurements ? trialMeasurements[`${participant.id}_1`] : (participant.performance_1 || '')}
                                   onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
                                 />
                               </td>
@@ -1778,7 +2011,7 @@ const UpdateIndividualResult = () => {
                                   type="text"
                                   placeholder="0.00"
                                   className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={trialMeasurements[`${participant.id}_2`] || participant.performance_2 || ''}
+                                  value={`${participant.id}_2` in trialMeasurements ? trialMeasurements[`${participant.id}_2`] : (participant.performance_2 || '')}
                                   onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
                                 />
                               </td>
@@ -1787,7 +2020,7 @@ const UpdateIndividualResult = () => {
                                   type="text"
                                   placeholder="0.00"
                                   className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={trialMeasurements[`${participant.id}_3`] || participant.performance_3 || ''}
+                                  value={`${participant.id}_3` in trialMeasurements ? trialMeasurements[`${participant.id}_3`] : (participant.performance_3 || '')}
                                   onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
                                 />
                               </td>
@@ -1959,9 +2192,9 @@ const UpdateIndividualResult = () => {
                   </table>
                 </div>
                 
-                {/* Save Trials Button for Trial Events */}
+                {/* Save Trials Button for Trial Events - Desktop Only */}
                 {isTrialEvent() && (
-                  <div className="mt-4 flex justify-end">
+                  <div className="mt-4 hidden md:flex justify-end">
                     <button
                       onClick={saveTrials}
                       disabled={savingTrials}
@@ -2149,45 +2382,55 @@ const UpdateIndividualResult = () => {
       <Modal />
       
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {/* Age Category Filter */}
-        <div className="flex flex-col">
+      <div className="space-y-4 mb-6 sm:mb-8">
+        {/* Age Category Filter Chips */}
+        <div className="flex flex-col mb-0">
           <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Age Category</label>
-          <select 
-            className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
-            value={selectedAge}
-            onChange={(e) => setSelectedAge(e.target.value)}
-          >
-            {ageGroups && ageGroups.length > 0 ? (
-              ageGroups.map((group) => (
-                <option key={group.id} value={group.value}>
-                  {group.name}
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>Loading age groups...</option>
-            )}
-          </select>
+          <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+            <div className="flex gap-2 pb-2" style={{ minWidth: 'max-content' }}>
+              {ageGroups && ageGroups.length > 0 ? (
+                ageGroups.map((group) => (
+                  <button
+                    key={group.id}
+                    onClick={() => setSelectedAge(group.name)}
+                    className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-medium whitespace-nowrap transition-all duration-200
+                      ${selectedAge === group.name 
+                        ? 'bg-[#D35D38] text-white shadow-md' 
+                        : 'bg-white text-[#2A2A2A] border border-[#F8DFBE] hover:border-[#D35D38] hover:text-[#D35D38]'
+                      }`}
+                  >
+                    {group.name}
+                  </button>
+                ))
+              ) : (
+                <span className="text-gray-400 text-sm">Loading age groups...</span>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Gender Filter */}
+        {/* Gender Filter Chips */}
         <div className="flex flex-col">
           <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Gender</label>
-          <select 
-            className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
-            value={selectedGender}
-            onChange={(e) => setSelectedGender(e.target.value)}
-          >
+          <div className="flex gap-2 flex-wrap">
             {genders && genders.length > 0 ? (
               genders.map((gender) => (
-                <option key={gender.id} value={gender.value}>
+                <button
+                  key={gender.id}
+                  onClick={() => setSelectedGender(gender.value)}
+                  className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-sm sm:text-base font-medium transition-all duration-200
+                    ${selectedGender === gender.value 
+                      ? 'bg-[#D35D38] text-white shadow-md' 
+                      : 'bg-white text-[#2A2A2A] border border-[#F8DFBE] hover:border-[#D35D38] hover:text-[#D35D38]'
+                    }`}
+                >
                   {gender.name}
-                </option>
+                </button>
               ))
             ) : (
-              <option value="" disabled>Loading genders...</option>
+              <span className="text-gray-400 text-sm">Loading genders...</span>
             )}
-          </select>
+          </div>
         </div>
       </div>
 
@@ -2213,7 +2456,7 @@ const UpdateIndividualResult = () => {
             const [ageCategory, gender] = key.split('::');
             return (
               <div key={key} className="space-y-4">
-                <h3 className="text-xl font-semibold text-[#D35D38] border-b-2 border-[#F8DFBE] pb-2">
+                <h3 className="text-sm md:text-base lg:text-lg font-semibold text-[#D35D38] border-b-2 border-[#F8DFBE] pb-2">
                   {ageCategory} - {gender}
                 </h3>
                 <div className="space-y-4 sm:pl-4">

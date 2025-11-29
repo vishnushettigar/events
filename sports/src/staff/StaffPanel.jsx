@@ -290,30 +290,13 @@ const StaffPanel = () => {
       <Modal />
       
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[#2A2A2A] mb-2">Sports Event Staff Panel</h1>
-          <p className="text-sm sm:text-base text-[#5A5A5A]">Manage your sports event data</p>
+        <div className="mb-2 sm:mb-4">
+          <h1 className="text-lg sm:text-3xl font-bold text-[#2A2A2A] mb-0 sm:mb-2">Staff Panel</h1>
+          <p className="hidden sm:block text-sm sm:text-base text-[#5A5A5A]">Manage your sports event data</p>
         </div>
 
         {/* Tabs */}
-        <div className="mb-6">
-          {/* Mobile Tabs - Dropdown */}
-          <div className="lg:hidden">
-            <div className="relative">
-              <select
-                value={activeTab}
-                onChange={(e) => setActiveTab(e.target.value)}
-                className="w-full p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-[#2A2A2A] font-medium"
-              >
-                {tabs.map(tab => (
-                  <option key={tab.id} value={tab.id}>
-                    {tab.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
+        <div className="mb-0 md:mb-6">
           {/* Desktop Tabs - Horizontal */}
           <nav className="hidden lg:flex space-x-8">
             {tabs.map(tab => (
@@ -367,6 +350,104 @@ const StaffPanel = () => {
         ) : activeTab === 'schedule' ? (
           <Schedule apiSource="staff" />
         ) : null}
+
+        {/* Bottom spacer for mobile to account for fixed tab bar */}
+        <div className="h-20 md:hidden"></div>
+      </div>
+
+      {/* Mobile Bottom Tab Bar (< 768px) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#F8DFBE] z-50 md:hidden">
+        <nav className="flex items-center justify-around py-2 px-1">
+          {/* Individual */}
+          <button
+            onClick={() => setActiveTab('update-results')}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-0 flex-1 ${
+              activeTab === 'update-results'
+                ? 'text-[#D35D38] bg-[#F8DFBE]'
+                : 'text-[#5A5A5A] hover:text-[#2A2A2A]'
+            }`}
+          >
+            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="text-[10px] font-medium truncate">Individual</span>
+          </button>
+
+          {/* Teams */}
+          <button
+            onClick={() => setActiveTab('teams')}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-0 flex-1 ${
+              activeTab === 'teams'
+                ? 'text-[#D35D38] bg-[#F8DFBE]'
+                : 'text-[#5A5A5A] hover:text-[#2A2A2A]'
+            }`}
+          >
+            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span className="text-[10px] font-medium truncate">Teams</span>
+          </button>
+
+          {/* Champions */}
+          <button
+            onClick={() => setActiveTab('champions')}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-0 flex-1 ${
+              activeTab === 'champions'
+                ? 'text-[#D35D38] bg-[#F8DFBE]'
+                : 'text-[#5A5A5A] hover:text-[#2A2A2A]'
+            }`}
+          >
+            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            <span className="text-[10px] font-medium truncate">Champions</span>
+          </button>
+
+          {/* All Results */}
+          <button
+            onClick={() => setActiveTab('all-result')}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-0 flex-1 ${
+              activeTab === 'all-result'
+                ? 'text-[#D35D38] bg-[#F8DFBE]'
+                : 'text-[#5A5A5A] hover:text-[#2A2A2A]'
+            }`}
+          >
+            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+            </svg>
+            <span className="text-[10px] font-medium truncate">Results</span>
+          </button>
+
+          {/* Schedule */}
+          <button
+            onClick={() => setActiveTab('schedule')}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-0 flex-1 ${
+              activeTab === 'schedule'
+                ? 'text-[#D35D38] bg-[#F8DFBE]'
+                : 'text-[#5A5A5A] hover:text-[#2A2A2A]'
+            }`}
+          >
+            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span className="text-[10px] font-medium truncate">Schedule</span>
+          </button>
+
+          {/* Temple Reports */}
+          <button
+            onClick={() => setActiveTab('temples')}
+            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors min-w-0 flex-1 ${
+              activeTab === 'temples'
+                ? 'text-[#D35D38] bg-[#F8DFBE]'
+                : 'text-[#5A5A5A] hover:text-[#2A2A2A]'
+            }`}
+          >
+            <svg className="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+            <span className="text-[10px] font-medium truncate">Temples</span>
+          </button>
+        </nav>
       </div>
     </div>
   );
