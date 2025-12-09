@@ -3,7 +3,6 @@ import { body, validationResult } from 'express-validator';
 import * as eventService from '../services/eventService.js';
 import * as systemService from '../services/systemService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { dataFetchLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../utils/prismaClient.js';
 
 const router = express.Router();
@@ -303,7 +302,7 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
 // });
 
 // Get combined temple participant data (age categories, gender options, and events)
-router.get('/participant-data', dataFetchLimiter, authenticate, async (req, res) => {
+router.get('/participant-data', authenticate, async (req, res) => {
   try {
     const { ageCategory = 'All', gender = 'ALL' } = req.query;
     

@@ -2,7 +2,6 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as eventManagementService from '../services/eventManagementService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { dataFetchLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../utils/prismaClient.js';
 
 const router = express.Router();
@@ -100,7 +99,7 @@ router.delete('/event-types/:id', authenticate, requireRole('ADMIN'), async (req
   }
 });
 
-router.get('/event-types', dataFetchLimiter, authenticate, async (req, res) => {
+router.get('/event-types', authenticate, async (req, res) => {
   try {
     const eventTypes = await eventManagementService.listEventTypes();
     res.json(eventTypes);
@@ -203,7 +202,7 @@ router.delete('/age-categories/:id', authenticate, requireRole('ADMIN'), async (
   }
 });
 
-router.get('/age-categories', dataFetchLimiter, authenticate, async (req, res) => {
+router.get('/age-categories', authenticate, async (req, res) => {
   try {
     const ageCategories = await eventManagementService.listAgeCategories();
     res.json(ageCategories);
@@ -319,7 +318,7 @@ router.delete('/events/:id', authenticate, requireRole('ADMIN'), async (req, res
   }
 });
 
-router.get('/events', dataFetchLimiter, authenticate, async (req, res) => {
+router.get('/events', authenticate, async (req, res) => {
   try {
     const filters = {
       temple_id: req.query.temple_id ? parseInt(req.query.temple_id) : undefined,
@@ -432,7 +431,7 @@ router.delete('/schedules/:id', authenticate, requireRole('ADMIN'), async (req, 
   }
 });
 
-router.get('/events/:event_id/schedules', dataFetchLimiter, authenticate, async (req, res) => {
+router.get('/events/:event_id/schedules', authenticate, async (req, res) => {
   try {
     const schedules = await eventManagementService.listEventSchedules(parseInt(req.params.event_id));
     res.json(schedules);

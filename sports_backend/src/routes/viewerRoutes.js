@@ -1,6 +1,5 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { dataFetchLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../utils/prismaClient.js';
 const router = express.Router();
 
@@ -131,7 +130,7 @@ router.get('/dashboard-stats', authenticate, requireRole('VIEWER'), async (req, 
  *       500:
  *         description: Server error
  */
-router.get('/events', dataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/events', authenticate, requireRole('VIEWER'), async (req, res) => {
    try {
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },
@@ -218,7 +217,7 @@ router.get('/events', dataFetchLimiter, authenticate, requireRole('VIEWER'), asy
  *       500:
  *         description: Server error
  */
-router.get('/participant-data', dataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
     const { ageCategory, gender } = req.query;
 
@@ -314,7 +313,7 @@ router.get('/participant-data', dataFetchLimiter, authenticate, requireRole('VIE
  *       500:
  *         description: Server error
  */
-router.get('/participants', dataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res) => {
     try {
         const { event_ids, temple_id } = req.query;
 
@@ -422,7 +421,7 @@ router.get('/participants', dataFetchLimiter, authenticate, requireRole('VIEWER'
  *       500:
  *         description: Server error
  */
-router.get('/teams', dataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
     const offset = (page - 1) * limit;
@@ -573,7 +572,7 @@ router.get('/temple-list', authenticate, requireRole('VIEWER'), async (req, res)
  *       500:
  *         description: Server error
  */
-router.get('/results', dataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/results', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
     const results = await prisma.ind_event_result.findMany({
       include: {
@@ -633,7 +632,7 @@ router.get('/results', dataFetchLimiter, authenticate, requireRole('VIEWER'), as
  *       500:
  *         description: Server error
  */
-router.get('/champions', dataFetchLimiter, authenticate, requireRole('VIEWER'), async (req, res) => {
+router.get('/champions', authenticate, requireRole('VIEWER'), async (req, res) => {
     try {
         // Get all individual events with results
         const individualRegistrations = await prisma.ind_event_registration.findMany({

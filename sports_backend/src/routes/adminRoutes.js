@@ -4,7 +4,6 @@ import * as userService from '../services/userService.js';
 import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
-import { sensitiveOperationLimiter, dataFetchLimiter } from '../middleware/rateLimiter.js';
 import prisma from '../utils/prismaClient.js';
 
 const router = express.Router();
@@ -84,7 +83,7 @@ router.get('/verify-access', authenticate, requireRole('ADMIN'), (req, res) => {
  *       500:
  *         description: Server error
  */
-router.get('/dashboard-stats', dataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/dashboard-stats', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     // Get actual statistics from database
     const [totalEvents, totalUsers, totalTemples, activeRegistrations] = await Promise.all([
@@ -364,7 +363,7 @@ router.get('/users/details', authenticate, requireRole('ADMIN'), async (req, res
  *       500:
  *         description: Server error
  */
-router.get('/users', dataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/users', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Admin users request query params:', req.query);
     
@@ -555,7 +554,7 @@ router.get('/users/:id', authenticate, requireRole('ADMIN'), async (req, res) =>
  *       500:
  *         description: Server error
  */
-router.put('/users/:id/update-role', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.put('/users/:id/update-role', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const userId = parseInt(req.params.id);
     const { role_id } = req.body;
@@ -987,7 +986,7 @@ router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req,
  *       500:
  *         description: Server error
  */
-router.get('/participants', dataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { event_ids, status, temple_id } = req.query;
     
@@ -1197,7 +1196,7 @@ router.get('/participants', dataFetchLimiter, authenticate, requireRole('ADMIN')
  *       500:
  *         description: Server error
  */
-router.get('/teams', dataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Teams API called');
     const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
@@ -1340,7 +1339,7 @@ router.get('/teams', dataFetchLimiter, authenticate, requireRole('ADMIN'), async
  *       500:
  *         description: Server error
  */
-router.get('/events', dataFetchLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },
@@ -1440,7 +1439,7 @@ router.get('/events', dataFetchLimiter, authenticate, requireRole('ADMIN'), asyn
  *       500:
  *         description: Server error
  */
-router.put('/participants/:registrationId/update-status', sensitiveOperationLimiter, authenticate, requireRole('ADMIN'), async (req, res) => {
+router.put('/participants/:registrationId/update-status', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const registrationId = parseInt(req.params.registrationId);
     const { status } = req.body;
