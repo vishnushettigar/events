@@ -232,10 +232,10 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
+        className="w-full px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 text-left flex items-center justify-between hover:bg-gray-50 transition-colors"
       >
         <div className="flex flex-col">
-          <span className="text-lg font-semibold text-[#2A2A2A]">{title}</span>
+          <span className="text-base md:text-lg font-semibold text-[#2A2A2A]">{title}</span>
           {pendingCount > 0 && (
             <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full mt-1 w-fit">
                 {pendingCount} Pending

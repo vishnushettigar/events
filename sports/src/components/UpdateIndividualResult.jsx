@@ -1474,7 +1474,14 @@ const UpdateIndividualResult = () => {
             onClick={handleToggle}
           >
             <span className="font-medium text-sm md:text-base text-[#2A2A2A]">{title}</span>
-            <span className="text-lg md:text-xl text-[#5A5A5A]">{isOpen ? '−' : '+'}</span>
+            <svg 
+              className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-[#5A5A5A] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
           {isOpen && eventParticipants.length > 0 && (
             <button
@@ -1767,9 +1774,14 @@ const UpdateIndividualResult = () => {
                                 </h4>
                               </div>
                               {/* Expand/Collapse indicator */}
-                              <span className="text-[#5A5A5A] text-lg">
-                                {isExpanded ? '−' : '+'}
-                              </span>
+                              <svg 
+                                className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-[#5A5A5A] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
                             </div>
                             
                             {/* Temple, Aadhar & Result Badge Row */}

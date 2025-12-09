@@ -94,72 +94,65 @@ const Templeparticipants = () => {
 
     return (
         <section className="min-h-screen bg-[#F0F0F0]">
-            <div className="w-full px-4 py-4 sm:px-6 lg:px-8">
+            <div className="w-full px-4 py-0 sm:py-4 sm:px-6 lg:px-8">
                 <div className="max-w-7xl mx-auto m-4">
                     {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-[#2A2A2A] mb-2">Temple Participants</h1>
-                        <p className="text-[#5A5A5A]">View and manage participants for all events</p>
+                    <div className="sm:mb-4">
+                        <h1 className="text-lg sm:text-2xl md:text-3xl font-bold text-[#2A2A2A] mb-2">Temple Participants</h1>
+                        <p className="hidden md:block text-sm sm:text-base text-[#5A5A5A]">View and manage participants for all events</p>
                     </div>
 
                     {/* Filters */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
-                        {/* Age Category Filter */}
+                    <div className="grid grid-cols-1 gap-1 md:gap-4 mb-2 md:mb-8">
+                        {/* Age Category Filter Chips */}
                         <div className="flex flex-col">
                             <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Age Category</label>
-                        <select 
-                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
-                            value={selectedAge}
-                                onChange={(e) => setSelectedAge(e.target.value)}
-                        >
-                                {ageGroups && ageGroups.length > 0 ? (
-                                    ageGroups.map((group) => (
-                                        <option key={group.id} value={group.value}>
-                                            {group.name}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="" disabled>Loading age groups...</option>
-                                )}
-                        </select>
-                    </div>
-
-                        {/* Gender Filter */}
-                        <div className="flex flex-col">
-                            <label className="mb-2 text-[#2A2A2A] font-medium">
-                                Filter by Gender
-                            </label>
-                            <select 
-                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
-                                value={selectedGender}
-                                onChange={(e) => setSelectedGender(e.target.value)}
-                            >
-                                {genders && genders.length > 0 ? (
-                                    genders.map((gender) => (
-                                        <option key={gender.id} value={gender.value}>
-                                            {gender.name}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="" disabled>Loading genders...</option>
-                                )}
-                            </select>
+                            <div className="overflow-x-auto scrollbar-hide -mx-2 px-2">
+                                <div className="flex gap-2 pb-2" style={{ minWidth: 'max-content' }}>
+                                    {ageGroups && ageGroups.length > 0 ? (
+                                        ageGroups.map((group) => (
+                                            <button
+                                                key={group.id}
+                                                onClick={() => setSelectedAge(group.name)}
+                                                className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200
+              ${selectedAge === group.name
+                                                        ? 'bg-[#D35D38] text-white shadow-md'
+                                                        : 'bg-white text-[#2A2A2A] border border-gray-300 hover:border-[#D35D38] hover:text-[#D35D38]'
+                                                    }`}
+                                            >
+                                                {group.name}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <span className="text-gray-400 text-sm">Loading age groups...</span>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Status Filter
+                        {/* Gender Filter Chips */}
                         <div className="flex flex-col">
-                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Status</label>
-                            <select 
-                                className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white"
-                                value={selectedStatus}
-                                onChange={(e) => setSelectedStatus(e.target.value)}
-                            >
-                                <option value="ALL">All Statuses</option>
-                                <option value="PENDING">Pending</option>
-                                <option value="ACCEPTED">Accepted</option>
-                                <option value="DECLINED">Declined</option>
-                            </select>
-                        </div> */}
+                            <label className="mb-2 text-[#2A2A2A] font-medium">Filter by Gender</label>
+                            <div className="flex flex-wrap gap-2">
+                                {genders && genders.length > 0 ? (
+                                    genders.map((gender) => (
+                                        <button
+                                            key={gender.id}
+                                            onClick={() => setSelectedGender(gender.value)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
+              ${selectedGender === gender.value
+                                                    ? 'bg-[#D35D38] text-white shadow-md'
+                                                    : 'bg-white text-[#2A2A2A] border border-gray-300 hover:border-[#D35D38] hover:text-[#D35D38]'
+                                                }`}
+                                        >
+                                            {gender.name}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <span className="text-gray-400 text-sm">Loading genders...</span>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     {/* Loading State */}
@@ -184,10 +177,10 @@ const Templeparticipants = () => {
                                 const [ageCategory, gender] = key.split('::');
                                 return (
                                     <div key={key} className="space-y-4">
-                                        <h3 className="text-xl font-semibold text-[#D35D38] border-b-2 border-[#D35D38] pb-2">
+                                        <h3 className="text-m md:text-lg lg:text-xl font-semibold text-[#D35D38] border-b-2 border-[#F8DFBE] pb-2">
                                             {ageCategory} - {gender}
                                         </h3>
-                                        <div className="space-y-4 sm:pl-4">
+                                        <div className="space-y-2 md:space-y-4 ">
                                             {groupEvents.map((event) => (
                                                 <CollapsibleList 
                                                     key={event.id} 

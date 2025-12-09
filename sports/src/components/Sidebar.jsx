@@ -42,7 +42,7 @@ const Sidebar = () => {
 
       {/* Sidebar - Only visible on desktop */}
       <aside
-        className={`hidden md:flex fixed md:relative min-h-screen bg-white shadow-xl flex-col transition-all duration-300 ease-in-out
+        className={`hidden md:flex fixed md:relative min-h-screen bg-white flex-col transition-all duration-300 ease-in-out
           ${isCollapsed ? 'w-20' : 'w-64'}
           z-40`}
       >
