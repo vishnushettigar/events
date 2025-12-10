@@ -1,5 +1,171 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import { eventAPI } from '../utils/api';
+
+// Mixed Team Row Component - MUST be outside the main component to prevent re-mounting
+const MixedTeamRow = memo(({ 
+  registrationId, 
+  temple, 
+  teamEvent, 
+  rowIndex, 
+  fetchTeamParticipantDetails, 
+  getTeamRankChanges, 
+  setTeamRankChange, 
+  printTeamParticipants 
+}) => {
+  const [participants, setParticipants] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [teamResult, setTeamResult] = useState(null);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  useEffect(() => {
+    // Only fetch once per registration
+    if (registrationId && !hasFetched) {
+      setHasFetched(true);
+      loadTeamParticipants();
+      loadTeamResult();
+    }
+  }, [registrationId, hasFetched]);
+
+  const loadTeamParticipants = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchTeamParticipantDetails(registrationId);
+      setParticipants(data);
+    } catch (error) {
+      console.error('Error loading team participants:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTeamResult = async () => {
+    try {
+      const registrationData = await eventAPI.getTeamRegistration(registrationId);
+      
+      if (registrationData.event_result) {
+        setTeamResult({
+          rank: registrationData.event_result.rank,
+          points: registrationData.event_result.points
+        });
+      } else {
+        setTeamResult(null);
+      }
+    } catch (error) {
+      console.error('Error loading team result:', error);
+      setTeamResult(null);
+    }
+  };
+
+  // Separate male and female participants
+  const maleParticipants = participants.filter(p => p.gender === 'MALE');
+  const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
+
+  return (
+    <tr className="hover:bg-gray-50">
+      <td className="px-4 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-[#2A2A2A]">
+          {rowIndex}
+        </div>
+      </td>
+      <td className="px-4 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div>
+            <div className="text-sm font-semibold text-[#2A2A2A]">
+              {temple.temple_name}
+            </div>
+            <div className="text-xs text-[#5A5A5A]">
+              Team {rowIndex % 10 || 1}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-4 py-4 whitespace-nowrap">
+        {loading ? (
+          <div className="text-sm text-gray-500">Loading...</div>
+        ) : maleParticipants.length > 0 ? (
+          <div className="space-y-1">
+            {maleParticipants.map((participant, idx) => (
+              <div key={idx} className="text-sm">
+                <span className="font-medium text-[#2A2A2A]">
+                  {participant.first_name} {participant.last_name}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">No male participants</div>
+        )}
+      </td>
+      <td className="px-4 py-4 whitespace-nowrap">
+        {loading ? (
+          <div className="text-sm text-gray-500">Loading...</div>
+        ) : femaleParticipants.length > 0 ? (
+          <div className="space-y-1">
+            {femaleParticipants.map((participant, idx) => (
+              <div key={idx} className="text-sm">
+                <span className="font-medium text-[#2A2A2A]">
+                  {participant.first_name} {participant.last_name}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-sm text-gray-500">No female participants</div>
+        )}
+      </td>
+      <td className="px-4 py-4 whitespace-nowrap">
+        <div className="flex items-center gap-2">
+          {teamResult?.rank ? (
+            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+              {teamResult.rank === 'FIRST' ? '🥇 1st' :
+               teamResult.rank === 'SECOND' ? '🥈 2nd' :
+               teamResult.rank === 'THIRD' ? '🥉 3rd' : teamResult.rank}
+            </span>
+          ) : (
+            <span className="text-xs text-[#5A5A5A]">No result</span>
+          )}
+          <select
+            className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
+            value={getTeamRankChanges(teamEvent.id)[registrationId] || teamResult?.rank || ""}
+            onChange={(e) => {
+              // Preserve scroll position to prevent jumping to top
+              const scrollY = window.scrollY;
+              
+              if (registrationId) {
+                setTeamRankChange(teamEvent.id, registrationId, e.target.value);
+              }
+              
+              // Restore scroll position after React updates the DOM
+              setTimeout(() => {
+                window.scrollTo(0, scrollY);
+              }, 0);
+            }}
+          >
+            <option value="">Select Rank</option>
+            <option value="FIRST">🥇 1st Place</option>
+            <option value="SECOND">🥈 2nd Place</option>
+            <option value="THIRD">🥉 3rd Place</option>
+            <option value="CLEAR">Clear Result</option>
+          </select>
+        </div>
+      </td>
+      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+        <button 
+          className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
+          onClick={() => printTeamParticipants(
+            { registration_id: registrationId }, 
+            teamEvent.event_type?.name || teamEvent.name || 'Team Event',
+            [registrationId]
+          )}
+        >
+          🖨️ Print Team
+        </button>
+      </td>
+    </tr>
+  );
+});
+
+MixedTeamRow.displayName = 'MixedTeamRow';
 
 const UpdateTeamResult = () => {
   // State management
@@ -679,172 +845,6 @@ const UpdateTeamResult = () => {
     }
   };
 
-  // Mixed Team Row Component
-  const MixedTeamRow = ({ 
-    registrationId, 
-    temple, 
-    teamEvent, 
-    rowIndex, 
-    getTeamParticipantDetails, 
-    fetchTeamParticipantDetails, 
-    getTeamRankChanges, 
-    setTeamRankChange, 
-    printTeamParticipants 
-  }) => {
-    const [participants, setParticipants] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [teamResult, setTeamResult] = useState(null);
-
-    useEffect(() => {
-      if (registrationId) {
-        loadTeamParticipants();
-        loadTeamResult();
-      }
-    }, [registrationId]);
-
-    const loadTeamParticipants = async () => {
-      setLoading(true);
-      try {
-        console.log('Loading team participants for registration ID:', registrationId);
-        const data = await fetchTeamParticipantDetails(registrationId);
-        console.log('Fetched team participants:', data);
-        setParticipants(data);
-      } catch (error) {
-        console.error('Error loading team participants:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const loadTeamResult = async () => {
-      try {
-        console.log('Loading team result for registration ID:', registrationId);
-        const registrationData = await eventAPI.getTeamRegistration(registrationId);
-        console.log('Fetched team registration data:', registrationData);
-        
-        if (registrationData.event_result) {
-          setTeamResult({
-            rank: registrationData.event_result.rank,
-            points: registrationData.event_result.points
-          });
-        } else {
-          setTeamResult(null);
-        }
-      } catch (error) {
-        console.error('Error loading team result:', error);
-        setTeamResult(null);
-      }
-    };
-
-    // Separate male and female participants
-    const maleParticipants = participants.filter(p => p.gender === 'MALE');
-    const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
-
-    return (
-      <tr className="hover:bg-gray-50">
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="text-sm font-medium text-[#2A2A2A]">
-            {rowIndex}
-          </div>
-        </td>
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="flex items-center">
-            <div>
-              <div className="text-sm font-semibold text-[#2A2A2A]">
-                {temple.temple_name}
-              </div>
-              <div className="text-xs text-[#5A5A5A]">
-                Team {rowIndex % 10 || 1}
-              </div>
-            </div>
-          </div>
-        </td>
-        <td className="px-4 py-4 whitespace-nowrap">
-          {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
-          ) : maleParticipants.length > 0 ? (
-            <div className="space-y-1">
-              {maleParticipants.map((participant, idx) => (
-                <div key={idx} className="text-sm">
-                  <span className="font-medium text-[#2A2A2A]">
-                    {participant.first_name} {participant.last_name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500">No male participants</div>
-          )}
-        </td>
-        <td className="px-4 py-4 whitespace-nowrap">
-          {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
-          ) : femaleParticipants.length > 0 ? (
-            <div className="space-y-1">
-              {femaleParticipants.map((participant, idx) => (
-                <div key={idx} className="text-sm">
-                  <span className="font-medium text-[#2A2A2A]">
-                    {participant.first_name} {participant.last_name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-sm text-gray-500">No female participants</div>
-          )}
-        </td>
-        <td className="px-4 py-4 whitespace-nowrap">
-          <div className="flex items-center gap-2">
-            {teamResult?.rank ? (
-              <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                {teamResult.rank === 'FIRST' ? '🥇 1st' :
-                 teamResult.rank === 'SECOND' ? '🥈 2nd' :
-                 teamResult.rank === 'THIRD' ? '🥉 3rd' : teamResult.rank}
-              </span>
-            ) : (
-              <span className="text-xs text-[#5A5A5A]">No result</span>
-            )}
-            <select
-              className="px-2 py-1 border border-[#F8DFBE] rounded text-xs"
-              value={getTeamRankChanges(teamEvent.id)[registrationId] || teamResult?.rank || ""}
-              onChange={(e) => {
-                // Preserve scroll position to prevent jumping to top
-                const scrollY = window.scrollY;
-                
-                if (registrationId) {
-                  setTeamRankChange(teamEvent.id, registrationId, e.target.value);
-                }
-                
-                // Restore scroll position after React updates the DOM
-                setTimeout(() => {
-                  window.scrollTo(0, scrollY);
-                }, 0);
-              }}
-            >
-              <option value="">Select Rank</option>
-              <option value="FIRST">🥇 1st Place</option>
-              <option value="SECOND">🥈 2nd Place</option>
-              <option value="THIRD">🥉 3rd Place</option>
-              <option value="CLEAR">Clear Result</option>
-            </select>
-          </div>
-        </td>
-        <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-          <button 
-            className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
-            onClick={() => printTeamParticipants(
-              { registration_id: registrationId }, 
-              teamEvent.event_type?.name || teamEvent.name || 'Team Event',
-              [registrationId]
-            )}
-          >
-            🖨️ Print Team
-          </button>
-        </td>
-      </tr>
-    );
-  };
-
   // Group team events by gender
   const groupEventsByGender = (events) => {
     const grouped = {
@@ -1520,7 +1520,6 @@ const UpdateTeamResult = () => {
                                     temple={row.temple}
                                     teamEvent={teamEvent}
                                     rowIndex={flatIndex + 1}
-                                    getTeamParticipantDetails={getTeamParticipantDetails}
                                     fetchTeamParticipantDetails={fetchTeamParticipantDetails}
                                     getTeamRankChanges={getTeamRankChanges}
                                     setTeamRankChange={setTeamRankChange}
