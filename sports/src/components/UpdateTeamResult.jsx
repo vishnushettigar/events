@@ -1504,25 +1504,30 @@ const UpdateTeamResult = () => {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {teamEvent.registered_temples.map((temple, templeIndex) => {
-                                // For Mixed events, we need to show each team separately
-                                // Use registration_ids to create individual team rows
-                                const registrationIds = temple.registration_ids || [];
-                                return registrationIds.map((registrationId, teamIndex) => (
+                              {/* Flatten all teams across temples for sequential numbering */}
+                              {teamEvent.registered_temples
+                                .flatMap((temple, templeIndex) => 
+                                  (temple.registration_ids || []).map((registrationId, teamIndex) => ({
+                                    registrationId,
+                                    temple,
+                                    key: `${templeIndex}-${teamIndex}`
+                                  }))
+                                )
+                                .map((row, flatIndex) => (
                                   <MixedTeamRow
-                                    key={`${templeIndex}-${teamIndex}`}
-                                    registrationId={registrationId}
-                                    temple={temple}
+                                    key={row.key}
+                                    registrationId={row.registrationId}
+                                    temple={row.temple}
                                     teamEvent={teamEvent}
-                                    rowIndex={templeIndex * 10 + teamIndex + 1} // Ensure unique row numbers
+                                    rowIndex={flatIndex + 1}
                                     getTeamParticipantDetails={getTeamParticipantDetails}
                                     fetchTeamParticipantDetails={fetchTeamParticipantDetails}
                                     getTeamRankChanges={getTeamRankChanges}
                                     setTeamRankChange={setTeamRankChange}
                                     printTeamParticipants={printTeamParticipants}
                                   />
-                                ));
-                              })}
+                                ))
+                              }
                             </tbody>
                           </table>
                         </div>

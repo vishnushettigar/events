@@ -674,19 +674,61 @@ const UserManagement = () => {
                       >
                         Previous
                       </button>
-                      {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((pageNum) => (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                            pageNum === pagination.page
-                              ? 'z-10 bg-[#D35D38] border-[#D35D38] text-white'
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                          }`}
-                        >
-                          {pageNum}
-                        </button>
-                      ))}
+                      {(() => {
+                        const totalPages = pagination.totalPages;
+                        const currentPage = pagination.page;
+                        const pages = [];
+                        
+                        if (totalPages <= 7) {
+                          // Show all pages if 7 or less
+                          for (let i = 1; i <= totalPages; i++) pages.push(i);
+                        } else {
+                          // Always show first page
+                          pages.push(1);
+                          
+                          if (currentPage > 3) {
+                            pages.push('...');
+                          }
+                          
+                          // Show pages around current page
+                          const start = Math.max(2, currentPage - 1);
+                          const end = Math.min(totalPages - 1, currentPage + 1);
+                          
+                          for (let i = start; i <= end; i++) {
+                            if (!pages.includes(i)) pages.push(i);
+                          }
+                          
+                          if (currentPage < totalPages - 2) {
+                            pages.push('...');
+                          }
+                          
+                          // Always show last page
+                          if (!pages.includes(totalPages)) pages.push(totalPages);
+                        }
+                        
+                        return pages.map((pageNum, idx) => (
+                          pageNum === '...' ? (
+                            <span
+                              key={`ellipsis-${idx}`}
+                              className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-500"
+                            >
+                              ...
+                            </span>
+                          ) : (
+                            <button
+                              key={pageNum}
+                              onClick={() => handlePageChange(pageNum)}
+                              className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                pageNum === currentPage
+                                  ? 'z-10 bg-[#D35D38] border-[#D35D38] text-white'
+                                  : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          )
+                        ));
+                      })()}
                       <button
                         onClick={() => handlePageChange(pagination.page + 1)}
                         disabled={pagination.page === pagination.totalPages}
@@ -1508,16 +1550,16 @@ const TeamsManagement = () => {
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-100">
                                 {event.temples.flatMap(temple => 
-                                  temple.teams.map((team, teamIndex) => (
-                                    <TeamMembersRow 
-                                      key={`${temple.temple_id}-${team.id}`}
-                                      team={team}
-                                      temple={temple}
-                                      index={teamIndex}
-                                      getTeamMemberDetails={getTeamMemberDetails}
-                                    />
-                                  ))
-                                )}
+                                  temple.teams.map(team => ({ team, temple }))
+                                ).map((item, index) => (
+                                  <TeamMembersRow 
+                                    key={`${item.temple.temple_id}-${item.team.id}`}
+                                    team={item.team}
+                                    temple={item.temple}
+                                    index={index}
+                                    getTeamMemberDetails={getTeamMemberDetails}
+                                  />
+                                ))}
                               </tbody>
                             </table>
                           </div>
