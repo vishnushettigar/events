@@ -408,9 +408,26 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
  *   get:
  *     tags: [Viewer]
  *     summary: Get all teams (read-only)
- *     description: Retrieve all teams for viewing purposes
+ *     description: Retrieve all teams for viewing purposes (no pagination)
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: temple_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by temple ID
+ *       - in: query
+ *         name: event_id
+ *         schema:
+ *           type: integer
+ *         description: Filter by event ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [PENDING, ACCEPTED, DECLINED]
+ *         description: Filter by team status
  *     responses:
  *       200:
  *         description: Teams retrieved successfully
@@ -423,8 +440,7 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
  */
 router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
-    const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
-    const offset = (page - 1) * limit;
+    const { temple_id, event_id, status } = req.query;
 
     let whereClause = {
       year: new Date().getFullYear()  // Only show current year data
@@ -472,8 +488,6 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
           }
         }
       },
-      skip: offset,
-      take: parseInt(limit),
       orderBy: {
         created_at: 'desc'
       }
@@ -490,16 +504,9 @@ router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
       };
     });
 
-    const total = await prisma.team_event_registration.count({ where: whereClause });
-
     res.json({
       teams: teamsWithMemberCount,
-      pagination: {
-        current_page: parseInt(page),
-        total_pages: Math.ceil(total / limit),
-        total_count: total,
-        limit: parseInt(limit)
-      }
+      total_count: teamsWithMemberCount.length
     });
   } catch (error) {
     console.error('Error fetching teams:', error);

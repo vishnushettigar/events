@@ -1092,22 +1092,10 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
  *   get:
  *     tags: [Admin]
  *     summary: Get all teams
- *     description: Retrieve all teams with their details and member counts
+ *     description: Retrieve all teams with their details and member counts (no pagination)
  *     security:
  *       - bearerAuth: []
  *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           default: 1
- *         description: Page number for pagination
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           default: 10
- *         description: Number of teams per page
  *       - in: query
  *         name: temple_id
  *         schema:
@@ -1178,17 +1166,9 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
  *                             type: integer
  *                           rank:
  *                             type: integer
- *                 pagination:
- *                   type: object
- *                   properties:
- *                     page:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     total:
- *                       type: integer
- *                     totalPages:
- *                       type: integer
+ *                 total_count:
+ *                   type: integer
+ *                   description: Total number of teams
  *       401:
  *         description: Unauthorized
  *       403:
@@ -1199,8 +1179,7 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
 router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Teams API called');
-    const { page = 1, limit = 10, temple_id, event_id, status } = req.query;
-    const offset = (page - 1) * limit;
+    const { temple_id, event_id, status } = req.query;
 
     let whereClause = {
       year: new Date().getFullYear()  // Only show current year data
@@ -1250,15 +1229,12 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
           }
         }
       },
-      skip: offset,
-      take: parseInt(limit),
       orderBy: {
         created_at: 'desc'
       }
     });
 
     console.log('Teams found:', teams.length);
-    console.log('First team sample:', teams[0] || 'No teams found');
 
     // Add member count and fetch member details for each team
     const teamsWithMemberCount = teams.map(team => {
@@ -1271,16 +1247,9 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
       };
     });
 
-    const total = await prisma.team_event_registration.count({ where: whereClause });
-
     res.json({
       teams: teamsWithMemberCount,
-      pagination: {
-        current_page: parseInt(page),
-        total_pages: Math.ceil(total / limit),
-        total_count: total,
-        limit: parseInt(limit)
-      }
+      total_count: teamsWithMemberCount.length
     });
   } catch (error) {
     console.error('Error fetching teams:', error);
