@@ -199,10 +199,10 @@ const Templedetailedreports = () => {
         <style>
           body { font-family: Arial, sans-serif; margin: 20px; }
           .header { text-align: center; margin-bottom: 20px; }
-          .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-          .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-          .temple-name { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #D35D38; }
-          .section-title { font-size: 18px; font-weight: bold; margin-top: 30px; margin-bottom: 15px; color: #D35D38; }
+          .title { font-size: 20px; font-weight: bold; margin-bottom: 6px; }
+          .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+          .place { font-size: 14px; margin-bottom: 6px; color: black; }
+          .section-title { font-size: 18px; font-weight: bold; margin-top: 3px; margin-bottom: 15px; color: black; }
           table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #D35D38; color: white; font-weight: bold; }
@@ -216,9 +216,11 @@ const Templedetailedreports = () => {
       </head>
       <body>
         <div class="header">
+          <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
           <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-          <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-          <div class="temple-name">${templeInfo.name}</div>
+          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+          <div class="section-title">${templeInfo.name}</div>
+          <div class="section-title">Detailed Report</div>
         </div>
         
         <!-- Individual Events -->

@@ -202,10 +202,56 @@ const TeamEvents = () => {
         return teams.length > 0 ? teams[0] : null;
     };
 
+    // Get count of ACCEPTED teams for an event
+    const getAcceptedTeamsCount = (eventName, gender) => {
+        const eventId = getEventId(eventName, gender);
+        return registeredTeams.filter(team => team.event_id === eventId && team.status === 'ACCEPTED').length;
+    };
+
+    // Handler for deleting a team
+    const handleDeleteTeam = async (teamId) => {
+        if (!window.confirm('Are you sure you want to delete this team registration?')) {
+            return;
+        }
+        
+        try {
+            setLoading(true);
+            await eventAPI.deleteTeam(teamId);
+            showSuccessModal('Success', 'Team deleted successfully!');
+            
+            // Refresh registered teams
+            const teamsResponse = await eventAPI.getTempleTeams();
+            setRegisteredTeams(teamsResponse);
+        } catch (err) {
+            showErrorModal('Error', err.message || 'Failed to delete team');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handler for accepting a PENDING team
+    const handleAcceptTeam = async (teamId) => {
+        try {
+            setLoading(true);
+            await eventAPI.acceptTeam(teamId);
+            showSuccessModal('Success', 'Team accepted successfully!');
+            
+            // Refresh registered teams
+            const teamsResponse = await eventAPI.getTempleTeams();
+            setRegisteredTeams(teamsResponse);
+        } catch (err) {
+            showErrorModal('Error', err.message || 'Failed to accept team');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const TeamForm = ({ eventName, playerCount, gender, buttonColor }) => {
         const registeredTeams = getRegisteredTeams(eventName, gender);
         const isEditing = registeredTeams.length > 0;
         const isMixedGender = gender === 'ALL';
+        const acceptedTeamsCount = getAcceptedTeamsCount(eventName, gender);
+        const canAcceptMore = isMixedGender && acceptedTeamsCount < 3;
         
         // Initialize players with empty array
         const initialPlayers = Array(playerCount).fill({ name: '', aadharNumber: '', profileId: '' });
@@ -628,18 +674,58 @@ const TeamEvents = () => {
                 {/* Show existing teams for mixed gender events */}
                 {isMixedGender && registeredTeams.length > 0 && (
                     <div className="mb-6">
-                        <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">Registered Teams ({registeredTeams.length})</h4>
+                        <h4 className="text-lg font-semibold mb-3 text-[#2A2A2A]">
+                            Registered Teams ({registeredTeams.length})
+                            <span className="text-sm font-normal ml-2 text-gray-600">
+                                (ACCEPTED: {acceptedTeamsCount}/3)
+                            </span>
+                        </h4>
                         <div className="space-y-3">
                             {registeredTeams.map((team, teamIndex) => (
-                                <div key={team.id} className="bg-[#F8DFBE] p-4 rounded-lg border border-[#E0E0E0]">
+                                <div 
+                                    key={team.id} 
+                                    className={`p-4 rounded-lg border ${
+                                        team.status === 'ACCEPTED' 
+                                            ? 'bg-green-50 border-green-200' 
+                                            : 'bg-yellow-50 border-yellow-200'
+                                    }`}
+                                >
                                     <div className="flex justify-between items-center mb-2">
-                                        <h5 className="font-semibold text-[#2A2A2A]">Team {teamIndex + 1}</h5>
-                                        <button
-                                            className="px-3 py-1 bg-[#D35D38] text-white rounded text-sm hover:opacity-90"
-                                            onClick={() => handleEditTeam(team)}
-                                        >
-                                            Edit
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <h5 className="font-semibold text-[#2A2A2A]">Team {teamIndex + 1}</h5>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                                team.status === 'ACCEPTED' 
+                                                    ? 'bg-green-100 text-green-800' 
+                                                    : 'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                                {team.status}
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {/* Accept button - only show for PENDING teams and if less than 3 ACCEPTED */}
+                                            {team.status === 'PENDING' && canAcceptMore && (
+                                                <button
+                                                    className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                                                    onClick={() => handleAcceptTeam(team.id)}
+                                                    disabled={loading}
+                                                >
+                                                    Accept
+                                                </button>
+                                            )}
+                                            <button
+                                                className="px-3 py-1 bg-[#D35D38] text-white rounded text-sm hover:opacity-90"
+                                                onClick={() => handleEditTeam(team)}
+                                            >
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50"
+                                                onClick={() => handleDeleteTeam(team.id)}
+                                                disabled={loading}
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                         {team.members
@@ -734,7 +820,7 @@ const TeamEvents = () => {
                 </div>
                     <div className="flex gap-2 mt-4">
                         {editMode ? (
-                            // Edit mode - show Save and Cancel buttons
+                            // Edit mode - show Save, Cancel, and Delete buttons
                             <>
                                 <button
                                     className={`px-4 py-2 ${buttonColor} text-white rounded hover:opacity-90 disabled:opacity-50`}
@@ -750,6 +836,15 @@ const TeamEvents = () => {
                                 >
                                     Cancel
                                 </button>
+                                {editingTeamId && (
+                                    <button
+                                        className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
+                                        onClick={() => handleDeleteTeam(editingTeamId)}
+                                        disabled={loading}
+                                    >
+                                        Delete Team
+                                    </button>
+                                )}
                             </>
                         ) : (
                             // New team registration
@@ -961,6 +1056,9 @@ const TeamEvents = () => {
                             </p>
                             <p className="text-sm text-blue-700 mt-1">
                                 <span className="font-semibold">Order:</span> First participant must be MALE, second participant must be FEMALE.
+                            </p>
+                            <p className="text-sm text-blue-700 mt-1">
+                                <span className="font-semibold">Team Limit:</span> Maximum 3 teams can have ACCEPTED status. Additional registrations will be in PENDING status.
                             </p>
                         </div>
                         <div className="space-y-6">

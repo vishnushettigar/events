@@ -190,9 +190,13 @@ export const eventAPI = {
   getTempleTeams: () => apiService.get('/events/temple-teams'),
   registerTeam: (data) => apiService.post('/events/register-team', data),
   updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
+  deleteTeam: (registrationId) => apiService.delete(`/events/delete-team/${registrationId}`),
+  acceptTeam: (registrationId) => apiService.put(`/events/accept-team/${registrationId}`),
+  getAcceptedTeamsCount: (eventId) => apiService.get(`/events/accepted-teams-count/${eventId}`),
   getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
   getTeamParticipants: (registrationId) => apiService.get(`/events/team-participants/${registrationId}`),
   getTeamRegistration: (registrationId) => apiService.get(`/events/team-registration/${registrationId}`),
+  getBatchTeamData: (registrationIds) => apiService.post('/events/batch-team-data', { registration_ids: registrationIds }),
   
   // Heat management
   generateHeats: (eventId) => apiService.post('/events/generate-heats', { event_id: eventId }),
@@ -205,6 +209,13 @@ export const eventAPI = {
   initTrials: (eventId) => apiService.post('/events/init-trials', { event_id: eventId }),
   getTrials: (eventId) => apiService.get(`/events/trials/${eventId}`),
   saveTrials: (eventId, trials) => apiService.put('/events/update-trials', { event_id: eventId, trials }),
+  
+  // Staff participant management
+  searchUsersForEvent: (eventId, aadharNumber) => apiService.get(`/events/search-users-for-event/${eventId}`, { aadharNumber }),
+  getUserRegistrationCount: (userId) => apiService.get(`/events/user-registration-count/${userId}`),
+  getTempleParticipantsCount: (eventId, templeId) => apiService.get(`/events/temple-participants-count/${eventId}/${templeId}`),
+  checkUserEventRegistration: (eventId, userId) => apiService.get(`/events/check-user-event-registration/${eventId}/${userId}`),
+  staffRegisterParticipant: (eventId, userId) => apiService.post('/events/staff-register-participant', { event_id: eventId, user_id: userId }),
 };
 
 export const participantAPI = {

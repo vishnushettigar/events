@@ -1,60 +1,23 @@
 import React, { useState, useEffect, memo, useCallback } from 'react';
-import { eventAPI } from '../utils/api';
+import { eventAPI, systemAPI } from '../utils/api';
 
 // Mixed Team Row Component - MUST be outside the main component to prevent re-mounting
+// Now uses pre-fetched data instead of making individual API calls
 const MixedTeamRow = memo(({ 
   registrationId, 
   temple, 
   teamEvent, 
   rowIndex, 
-  fetchTeamParticipantDetails, 
+  batchTeamData,
   getTeamRankChanges, 
   setTeamRankChange, 
   printTeamParticipants 
 }) => {
-  const [participants, setParticipants] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [teamResult, setTeamResult] = useState(null);
-  const [hasFetched, setHasFetched] = useState(false);
-
-  useEffect(() => {
-    // Only fetch once per registration
-    if (registrationId && !hasFetched) {
-      setHasFetched(true);
-      loadTeamParticipants();
-      loadTeamResult();
-    }
-  }, [registrationId, hasFetched]);
-
-  const loadTeamParticipants = async () => {
-    setLoading(true);
-    try {
-      const data = await fetchTeamParticipantDetails(registrationId);
-      setParticipants(data);
-    } catch (error) {
-      console.error('Error loading team participants:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTeamResult = async () => {
-    try {
-      const registrationData = await eventAPI.getTeamRegistration(registrationId);
-      
-      if (registrationData.event_result) {
-        setTeamResult({
-          rank: registrationData.event_result.rank,
-          points: registrationData.event_result.points
-        });
-      } else {
-        setTeamResult(null);
-      }
-    } catch (error) {
-      console.error('Error loading team result:', error);
-      setTeamResult(null);
-    }
-  };
+  // Get data from pre-fetched batch data
+  const teamData = batchTeamData?.[registrationId] || null;
+  const participants = teamData?.participants || [];
+  const teamResult = teamData?.registration?.event_result || null;
+  const loading = !batchTeamData; // Loading if batch data not yet available
 
   // Separate male and female participants
   const maleParticipants = participants.filter(p => p.gender === 'MALE');
@@ -73,9 +36,9 @@ const MixedTeamRow = memo(({
             <div className="text-sm font-semibold text-[#2A2A2A]">
               {temple.temple_name}
             </div>
-            <div className="text-xs text-[#5A5A5A]">
+            {/* <div className="text-xs text-[#5A5A5A]">
               Team {rowIndex % 10 || 1}
-            </div>
+            </div> */}
           </div>
         </div>
       </td>
@@ -184,8 +147,19 @@ const UpdateTeamResult = () => {
   // For tracking team rank changes
   const [teamRankChanges, setTeamRankChanges] = useState({});
   
-  // For team participant details
+  // For team participant details (legacy - kept for non-mixed events)
   const [teamParticipantDetails, setTeamParticipantDetails] = useState({});
+  
+  // For batch-fetched mixed team data (keyed by registration ID)
+  const [mixedTeamBatchData, setMixedTeamBatchData] = useState({});
+  
+  // Heat generation state
+  const [showHeatModal, setShowHeatModal] = useState(false);
+  const [showFinalHeatModal, setShowFinalHeatModal] = useState(false);
+  const [generatedHeats, setGeneratedHeats] = useState([]);
+  const [selectedEventForHeat, setSelectedEventForHeat] = useState(null);
+  const [laneCount, setLaneCount] = useState(8);
+  const [finalHeatTeams, setFinalHeatTeams] = useState([]);
 
   // Helper functions for team rank changes management
   const getTeamRankChanges = (eventId) => {
@@ -247,12 +221,57 @@ const UpdateTeamResult = () => {
       setError(null);
       const data = await eventAPI.getTeamEvents();
       setData(data);
+      
+      // Batch fetch mixed team data
+      await fetchMixedTeamBatchData(data);
     } catch (err) {
       console.error('Error fetching team events:', err);
       setError(err.message);
       setData([]);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Fetch batch data for all mixed team events
+  const fetchMixedTeamBatchData = async (teamEvents) => {
+    try {
+      // Find mixed/ALL events and collect all registration IDs
+      const mixedEvents = teamEvents.filter(event => 
+        event.gender === 'MIXED' || event.gender === 'ALL'
+      );
+      
+      if (mixedEvents.length === 0) {
+        return;
+      }
+      
+      // Collect all registration IDs from mixed events
+      const allRegistrationIds = [];
+      mixedEvents.forEach(event => {
+        (event.registered_temples || []).forEach(temple => {
+          (temple.registration_ids || []).forEach(regId => {
+            if (regId && !allRegistrationIds.includes(regId)) {
+              allRegistrationIds.push(regId);
+            }
+          });
+        });
+      });
+      
+      if (allRegistrationIds.length === 0) {
+        return;
+      }
+      
+      console.log('Batch fetching data for', allRegistrationIds.length, 'mixed team registrations');
+      
+      // Fetch all data in a single batch call
+      const batchData = await eventAPI.getBatchTeamData(allRegistrationIds);
+      setMixedTeamBatchData(batchData);
+      
+      console.log('Batch fetch complete for mixed teams');
+    } catch (error) {
+      console.error('Error fetching mixed team batch data:', error);
+      // Don't fail silently - set empty object so rows show as loaded but empty
+      setMixedTeamBatchData({});
     }
   };
 
@@ -275,6 +294,233 @@ const UpdateTeamResult = () => {
   useEffect(() => {
     fetchTeamEvents();
   }, []);
+
+  // Fetch lane count setting
+  useEffect(() => {
+    const fetchLaneCount = async () => {
+      try {
+        const setting = await systemAPI.getSetting('lane_count');
+        if (setting && setting.value) {
+          setLaneCount(parseInt(setting.value) || 8);
+        }
+      } catch (error) {
+        console.error('Error fetching lane count:', error);
+        setLaneCount(8); // Default to 8 lanes
+      }
+    };
+    fetchLaneCount();
+  }, []);
+
+  // Check if event is a relay event (supports heat generation)
+  const isRelayEvent = (eventName) => {
+    const name = eventName?.toLowerCase() || '';
+    return name.includes('relay') || name.includes('100 x 4') || name.includes('4x100') || name.includes('50 x 2');
+  };
+
+  const generateHeatsForEvent = (teamEvent) => {
+    // 1. Data Preparation
+    const allTeams = (teamEvent.registered_temples || []).flatMap(temple => 
+      (temple.registration_ids || []).map(registrationId => ({
+        registration_id: registrationId,
+        temple_name: temple.temple_name,
+        temple_id: temple.temple_id,
+        members: mixedTeamBatchData[registrationId]?.participants || []
+      }))
+    );
+  
+    const totalTeams = allTeams.length;
+    if (totalTeams === 0) return [];
+  
+    // 2. Optimized Heat Size Calculation (Backend Logic)
+    let heatSizes = [];
+    if (totalTeams <= laneCount) {
+      heatSizes.push(totalTeams);
+    } else if (totalTeams < laneCount * 2) {
+      // Case: Between 1 and 2 full heats - split evenly
+      const half = Math.floor(totalTeams / 2);
+      heatSizes.push(totalTeams - half); // Larger half first
+      heatSizes.push(half);
+    } else {
+      // Case: Standard distribution for larger volumes
+      let remaining = totalTeams;
+      const numHeats = Math.ceil(totalTeams / laneCount);
+      const baseSize = Math.floor(totalTeams / numHeats);
+      const extra = totalTeams % numHeats;
+  
+      for (let i = 0; i < numHeats; i++) {
+        heatSizes.push(baseSize + (i < extra ? 1 : 0));
+      }
+    }
+  
+    // 3. Initialize Heats
+    const heats = heatSizes.map((size, index) => ({
+      id: index + 1,
+      teams: [],
+      maxSize: size
+    }));
+  
+    // 4. Distribution Logic (Temple Separation)
+    if (heats.length === 1) {
+      heats[0].teams = [...allTeams];
+    } else {
+      // Grouping for sorting
+      const templeGroups = {};
+      allTeams.forEach(team => {
+        if (!templeGroups[team.temple_name]) templeGroups[team.temple_name] = [];
+        templeGroups[team.temple_name].push(team);
+      });
+  
+      // Sort teams: Largest temple groups first (crucial for separation)
+      const sortedTeams = [...allTeams].sort((a, b) => {
+        return templeGroups[b.temple_name].length - templeGroups[a.temple_name].length;
+      });
+  
+      // Track temple counts per heat: { "Temple A": [heat1Count, heat2Count], ... }
+      const templeCountsPerHeat = {};
+      Object.keys(templeGroups).forEach(name => {
+        templeCountsPerHeat[name] = new Array(heats.length).fill(0);
+      });
+  
+      sortedTeams.forEach(team => {
+        let targetHeatIndex = -1;
+        let minTempleCount = Infinity;
+        let minTotalCount = Infinity;
+  
+        // Find best heat using Backend scoring logic
+        for (let i = 0; i < heats.length; i++) {
+          if (heats[i].teams.length < heats[i].maxSize) {
+            const currentTempleCount = templeCountsPerHeat[team.temple_name][i];
+            const currentHeatTotal = heats[i].teams.length;
+  
+            // Priority 1: Least teams from same temple
+            // Priority 2: Least total teams (load balancing)
+            if (currentTempleCount < minTempleCount || 
+               (currentTempleCount === minTempleCount && currentHeatTotal < minTotalCount)) {
+              minTempleCount = currentTempleCount;
+              minTotalCount = currentHeatTotal;
+              targetHeatIndex = i;
+            }
+          }
+        }
+  
+        if (targetHeatIndex !== -1) {
+          heats[targetHeatIndex].teams.push(team);
+          templeCountsPerHeat[team.temple_name][targetHeatIndex]++;
+        }
+      });
+    }
+  
+    // Final Lane Count Adjustment
+    return heats.map(heat => ({
+      ...heat,
+      laneCount: heat.teams.length
+    }));
+  };
+
+  // Handle generate heats button click
+  const handleGenerateHeats = (teamEvent) => {
+    setSelectedEventForHeat(teamEvent);
+    const heats = generateHeatsForEvent(teamEvent);
+    setGeneratedHeats(heats);
+    setShowHeatModal(true);
+  };
+
+  // Handle final heat modal
+  const handleOpenFinalHeatModal = (teamEvent) => {
+    setSelectedEventForHeat(teamEvent);
+    // Get all teams for final heat selection
+    const allTeams = (teamEvent.registered_temples || []).flatMap(temple => 
+      (temple.registration_ids || []).map(registrationId => ({
+        registration_id: registrationId,
+        temple_name: temple.temple_name,
+        temple_id: temple.temple_id,
+        members: mixedTeamBatchData[registrationId]?.participants || [],
+        selected: false
+      }))
+    );
+    setFinalHeatTeams(allTeams);
+    setShowFinalHeatModal(true);
+  };
+
+  // Toggle team selection for final heat
+  const toggleFinalHeatTeamSelection = (registrationId) => {
+    setFinalHeatTeams(prev => prev.map(team => 
+      team.registration_id === registrationId ? { ...team, selected: !team.selected } : team
+    ));
+  };
+
+  // Generate final heat with selected teams
+  const generateFinalHeat = () => {
+    const selectedTeams = finalHeatTeams.filter(team => team.selected);
+    if (selectedTeams.length === 0) {
+      showInfoModal('No Selection', 'Please select at least one team for the final heat');
+      return;
+    }
+    
+    const finalHeat = [{
+      id: 'Final',
+      teams: selectedTeams,
+      laneCount: selectedTeams.length,
+      isFinal: true
+    }];
+    
+    setGeneratedHeats(finalHeat);
+    setShowFinalHeatModal(false);
+    setShowHeatModal(true);
+  };
+
+  // Print heats
+  const handlePrintHeats = () => {
+    const printContent = document.getElementById('heat-print-content');
+    if (!printContent) return;
+
+    const eventName = selectedEventForHeat?.event_type?.name || selectedEventForHeat?.name || 'Relay Event';
+    const gender = selectedEventForHeat?.gender;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Heat Schedule - ${eventName}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            .header { text-align: center; margin-bottom: 20px; }
+            .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+            .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+            .place { font-size: 14px; margin-bottom: 6px; color: black; }
+            h1 { text-align: center; color: black; margin-bottom: 10px; }
+            h2 { text-align: center; color: #2A2A2A; margin-bottom: 20px; font-size: 16px; }
+            .heat-container { margin-bottom: 30px; page-break-inside: avoid; }
+            .heat-header { background: #f5f5f5; color: black; padding: 10px 15px; border-radius: 8px 8px 0 0; }
+            .heat-header h3 { margin: 0; font-size: 18px; }
+            .heat-header span { font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 0; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background: #f5f5f5; font-weight: bold; }
+            .lane-number { font-weight: bold; color: black; text-align: center; }
+            .temple-name { font-weight: 600; }
+            .member-list { font-size: 12px; color: black; }
+            @media print {
+              .heat-container { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
+            <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+          </div>
+          <h1>${eventName}</h1>
+          <h2>${gender === 'MIXED' || gender === 'ALL' ? 'Mixed Gender' : gender} • Team Event</h2>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   // Modal helper functions
   const showSuccessModal = (title, message, details = null) => {
@@ -349,8 +595,8 @@ const UpdateTeamResult = () => {
       // Check if this is a Mixed gender event
       const isMixedEvent = teamEvent && (teamEvent.gender === 'MIXED' || teamEvent.gender === 'ALL');
       
-      // Show confirmation modal with all changes
-      const changesList = await Promise.all(changeEntries.map(async ([registrationId, rank]) => {
+      // Show confirmation modal with all changes - use cached batch data for mixed events
+      const changesList = changeEntries.map(([registrationId, rank]) => {
         // Find the temple name from the specific team event
         let temple = null;
         
@@ -367,25 +613,21 @@ const UpdateTeamResult = () => {
           console.warn(`Temple not found for registration ID ${registrationId} in event ${eventId}`);
         }
         
-        // For Mixed events, fetch participant names
+        // For Mixed events, use cached batch data for participant names
         let participantNames = null;
         if (isMixedEvent && registrationId) {
-          try {
-            const participants = await fetchTeamParticipantDetails(registrationId);
-            if (participants && participants.length > 0) {
-              const maleParticipants = participants.filter(p => p.gender === 'MALE');
-              const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
-              
-              const maleNames = maleParticipants.map(p => `${p.first_name} ${p.last_name || ''}`.trim()).join(', ');
-              const femaleNames = femaleParticipants.map(p => `${p.first_name} ${p.last_name || ''}`.trim()).join(', ');
-              
-              participantNames = {
-                male: maleNames || 'None',
-                female: femaleNames || 'None'
-              };
-            }
-          } catch (error) {
-            console.error(`Error fetching participants for registration ${registrationId}:`, error);
+          const cachedData = mixedTeamBatchData[registrationId];
+          if (cachedData && cachedData.participants && cachedData.participants.length > 0) {
+            const maleParticipants = cachedData.participants.filter(p => p.gender === 'MALE');
+            const femaleParticipants = cachedData.participants.filter(p => p.gender === 'FEMALE');
+            
+            const maleNames = maleParticipants.map(p => `${p.first_name} ${p.last_name || ''}`.trim()).join(', ');
+            const femaleNames = femaleParticipants.map(p => `${p.first_name} ${p.last_name || ''}`.trim()).join(', ');
+            
+            participantNames = {
+              male: maleNames || 'None',
+              female: femaleNames || 'None'
+            };
           }
         }
         
@@ -396,7 +638,7 @@ const UpdateTeamResult = () => {
           isMixed: isMixedEvent,
           participants: participantNames
         };
-      }));
+      });
 
       showConfirmModal(
         'Confirm Team Result Update',
@@ -565,19 +807,29 @@ const UpdateTeamResult = () => {
               padding-bottom: 20px;
             }
             .header h1 {
-              color: #D35D38;
+              color: black;
               margin: 0;
               font-size: 24px;
             }
             .header h2 {
-              color: #666;
+              color: black;
               margin: 10px 0 0 0;
               font-size: 18px;
             }
+            .title {
+              font-size: 20px;
+              font-weight: normal;
+              margin-bottom: 6px;
+            }
+            .main-title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 6px;
+            }
             .place {
-              font-size: 16px;
-              margin: 10px 0;
-              color: #666;
+              font-size: 14px;
+              margin-bottom: 6px;
+              color: black;
             }
             table {
               width: 100%;
@@ -599,7 +851,7 @@ const UpdateTeamResult = () => {
             }
             .temple-name {
               font-weight: bold;
-              color: #D35D38;
+              color: black;
             }
             @media print {
               body { margin: 0; }
@@ -609,8 +861,10 @@ const UpdateTeamResult = () => {
         </head>
         <body>
           <div class="header">
+            <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
+            <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
             <h1>${eventName}</h1>
-            <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
             <h2>Team: <span class="temple-name">${temple.temple_name || temple.registration_id}</span></h2>
             <p>Total Members: ${participants.length}</p>
           </div>
@@ -666,23 +920,29 @@ const UpdateTeamResult = () => {
             <title>${eventType} Team Events - ${eventName}</title>
             <style>
               body { font-family: Arial, sans-serif; margin: 20px; }
+              .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+              .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+              .place { font-size: 14px; margin-bottom: 6px; color: black; }
               .header { text-align: center; margin-bottom: 20px; }
-              .event-name { font-size: 18px; font-weight: bold; color: #D35D38; }
-              .event-details { font-size: 14px; margin-top: 5px; color: #666; }
+              .event-name { font-size: 18px; font-weight: bold; color: black; }
+              .event-details { font-size: 14px; margin-top: 5px; color: black; }
               table { width: 100%; border-collapse: collapse; margin-top: 20px; }
               th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #D35D38; color: white; font-weight: bold; }
+              th { background-color: black; color: white; font-weight: bold; }
               tr:nth-child(even) { background-color: #f9f9f9; }
               .result { font-weight: bold; }
-              .first { color: #FFD700; }
-              .second { color: #C0C0C0; }
-              .third { color: #CD7F32; }
+              .first { color: black; }
+              .second { color: black; }
+              .third { color: black; }
             </style>
           </head>
           <body>
             <div class="header">
+              <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
+              <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+              <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
               <div class="event-name">${eventName} - ${gender}</div>
-              <div class="event-details">${teamEvent.age_category} • ${eventType} Team Event</div>
+             
             </div>
             <table>
               <thead>
@@ -738,20 +998,20 @@ const UpdateTeamResult = () => {
     }
   };
 
-  // Print MIXED team events table
-  const printMixedTeamEventTable = async (teamEvent) => {
+  // Print MIXED team events table - uses cached batch data
+  const printMixedTeamEventTable = (teamEvent) => {
     try {
       const eventName = teamEvent.event_type?.name || teamEvent.name || 'Team Event';
       
-      // Fetch all team data for mixed events
+      // Use cached batch data for mixed events
       const allTeamData = [];
       for (const temple of teamEvent.registered_temples || []) {
         const registrationIds = temple.registration_ids || [];
         for (const registrationId of registrationIds) {
-          try {
-            const registrationData = await eventAPI.getTeamRegistration(registrationId);
-            const participants = await eventAPI.getTeamParticipants(registrationId);
-            
+          const cachedData = mixedTeamBatchData[registrationId];
+          
+          if (cachedData) {
+            const participants = cachedData.participants || [];
             const maleParticipants = participants.filter(p => p.gender === 'MALE');
             const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
             
@@ -759,14 +1019,20 @@ const UpdateTeamResult = () => {
               templeName: temple.temple_name,
               maleParticipants: maleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', '),
               femaleParticipants: femaleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', '),
-              result: registrationData.event_result ? 
-                (registrationData.event_result.rank === 'FIRST' ? '🥇 1st Place' :
-                 registrationData.event_result.rank === 'SECOND' ? '🥈 2nd Place' :
-                 registrationData.event_result.rank === 'THIRD' ? '🥉 3rd Place' : registrationData.event_result.rank) : 
+              result: cachedData.registration?.event_result ? 
+                (cachedData.registration.event_result.rank === 'FIRST' ? '🥇 1st Place' :
+                 cachedData.registration.event_result.rank === 'SECOND' ? '🥈 2nd Place' :
+                 cachedData.registration.event_result.rank === 'THIRD' ? '🥉 3rd Place' : cachedData.registration.event_result.rank) : 
                 ''
             });
-          } catch (error) {
-            console.error(`Error fetching data for registration ${registrationId}:`, error);
+          } else {
+            // Fallback if data not in cache
+            allTeamData.push({
+              templeName: temple.temple_name,
+              maleParticipants: 'Loading...',
+              femaleParticipants: 'Loading...',
+              result: ''
+            });
           }
         }
       }
@@ -779,11 +1045,11 @@ const UpdateTeamResult = () => {
             <style>
               body { font-family: Arial, sans-serif; margin: 20px; }
               .header { text-align: center; margin-bottom: 20px; }
-              .event-name { font-size: 18px; font-weight: bold; color: #D35D38; }
-              .event-details { font-size: 14px; margin-top: 5px; color: #666; }
+              .event-name { font-size: 18px; font-weight: bold; color: black; }
+              .event-details { font-size: 14px; margin-top: 5px; color: black; }
               table { width: 100%; border-collapse: collapse; margin-top: 20px; }
               th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #D35D38; color: white; font-weight: bold; }
+              th { background-color: black; color: white; font-weight: bold; }
               tr:nth-child(even) { background-color: #f9f9f9; }
               .result { font-weight: bold; }
               .participants { font-size: 12px; }
@@ -1042,6 +1308,238 @@ const UpdateTeamResult = () => {
     <div className="space-y-8">
       {/* Modal */}
       <Modal />
+
+      {/* Heat Generation Modal */}
+      {showHeatModal && selectedEventForHeat && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {generatedHeats[0]?.isFinal ? '🏆 Final Heat' : '🏃 Generated Heats'}
+                </h2>
+                <p className="text-[#F8DFBE] text-sm">
+                  {selectedEventForHeat.event_type?.name || selectedEventForHeat.name || 'Team Event'} • {selectedEventForHeat.gender === 'MIXED' || selectedEventForHeat.gender === 'ALL' ? 'Mixed Gender' : selectedEventForHeat.gender}
+                </p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handlePrintHeats}
+                  className="bg-white text-[#D35D38] px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center space-x-2"
+                >
+                  <span>🖨️</span>
+                  <span>Print</span>
+                </button>
+                <button
+                  onClick={() => setShowHeatModal(false)}
+                  className="text-white hover:text-gray-200 text-3xl font-bold leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6" id="heat-print-content">
+              {generatedHeats.length > 0 ? (
+                <div className="space-y-6">
+                  {generatedHeats.map((heat, heatIndex) => (
+                    <div key={heat.id} className="heat-container bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                      <div className="heat-header bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-white">
+                          {heat.isFinal ? '🏆 Final Heat' : `Heat ${heat.id}`}
+                        </h3>
+                        <span className="text-[#F8DFBE] text-sm">
+                          {heat.teams.length} Team{heat.teams.length !== 1 ? 's' : ''} • {heat.laneCount} Lane{heat.laneCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <table className="min-w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase w-20">Lane</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Temple</th>
+                            {/* For mixed gender events: show Team Members + Result; for regular relay: show Result only */}
+                            {(selectedEventForHeat?.gender === 'MIXED' || selectedEventForHeat?.gender === 'ALL') ? (
+                              <>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Team Members</th>
+                                <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase w-32">Result</th>
+                              </>
+                            ) : (
+                              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase w-32">Result</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {heat.teams.map((team, laneIndex) => (
+                            <tr key={team.registration_id} className="hover:bg-orange-50">
+                              <td className="px-4 py-3 lane-number text-center">
+                                <span className="inline-flex items-center justify-center w-8 h-8 bg-[#D35D38] text-white rounded-full font-bold">
+                                  {laneIndex + 1}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="font-semibold text-[#2A2A2A] temple-name">{team.temple_name}</div>
+                              </td>
+                              {/* For mixed gender events: show Team Members + Result; for regular relay: show Result only */}
+                              {(selectedEventForHeat?.gender === 'MIXED' || selectedEventForHeat?.gender === 'ALL') ? (
+                                <>
+                                  <td className="px-4 py-3">
+                                    <div className="member-list space-y-1">
+                                      {team.members && team.members.length > 0 ? (
+                                        team.members.map((member, idx) => (
+                                          <div key={member.id || idx} className="text-sm">
+                                            <span className="font-medium text-[#2A2A2A]">
+                                              {member.first_name} {member.last_name || ''}
+                                            </span>
+                                            {member.gender && (
+                                              <span className="text-gray-500 ml-1">({member.gender})</span>
+                                            )}
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="text-gray-400 text-sm">No member details</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <div className="text-sm text-gray-400">&nbsp;</div>
+                                  </td>
+                                </>
+                              ) : (
+                                <td className="px-4 py-3">
+                                  <div className="text-sm text-gray-400">&nbsp;</div>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-xl mb-2">No teams available for heat generation</p>
+                  <p className="text-sm">Register teams to generate heats</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                Total: {generatedHeats.reduce((sum, heat) => sum + heat.teams.length, 0)} teams in {generatedHeats.length} heat{generatedHeats.length !== 1 ? 's' : ''}
+              </div>
+              <button
+                onClick={() => setShowHeatModal(false)}
+                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Heat Selection Modal */}
+      {showFinalHeatModal && selectedEventForHeat && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-white">🏆 Select Teams for Final Heat</h2>
+                <p className="text-[#F8DFBE] text-sm">
+                  {selectedEventForHeat.event_type?.name || selectedEventForHeat.name || 'Team Event'} • {selectedEventForHeat.gender === 'MIXED' || selectedEventForHeat.gender === 'ALL' ? 'Mixed Gender' : selectedEventForHeat.gender}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowFinalHeatModal(false)}
+                className="text-white hover:text-gray-200 text-3xl font-bold leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <p className="text-gray-600 mb-4">
+                Select the teams that qualified for the final heat. You can select multiple teams.
+              </p>
+              
+              {finalHeatTeams.length > 0 ? (
+                <div className="space-y-3">
+                  {finalHeatTeams.map((team, index) => (
+                    <div 
+                      key={team.registration_id}
+                      onClick={() => toggleFinalHeatTeamSelection(team.registration_id)}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        team.selected 
+                          ? 'border-[#D35D38] bg-orange-50' 
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                            team.selected 
+                              ? 'border-[#D35D38] bg-[#D35D38]' 
+                              : 'border-gray-300'
+                          }`}>
+                            {team.selected && (
+                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-[#2A2A2A]">{team.temple_name}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-600">
+                            {team.members && team.members.length > 0 
+                              ? team.members.map(m => `${m.first_name} ${m.last_name || ''}`).join(', ')
+                              : 'No member details'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No teams available for selection</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                {finalHeatTeams.filter(t => t.selected).length} of {finalHeatTeams.length} teams selected
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowFinalHeatModal(false)}
+                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={generateFinalHeat}
+                  disabled={finalHeatTeams.filter(t => t.selected).length === 0}
+                  className="bg-[#D35D38] text-white px-6 py-2 rounded-lg hover:bg-[#B84A2E] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Generate Final Heat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Loading State */}
       {loading && (
@@ -1080,12 +1578,31 @@ const UpdateTeamResult = () => {
                              {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} participants
                           </p>
                         </div>
-                        <button
-                          onClick={() => printTeamEventTable(teamEvent, 'Male')}
-                          className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
-                        >
-                          🖨️ Print Table
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Heat Generation Buttons for Relay Events */}
+                          {isRelayEvent(teamEvent.event_type?.name || teamEvent.name) && (
+                            <>
+                              <button
+                                onClick={() => handleGenerateHeats(teamEvent)}
+                                className="px-3 py-1.5 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-1 text-sm font-medium"
+                              >
+                                🏃 Generate Heats
+                              </button>
+                              <button
+                                onClick={() => handleOpenFinalHeatModal(teamEvent)}
+                                className="px-3 py-1.5 bg-yellow-400 text-yellow-900 rounded-lg hover:bg-yellow-300 flex items-center gap-1 text-sm font-medium"
+                              >
+                                🏆 Final Heat
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => printTeamEventTable(teamEvent, 'Male')}
+                            className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
+                          >
+                            🖨️ Print Table
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -1145,9 +1662,9 @@ const UpdateTeamResult = () => {
                                         <div className="text-sm font-semibold text-[#2A2A2A]">
                                           {temple.temple_name}
                                         </div>
-                                        <div className="text-xs text-[#5A5A5A]">
+                                        {/* <div className="text-xs text-[#5A5A5A]">
                                           {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
-                                        </div>
+                                        </div> */}
                                       </div>
                                     </div>
                                   </td>
@@ -1266,12 +1783,31 @@ const UpdateTeamResult = () => {
                             {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} participants
                           </p>
                         </div>
-                        <button
-                          onClick={() => printTeamEventTable(teamEvent, 'Female')}
-                          className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
-                        >
-                          🖨️ Print Table
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Heat Generation Buttons for Relay Events */}
+                          {isRelayEvent(teamEvent.event_type?.name || teamEvent.name) && (
+                            <>
+                              <button
+                                onClick={() => handleGenerateHeats(teamEvent)}
+                                className="px-3 py-1.5 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-1 text-sm font-medium"
+                              >
+                                🏃 Generate Heats
+                              </button>
+                              <button
+                                onClick={() => handleOpenFinalHeatModal(teamEvent)}
+                                className="px-3 py-1.5 bg-yellow-400 text-yellow-900 rounded-lg hover:bg-yellow-300 flex items-center gap-1 text-sm font-medium"
+                              >
+                                🏆 Final Heat
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => printTeamEventTable(teamEvent, 'Female')}
+                            className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
+                          >
+                            🖨️ Print Table
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -1331,9 +1867,9 @@ const UpdateTeamResult = () => {
                                         <div className="text-sm font-semibold text-[#2A2A2A]">
                                           {temple.temple_name}
                                         </div>
-                                        <div className="text-xs text-[#5A5A5A]">
+                                        {/* <div className="text-xs text-[#5A5A5A]">
                                           {temple.team_count || 1} team{temple.team_count > 1 ? 's' : ''} registered
-                                        </div>
+                                        </div> */}
                                       </div>
                                     </div>
                                   </td>
@@ -1452,12 +1988,31 @@ const UpdateTeamResult = () => {
                             {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} partcipants
                           </p>
                         </div>
-                        <button
-                          onClick={() => printMixedTeamEventTable(teamEvent)}
-                          className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
-                        >
-                          🖨️ Print Table
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {/* Heat Generation Buttons for Relay Events */}
+                          {isRelayEvent(teamEvent.event_type?.name || teamEvent.name) && (
+                            <>
+                              <button
+                                onClick={() => handleGenerateHeats(teamEvent)}
+                                className="px-3 py-1.5 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-1 text-sm font-medium"
+                              >
+                                🏃 Generate Heats
+                              </button>
+                              <button
+                                onClick={() => handleOpenFinalHeatModal(teamEvent)}
+                                className="px-3 py-1.5 bg-yellow-400 text-yellow-900 rounded-lg hover:bg-yellow-300 flex items-center gap-1 text-sm font-medium"
+                              >
+                                🏆 Final Heat
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => printMixedTeamEventTable(teamEvent)}
+                            className="px-4 py-2 bg-white text-[#D35D38] rounded-lg hover:bg-gray-100 flex items-center gap-2 text-sm font-medium"
+                          >
+                            🖨️ Print Table
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -1520,7 +2075,7 @@ const UpdateTeamResult = () => {
                                     temple={row.temple}
                                     teamEvent={teamEvent}
                                     rowIndex={flatIndex + 1}
-                                    fetchTeamParticipantDetails={fetchTeamParticipantDetails}
+                                    batchTeamData={mixedTeamBatchData}
                                     getTeamRankChanges={getTeamRankChanges}
                                     setTeamRankChange={setTeamRankChange}
                                     printTeamParticipants={printTeamParticipants}

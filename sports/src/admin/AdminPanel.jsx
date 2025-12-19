@@ -1069,6 +1069,17 @@ const TeamsManagement = () => {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [selectedTemple, setSelectedTemple] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  
+  // Batch data for mixed team members (keyed by team registration ID)
+  const [mixedTeamBatchData, setMixedTeamBatchData] = useState({});
+  
+  // Heat generation state
+  const [showHeatModal, setShowHeatModal] = useState(false);
+  const [showFinalHeatModal, setShowFinalHeatModal] = useState(false);
+  const [generatedHeats, setGeneratedHeats] = useState([]);
+  const [selectedEventForHeat, setSelectedEventForHeat] = useState(null);
+  const [laneCount, setLaneCount] = useState(8);
+  const [finalHeatTeams, setFinalHeatTeams] = useState([]);
 
   useEffect(() => {
     fetchTeamsData();
@@ -1139,12 +1150,290 @@ const TeamsManagement = () => {
       }
       
       setTeams(data.teams);
+      
+      // Batch fetch mixed team member data
+      await fetchMixedTeamBatchData(data.teams);
     } catch (err) {
       console.error('Error fetching teams data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
+  };
+  
+  // Fetch batch data for all mixed team events
+  const fetchMixedTeamBatchData = async (teamsData) => {
+    try {
+      // Find mixed events and collect all team registration IDs
+      const mixedTeamIds = teamsData
+        .filter(team => team.event?.gender === 'MIXED')
+        .map(team => team.id)
+        .filter(id => id);
+      
+      if (mixedTeamIds.length === 0) {
+        return;
+      }
+      
+      console.log('Batch fetching data for', mixedTeamIds.length, 'mixed team registrations');
+      
+      // Fetch all data in a single batch call
+      const batchData = await eventAPI.getBatchTeamData(mixedTeamIds);
+      setMixedTeamBatchData(batchData);
+      
+      console.log('Batch fetch complete for mixed teams');
+    } catch (error) {
+      console.error('Error fetching mixed team batch data:', error);
+      // Don't fail silently - set empty object so rows show as loaded but empty
+      setMixedTeamBatchData({});
+    }
+  };
+
+  // Fetch lane count setting
+  useEffect(() => {
+    const fetchLaneCount = async () => {
+      try {
+        const setting = await systemAPI.getSetting('lane_count');
+        if (setting && setting.value) {
+          setLaneCount(parseInt(setting.value) || 8);
+        }
+      } catch (error) {
+        console.error('Error fetching lane count:', error);
+        setLaneCount(8); // Default to 8 lanes
+      }
+    };
+    fetchLaneCount();
+  }, []);
+
+  // Check if event is a relay event (supports heat generation)
+  const isRelayEvent = (eventName) => {
+    const name = eventName?.toLowerCase() || '';
+    return name.includes('relay') || name.includes('100 x 4') || name.includes('4x100') || name.includes('50 x 2');
+  };
+
+  // Generate heats for relay events (same logic as backend)
+  const generateHeatsForEvent = (event) => {
+    // Get all accepted teams from all temples for this event
+    const allTeams = event.temples.flatMap(temple => 
+      temple.teams.filter(team => team.status === 'ACCEPTED').map(team => ({
+        ...team,
+        temple_name: temple.temple_name,
+        temple_id: temple.temple_id,
+        temple_code: temple.temple_code,
+        members: mixedTeamBatchData[team.id]?.participants || []
+      }))
+    );
+
+    const totalTeams = allTeams.length;
+    if (totalTeams === 0) {
+      return [];
+    }
+
+    let heatSizes = [];
+
+    // Heat size calculation (using lane_count from settings)
+    if (totalTeams <= laneCount) {
+      // Single heat
+      heatSizes.push(totalTeams);
+    } else if (totalTeams < 16) {
+      // Case 1: less than 2 complete heats
+      let half = Math.floor(totalTeams / 2);
+      let remaining = totalTeams - half;
+      heatSizes.push(Math.max(half, remaining));
+      heatSizes.push(Math.min(half, remaining));
+    } else {
+      // Case 2: more than 3 full heats possible
+      let remaining = totalTeams;
+
+      // Add all full heats except the last few
+      while (remaining > laneCount * 3) {
+        heatSizes.push(laneCount);
+        remaining -= laneCount;
+      }
+
+      // Distribute remaining teams equally
+      let numHeatsLeft = Math.ceil(remaining / laneCount);
+      let baseSize = Math.floor(remaining / numHeatsLeft);
+      let extra = remaining % numHeatsLeft;
+
+      for (let i = 0; i < numHeatsLeft; i++) {
+        heatSizes.push(baseSize + (i < extra ? 1 : 0));
+      }
+    }
+
+    // Initialize heat containers
+    const heats = heatSizes.map((size, index) => ({
+      id: index + 1,
+      teams: [],
+      laneCount: size
+    }));
+
+    // Group teams by temple
+    const templeGroups = {};
+    allTeams.forEach(team => {
+      const temple = team.temple_name;
+      if (!templeGroups[temple]) {
+        templeGroups[temple] = [];
+      }
+      templeGroups[temple].push(team);
+    });
+
+    // Team distribution with temple separation logic
+    if (heats.length === 1) {
+      // No temple separation needed - place all teams in single heat
+      heats[0].teams = [...allTeams];
+    } else {
+      let remainingTeams = [...allTeams];
+      
+      // Get temples with 3+ teams that need separation
+      const templesNeedingSeparation = Object.entries(templeGroups)
+        .filter(([temple, templeTeams]) => templeTeams.length >= 3)
+        .map(([temple, templeTeams]) => ({ temple, teams: templeTeams }));
+
+      // Sort temples by team count (descending) for better distribution
+      templesNeedingSeparation.sort((a, b) => b.teams.length - a.teams.length);
+
+      // First, distribute teams from temples that need separation
+      templesNeedingSeparation.forEach(({ temple, teams: templeTeams }) => {
+        // Remove these teams from remaining list
+        remainingTeams = remainingTeams.filter(t => t.temple_name !== temple);
+        
+        if (heats.length === 2) {
+          // 2 heats: Place 2 in heat with more teams, rest in heat with fewer
+          const heat1Count = heats[0].teams.length;
+          const heat2Count = heats[1].teams.length;
+          
+          const largerHeatIndex = heat1Count >= heat2Count ? 0 : 1;
+          const smallerHeatIndex = heat1Count >= heat2Count ? 1 : 0;
+          
+          templeTeams.forEach((team, index) => {
+            if (index < 2) {
+              heats[largerHeatIndex].teams.push(team);
+            } else {
+              heats[smallerHeatIndex].teams.push(team);
+            }
+          });
+        } else if (heats.length >= 3) {
+          // 3+ heats: Distribute temple teams across different heats
+          templeTeams.forEach((team, index) => {
+            const targetHeatIndex = index % heats.length;
+            heats[targetHeatIndex].teams.push(team);
+          });
+        }
+      });
+
+      // Then, distribute remaining teams using round-robin
+      let currentHeatIndex = 0;
+      remainingTeams.forEach(team => {
+        while (heats[currentHeatIndex % heats.length].teams.length >= heatSizes[currentHeatIndex % heats.length]) {
+          currentHeatIndex++;
+        }
+        
+        const targetHeatIndex = currentHeatIndex % heats.length;
+        heats[targetHeatIndex].teams.push(team);
+        currentHeatIndex++;
+      });
+    }
+
+    // Set final laneCount based on actual teams
+    heats.forEach(heat => {
+      heat.laneCount = heat.teams.length;
+    });
+
+    return heats;
+  };
+
+  // Handle generate heats button click
+  const handleGenerateHeats = (event) => {
+    setSelectedEventForHeat(event);
+    const heats = generateHeatsForEvent(event);
+    setGeneratedHeats(heats);
+    setShowHeatModal(true);
+  };
+
+  // Handle final heat modal
+  const handleOpenFinalHeatModal = (event) => {
+    setSelectedEventForHeat(event);
+    // Get all accepted teams for final heat selection
+    const allTeams = event.temples.flatMap(temple => 
+      temple.teams.filter(team => team.status === 'ACCEPTED').map(team => ({
+        ...team,
+        temple_name: temple.temple_name,
+        temple_id: temple.temple_id,
+        temple_code: temple.temple_code,
+        members: mixedTeamBatchData[team.id]?.participants || [],
+        selected: false
+      }))
+    );
+    setFinalHeatTeams(allTeams);
+    setShowFinalHeatModal(true);
+  };
+
+  // Toggle team selection for final heat
+  const toggleFinalHeatTeamSelection = (teamId) => {
+    setFinalHeatTeams(prev => prev.map(team => 
+      team.id === teamId ? { ...team, selected: !team.selected } : team
+    ));
+  };
+
+  // Generate final heat with selected teams
+  const generateFinalHeat = () => {
+    const selectedTeams = finalHeatTeams.filter(team => team.selected);
+    if (selectedTeams.length === 0) {
+      alert('Please select at least one team for the final heat');
+      return;
+    }
+    
+    const finalHeat = [{
+      id: 'Final',
+      teams: selectedTeams,
+      laneCount: selectedTeams.length,
+      isFinal: true
+    }];
+    
+    setGeneratedHeats(finalHeat);
+    setShowFinalHeatModal(false);
+    setShowHeatModal(true);
+  };
+
+  // Print heats
+  const handlePrintHeats = () => {
+    const printContent = document.getElementById('heat-print-content');
+    if (!printContent) return;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Heat Schedule - ${selectedEventForHeat?.eventName || 'Relay Event'}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 20px; }
+            h1 { text-align: center; color: #D35D38; margin-bottom: 10px; }
+            h2 { text-align: center; color: #2A2A2A; margin-bottom: 20px; font-size: 16px; }
+            .heat-container { margin-bottom: 30px; page-break-inside: avoid; }
+            .heat-header { background: #D35D38; color: white; padding: 10px 15px; border-radius: 8px 8px 0 0; }
+            .heat-header h3 { margin: 0; font-size: 18px; }
+            .heat-header span { font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 0; }
+            th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+            th { background: #f5f5f5; font-weight: bold; }
+            .lane-number { font-weight: bold; color: #D35D38; text-align: center; }
+            .temple-name { font-weight: 600; }
+            .member-list { font-size: 12px; color: #666; }
+            @media print {
+              .heat-container { page-break-inside: avoid; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>${selectedEventForHeat?.eventName || 'Relay Event'}</h1>
+          <h2>${selectedEventForHeat?.gender === 'MIXED' ? 'Mixed Gender' : selectedEventForHeat?.gender} • ${selectedEventForHeat?.ageCategory?.name || 'All Ages'}</h2>
+          ${printContent.innerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
   };
 
   // Group teams by event
@@ -1174,7 +1463,6 @@ const TeamsManagement = () => {
         grouped[eventKey].temples.push({
           temple_id: team.temple_id,
           temple_name: team.temple?.name || 'Unknown Temple',
-          temple_code: team.temple?.code || '',
           teams: [team],
           totalMembers: team.member_count || 0,
           totalPoints: team.event_result?.points || 0,
@@ -1321,9 +1609,30 @@ const TeamsManagement = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-right text-[#F8DFBE]">
-                                <div className="text-2xl font-bold">{event.temples.length}</div>
-                                <div className="text-sm">Temples</div>
+                              <div className="flex items-center space-x-4">
+                                {/* Heat Generation Buttons for Relay Events */}
+                                {isRelayEvent(event.eventName) && (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleGenerateHeats(event)}
+                                      className="bg-white text-[#D35D38] px-3 py-1.5 rounded-lg font-semibold text-sm hover:bg-gray-100 transition flex items-center space-x-1"
+                                    >
+                                      <span>🏃</span>
+                                      <span>Generate Heats</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenFinalHeatModal(event)}
+                                      className="bg-yellow-400 text-yellow-900 px-3 py-1.5 rounded-lg font-semibold text-sm hover:bg-yellow-300 transition flex items-center space-x-1"
+                                    >
+                                      <span>🏆</span>
+                                      <span>Final Heat</span>
+                                    </button>
+                                  </div>
+                                )}
+                                <div className="text-right text-[#F8DFBE]">
+                                  <div className="text-2xl font-bold">{event.temples.length}</div>
+                                  <div className="text-sm">Temples</div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1335,8 +1644,8 @@ const TeamsManagement = () => {
                                 <tr>
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">SL.NO</th>
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Name</th>
-                                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Code</th>
-                                  <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Teams</th>
+                                  {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Temple Code</th> */}
+                                  {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Teams</th> */}
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Members</th>
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status Breakdown</th>
                                   <th className="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Total Points</th>
@@ -1350,10 +1659,10 @@ const TeamsManagement = () => {
                                     <td className="px-6 py-4">
                                       <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
                                     </td>
-                                    <td className="px-6 py-4 text-gray-600">{temple.temple_code}</td>
-                                    <td className="px-6 py-4 text-center">
+                                    {/* <td className="px-6 py-4 text-gray-600">{temple.temple_code}</td> */}
+                                    {/* <td className="px-6 py-4 text-center">
                                       <div className="font-bold text-lg text-[#2A2A2A]">{temple.teams.length}</div>
-                                    </td>
+                                    </td> */}
                                     <td className="px-6 py-4 text-center">
                                       <div className="font-bold text-lg text-[#2A2A2A]">{temple.totalMembers}</div>
                                     </td>
@@ -1424,9 +1733,30 @@ const TeamsManagement = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-right text-[#F8DFBE]">
-                                <div className="text-2xl font-bold">{event.temples.length}</div>
-                                <div className="text-sm">Temples</div>
+                              <div className="flex items-center space-x-4">
+                                {/* Heat Generation Buttons for Relay Events */}
+                                {isRelayEvent(event.eventName) && (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleGenerateHeats(event)}
+                                      className="bg-white text-[#D35D38] px-3 py-1.5 rounded-lg font-semibold text-sm hover:bg-gray-100 transition flex items-center space-x-1"
+                                    >
+                                      <span>🏃</span>
+                                      <span>Generate Heats</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenFinalHeatModal(event)}
+                                      className="bg-yellow-400 text-yellow-900 px-3 py-1.5 rounded-lg font-semibold text-sm hover:bg-yellow-300 transition flex items-center space-x-1"
+                                    >
+                                      <span>🏆</span>
+                                      <span>Final Heat</span>
+                                    </button>
+                                  </div>
+                                )}
+                                <div className="text-right text-[#F8DFBE]">
+                                  <div className="text-2xl font-bold">{event.temples.length}</div>
+                                  <div className="text-sm">Temples</div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1527,9 +1857,30 @@ const TeamsManagement = () => {
                                   </span>
                                 </div>
                               </div>
-                              <div className="text-right text-[#F8DFBE]">
-                                <div className="text-2xl font-bold">{event.temples.length}</div>
-                                <div className="text-sm">Temples</div>
+                              <div className="flex items-center space-x-4">
+                                {/* Heat Generation Buttons for Relay Events */}
+                                {isRelayEvent(event.eventName) && (
+                                  <div className="flex space-x-2">
+                                    <button
+                                      onClick={() => handleGenerateHeats(event)}
+                                      className="bg-white text-[#D35D38] px-3 py-1.5 rounded-lg font-semibold text-sm hover:bg-gray-100 transition flex items-center space-x-1"
+                                    >
+                                      <span>🏃</span>
+                                      <span>Generate Heats</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleOpenFinalHeatModal(event)}
+                                      className="bg-yellow-400 text-yellow-900 px-3 py-1.5 rounded-lg font-semibold text-sm hover:bg-yellow-300 transition flex items-center space-x-1"
+                                    >
+                                      <span>🏆</span>
+                                      <span>Final Heat</span>
+                                    </button>
+                                  </div>
+                                )}
+                                <div className="text-right text-[#F8DFBE]">
+                                  <div className="text-2xl font-bold">{event.temples.length}</div>
+                                  <div className="text-sm">Temples</div>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1557,7 +1908,7 @@ const TeamsManagement = () => {
                                     team={item.team}
                                     temple={item.temple}
                                     index={index}
-                                    getTeamMemberDetails={getTeamMemberDetails}
+                                    batchTeamData={mixedTeamBatchData}
                                   />
                                 ))}
                               </tbody>
@@ -1727,36 +2078,236 @@ const TeamsManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Heat Generation Modal */}
+      {showHeatModal && selectedEventForHeat && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-white">
+                  {generatedHeats[0]?.isFinal ? '🏆 Final Heat' : '🏃 Generated Heats'}
+                </h2>
+                <p className="text-[#F8DFBE] text-sm">
+                  {selectedEventForHeat.eventName} • {selectedEventForHeat.gender === 'MIXED' ? 'Mixed Gender' : selectedEventForHeat.gender} • {selectedEventForHeat.ageCategory?.name || 'All Ages'}
+                </p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handlePrintHeats}
+                  className="bg-white text-[#D35D38] px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center space-x-2"
+                >
+                  <span>🖨️</span>
+                  <span>Print</span>
+                </button>
+                <button
+                  onClick={() => setShowHeatModal(false)}
+                  className="text-white hover:text-gray-200 text-3xl font-bold leading-none"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6" id="heat-print-content">
+              {generatedHeats.length > 0 ? (
+                <div className="space-y-6">
+                  {generatedHeats.map((heat, heatIndex) => (
+                    <div key={heat.id} className="heat-container bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                      <div className="heat-header bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-4 py-3 flex justify-between items-center">
+                        <h3 className="text-lg font-bold text-white">
+                          {heat.isFinal ? '🏆 Final Heat' : `Heat ${heat.id}`}
+                        </h3>
+                        <span className="text-[#F8DFBE] text-sm">
+                          {heat.teams.length} Team{heat.teams.length !== 1 ? 's' : ''} • {heat.laneCount} Lane{heat.laneCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <table className="min-w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase w-20">Lane</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Temple</th>
+                            <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase">Team Members</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {heat.teams.map((team, laneIndex) => (
+                            <tr key={team.id} className="hover:bg-orange-50">
+                              <td className="px-4 py-3 lane-number text-center">
+                                <span className="inline-flex items-center justify-center w-8 h-8 bg-[#D35D38] text-white rounded-full font-bold">
+                                  {laneIndex + 1}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="font-semibold text-[#2A2A2A] temple-name">{team.temple_name}</div>
+                                <div className="text-xs text-gray-500">{team.temple_code}</div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="member-list space-y-1">
+                                  {team.members && team.members.length > 0 ? (
+                                    team.members.map((member, idx) => (
+                                      <div key={member.id || idx} className="text-sm">
+                                        <span className="font-medium text-[#2A2A2A]">
+                                          {member.first_name} {member.last_name || ''}
+                                        </span>
+                                        {member.gender && (
+                                          <span className="text-gray-500 ml-1">({member.gender})</span>
+                                        )}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <span className="text-gray-400 text-sm">No member details</span>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-xl mb-2">No teams available for heat generation</p>
+                  <p className="text-sm">Only accepted teams can be assigned to heats</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                Total: {generatedHeats.reduce((sum, heat) => sum + heat.teams.length, 0)} teams in {generatedHeats.length} heat{generatedHeats.length !== 1 ? 's' : ''}
+              </div>
+              <button
+                onClick={() => setShowHeatModal(false)}
+                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Final Heat Selection Modal */}
+      {showFinalHeatModal && selectedEventForHeat && (
+        <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-[90vw] max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E] px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-white">🏆 Select Teams for Final Heat</h2>
+                <p className="text-[#F8DFBE] text-sm">
+                  {selectedEventForHeat.eventName} • {selectedEventForHeat.gender === 'MIXED' ? 'Mixed Gender' : selectedEventForHeat.gender}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowFinalHeatModal(false)}
+                className="text-white hover:text-gray-200 text-3xl font-bold leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <p className="text-gray-600 mb-4">
+                Select the teams that qualified for the final heat. You can select multiple teams.
+              </p>
+              
+              {finalHeatTeams.length > 0 ? (
+                <div className="space-y-3">
+                  {finalHeatTeams.map((team, index) => (
+                    <div 
+                      key={team.id}
+                      onClick={() => toggleFinalHeatTeamSelection(team.id)}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                        team.selected 
+                          ? 'border-[#D35D38] bg-orange-50' 
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                            team.selected 
+                              ? 'border-[#D35D38] bg-[#D35D38]' 
+                              : 'border-gray-300'
+                          }`}>
+                            {team.selected && (
+                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-[#2A2A2A]">{team.temple_name}</div>
+                            <div className="text-sm text-gray-500">{team.temple_code}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm text-gray-600">
+                            {team.members && team.members.length > 0 
+                              ? team.members.map(m => `${m.first_name} ${m.last_name || ''}`).join(', ')
+                              : 'No member details'
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No accepted teams available for selection</p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex justify-between items-center">
+              <div className="text-sm text-gray-600">
+                {finalHeatTeams.filter(t => t.selected).length} of {finalHeatTeams.length} teams selected
+              </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowFinalHeatModal(false)}
+                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={generateFinalHeat}
+                  disabled={finalHeatTeams.filter(t => t.selected).length === 0}
+                  className="bg-[#D35D38] text-white px-6 py-2 rounded-lg hover:bg-[#B84A2E] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Generate Final Heat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadTeamMembers();
-  }, [team.id]);
-
-  const loadTeamMembers = async () => {
-    setLoading(true);
-    try {
-      const memberDetails = await getTeamMemberDetails(team);
-      setMembers(memberDetails);
-    } catch (error) {
-      console.error('Error loading team members:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+const TeamMembersRow = ({ team, temple, index, batchTeamData }) => {
+  // Get data from pre-fetched batch data
+  const teamData = batchTeamData?.[team.id] || null;
+  const members = teamData?.participants || [];
+  const loading = !batchTeamData; // Loading if batch data not yet available
 
   return (
     <tr className="hover:bg-orange-50 transition">
       <td className="px-6 py-4 font-semibold text-[#D35D38]">{index + 1}</td>
       <td className="px-6 py-4">
         <div className="font-semibold text-[#2A2A2A]">{temple.temple_name}</div>
-        <div className="text-sm text-gray-600">{temple.temple_code}</div>
+        {/* <div className="text-sm text-gray-600">{temple.temple_code}</div> */}
       </td>
       <td className="px-6 py-4">
         {loading ? (
@@ -1764,11 +2315,11 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
         ) : members.length > 0 ? (
           <div className="space-y-1">
             {members.map((member, idx) => (
-              <div key={member.id} className="text-sm">
+              <div key={member.id || idx} className="text-sm">
                 <span className="font-medium text-[#2A2A2A]">
-                  {member.profile?.first_name} {member.profile?.last_name}
+                  {member.first_name} {member.last_name}
                 </span>
-                <span className="text-gray-500 ml-2">({member.profile?.gender || 'N/A'})</span>
+                <span className="text-gray-500 ml-2">({member.gender || 'N/A'})</span>
               </div>
             ))}
           </div>
@@ -1787,8 +2338,8 @@ const TeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
         ) : members.length > 0 ? (
           <div className="space-y-1">
             {members.map((member, idx) => (
-              <div key={member.id} className="text-sm text-gray-600">
-                {member.profile?.aadhar_number || 'N/A'}
+              <div key={member.id || idx} className="text-sm text-gray-600">
+                {member.aadhar_number || 'N/A'}
               </div>
             ))}
           </div>

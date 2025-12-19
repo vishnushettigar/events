@@ -118,7 +118,6 @@ const AvailableEvents = () => {
 
       try {
         const requestBody = {
-          user_id: parseInt(userInfo.id),
           event_id: parseInt(selectedEvent.id)
         };
 
@@ -328,7 +327,7 @@ const AvailableEvents = () => {
     <div className="container mx-auto px-4 py-8 bg-[#F0F0F0] min-h-screen">
       {userInfo && (
         <div className="mb-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold mb-4 text-[#2A2A2A]">{userInfo.first_name} {userInfo.last_name}</h2>
+          <h2 className="text-2xl font-bold mb-4 text-[#2A2A2A]">{[userInfo.first_name, userInfo.last_name].filter(Boolean).join(' ')}</h2>
           <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <p className="text-[#5A5A5A]">Age</p>
@@ -354,11 +353,11 @@ const AvailableEvents = () => {
             </h4>
             
             {/* Temple Total Points */}
-            {templeTotalPoints !== null && (
+            {/* {templeTotalPoints !== null && (
               <div className='text-black font-semibold sm:text-right'>
                 <span>Total Points: {templeTotalPoints}</span>
               </div>
-            )}
+            )} */}
           </div>
         </div>
       )}

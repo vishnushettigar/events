@@ -152,11 +152,33 @@ const Champions = ({
     return b.points - a.points;
   });
 
+  // Group champions by age category for separate display
+  const championsByCategory = {};
+  allChampions.forEach(champion => {
+    const categoryKey = champion.category; // e.g., "11-14 - MALE"
+    if (!championsByCategory[categoryKey]) {
+      championsByCategory[categoryKey] = {
+        age_category: champion.age_category,
+        gender: champion.gender,
+        category: categoryKey,
+        champions: []
+      };
+    }
+    championsByCategory[categoryKey].champions.push(champion);
+  });
+
+  // Convert to array and sort by age category order
+  const groupedCategories = Object.values(championsByCategory).sort((a, b) => {
+    const ageOrderA = ageCategoryOrder[a.age_category] || 999;
+    const ageOrderB = ageCategoryOrder[b.age_category] || 999;
+    return ageOrderA - ageOrderB;
+  });
+
   return (
     <div className={`space-y-8 ${className}`}>
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-[#2A2A2A]">🏆 Champions</h1>
+        <h1 className="text-2xl font-bold text-[#2A2A2A]">Champions</h1>
         <p className="text-[#5A5A5A] mt-1">Top performers from all categories</p>
       </div>
 
@@ -164,7 +186,7 @@ const Champions = ({
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 py-4 bg-[#D35D38] border-b border-gray-200 flex justify-between items-center">
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-white">🏛️ Top 5 Temples</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-white">Top 5 Temples</h3>
             <p className="text-xs sm:text-sm text-white/80 mt-1">Temples ranked by total points</p>
           </div>
           <button
@@ -178,9 +200,10 @@ const Champions = ({
                   <style>
                     body { font-family: Arial, sans-serif; margin: 20px; }
                     .header { text-align: center; margin-bottom: 20px; }
-                    .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                    .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                    .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+                    .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+                    .place { font-size: 14px; margin-bottom: 6px; color: black; }
+                    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: black; }
                     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
                     th { background-color: #f2f2f2; font-weight: bold; }
@@ -197,9 +220,10 @@ const Champions = ({
                 </head>
                 <body>
                   <div class="header">
+                    <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
                     <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                    <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                    <div class="section-title">🏛️ Top 5 Temples</div>
+                    <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                    <div class="section-title">Overall Champions</div>
                   </div>
                   <table>
                     <thead>
@@ -305,15 +329,32 @@ const Champions = ({
         )}
       </div>
 
-      {/* Champions Table */}
+      {/* Champions by Category */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200 flex justify-between items-center">
           <div>
-            <h3 className="text-base sm:text-lg font-semibold text-[#2A2A2A]">🏆 Champions Leaderboard</h3>
-            <p className="text-xs sm:text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions ranked by total points</p>
+            <h3 className="text-base sm:text-lg font-semibold text-[#2A2A2A]">Individual Champions </h3>
+            <p className="text-xs sm:text-sm text-[#5A5A5A] mt-1">{allChampions.length} champions across {groupedCategories.length} categories</p>
           </div>
           <button
             onClick={() => {
+              const generateCategoryHtml = (category) => {
+                return '<div class="category-container">' +
+                  '<div class="category-header">' + category.category + '</div>' +
+                  '<table class="champions-table"><thead><tr>' +
+                  '<th>SL.NO</th><th>Name</th><th>Temple</th><th>Aadhar No</th><th>Points</th><th>Events Won</th>' +
+                  '</tr></thead><tbody>' +
+                  category.champions.map((champion, index) => 
+                    '<tr><td>' + (index + 1) + '</td>' +
+                    '<td>' + (champion.name || 'N/A') + '</td>' +
+                    '<td>' + (champion.temple || 'N/A') + '</td>' +
+                    '<td>' + (champion.aadhar_number || 'N/A') + '</td>' +
+                    '<td><strong>' + (champion.points || 0) + '</strong></td>' +
+                    '<td>' + (champion.events_count || 0) + '</td></tr>'
+                  ).join('') +
+                  '</tbody></table></div>';
+              };
+
               const printWindow = window.open('', '_blank');
               const printContent = `
                 <!DOCTYPE html>
@@ -323,67 +364,30 @@ const Champions = ({
                   <style>
                     body { font-family: Arial, sans-serif; margin: 20px; }
                     .header { text-align: center; margin-bottom: 20px; }
-                    .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                    .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                    th { background-color: #f2f2f2; font-weight: bold; }
-                    .rank-badge { padding: 4px 8px; border-radius: 50%; color: white; font-weight: bold; }
-                    .rank-1 { background-color: #ffd700; }
-                    .rank-2 { background-color: #c0c0c0; }
-                    .rank-3 { background-color: #cd7f32; }
-                    .rank-other { background-color: #6c757d; }
-                    .result-badge { padding: 2px 6px; border-radius: 4px; font-size: 12px; }
-                    .first { background-color: #fff3cd; color: #856404; }
-                    .second { background-color: #f8f9fa; color: #6c757d; }
-                    .third { background-color: #ffeaa7; color: #d63031; }
+                    .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+                    .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+                    .place { font-size: 14px; margin-bottom: 6px; color: black; }
+                    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: black; }
+                    .category-container { margin-bottom: 25px; page-break-inside: avoid; }
+                    .category-header { background-color: #f8f9fa; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; font-size: 16px; font-weight: bold; color: #2A2A2A; }
+                    .champions-table { width: 100%; border-collapse: collapse; }
+                    .champions-table th, .champions-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    .champions-table th { background-color: #f2f2f2; font-weight: bold; }
                     @media print {
                       body { margin: 0; }
                       .no-print { display: none; }
+                      .category-container { page-break-inside: avoid; }
                     }
                   </style>
                 </head>
                 <body>
                   <div class="header">
+                    <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
                     <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                    <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                    <div class="section-title">🏆 Champions Leaderboard</div>
+                    <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                    <div class="section-title">Individual Champions</div>
                   </div>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>SL.NO</th>
-                        <th>Category</th>
-                        <th>Name</th>
-                        <th>Temple</th>
-                        <th>Aadhar No</th>
-                        <th>Points</th>
-                        <th>Events Won</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${allChampions.map((champion, index) => `
-                        <tr>
-                          <td>
-                            <span class="rank-badge ${
-                              index === 0 ? 'rank-1' : 
-                              index === 1 ? 'rank-2' : 
-                              index === 2 ? 'rank-3' : 'rank-other'
-                            }">
-                              ${index + 1}
-                            </span>
-                          </td>
-                          <td>${champion.category || 'N/A'}</td>
-                          <td>${champion.name || 'N/A'}</td>
-                          <td>${champion.temple || 'N/A'}</td>
-                          <td>${champion.aadhar_number || 'N/A'}</td>
-                          <td><strong>${champion.points || 0}</strong></td>
-                          <td>${champion.events_count || 0}</td>
-                        </tr>
-                      `).join('')}
-                    </tbody>
-                  </table>
+                  ${groupedCategories.map(generateCategoryHtml).join('')}
                 </body>
                 </html>
               `;
@@ -395,72 +399,146 @@ const Champions = ({
             }}
             className="bg-[#D35D38] text-white px-3 py-2 rounded-md text-sm font-medium hover:bg-[#B84A2A] transition-colors"
           >
-            🖨️ Print
+            🖨️ Print All
           </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  SL.NO
-                </th>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Champion
-                </th>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Temple
-                </th>
-                <th className="hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Aadhar Number
-                </th>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Total Points
-                </th>
-                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
-                  Events Won
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {allChampions.map((champion, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <span className="text-sm sm:text-base font-medium text-[#2A2A2A]">
-                        {index + 1}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                    {champion.category}
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                    <div className="text-xs sm:text-sm font-medium text-[#2A2A2A]">
-                      {champion.name}
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                    {champion.temple}
-                  </td>
-                  <td className="hidden md:table-cell px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                    {champion.aadhar_number}
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap">
-                    <span className="text-sm sm:text-lg font-bold text-[#D35D38]">
-                      {champion.points}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-4 py-3 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
-                    {champion.events_count}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        
+        <div className="space-y-6 p-4 sm:p-6">
+          {groupedCategories.map((categoryGroup, categoryIndex) => (
+            <div key={categoryIndex} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
+                <h4 className="text-sm sm:text-base font-semibold text-[#2A2A2A]">
+                  {categoryGroup.category}
+                </h4>
+                <button
+                  onClick={() => {
+                    const printWindow = window.open('', '_blank');
+                    const printContent = `
+                      <!DOCTYPE html>
+                      <html>
+                      <head>
+                        <title>${categoryGroup.category} - Champions</title>
+                        <style>
+                          body { font-family: Arial, sans-serif; margin: 20px; }
+                          .header { text-align: center; margin-bottom: 20px; }
+                          .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+                          .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+                          .place { font-size: 14px; margin-bottom: 6px; color: black; }
+                          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: black; }
+                          .category-header { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; font-size: 18px; font-weight: bold; color: #2A2A2A; }
+                          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                          th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                          th { background-color: #f2f2f2; font-weight: bold; }
+                          @media print {
+                            body { margin: 0; }
+                            .no-print { display: none; }
+                          }
+                        </style>
+                      </head>
+                      <body>
+                        <div class="header">
+                          <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
+                          <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
+                          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                         <div class="section-title">Individual Champions</div>
+                        </div>
+                        <div class="category-header">${categoryGroup.category}</div>
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>SL.NO</th>
+                              <th>Name</th>
+                              <th>Temple</th>
+                              <th>Aadhar No</th>
+                              <th>Points</th>
+                              <th>Events Won</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${categoryGroup.champions.map((champion, index) => `
+                              <tr>
+                                <td>${index + 1}</td>
+                                <td>${champion.name || 'N/A'}</td>
+                                <td>${champion.temple || 'N/A'}</td>
+                                <td>${champion.aadhar_number || 'N/A'}</td>
+                                <td><strong>${champion.points || 0}</strong></td>
+                                <td>${champion.events_count || 0}</td>
+                              </tr>
+                            `).join('')}
+                          </tbody>
+                        </table>
+                      </body>
+                      </html>
+                    `;
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    printWindow.focus();
+                    printWindow.print();
+                    printWindow.close();
+                  }}
+                  className="bg-[#D35D38] text-white px-2 py-1 rounded text-xs font-medium hover:bg-[#B84A2A] transition-colors"
+                >
+                  🖨️ Print
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                        SL.NO
+                      </th>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                        Champion
+                      </th>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                        Temple
+                      </th>
+                      <th className="hidden md:table-cell px-2 sm:px-4 py-2 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                        Aadhar Number
+                      </th>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                        Points
+                      </th>
+                      <th className="px-2 sm:px-4 py-2 text-left text-xs font-medium text-[#2A2A2A] uppercase tracking-wider">
+                        Events Won
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {categoryGroup.champions.map((champion, index) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                          <span className="text-sm font-medium text-[#2A2A2A]">
+                            {index + 1}
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                          <div className="text-xs sm:text-sm font-medium text-[#2A2A2A]">
+                            {champion.name}
+                          </div>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
+                          {champion.temple}
+                        </td>
+                        <td className="hidden md:table-cell px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
+                          {champion.aadhar_number}
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap">
+                          <span className="text-sm font-bold text-[#D35D38]">
+                            {champion.points}
+                          </span>
+                        </td>
+                        <td className="px-2 sm:px-4 py-2 whitespace-nowrap text-xs sm:text-sm text-[#5A5A5A]">
+                          {champion.events_count}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

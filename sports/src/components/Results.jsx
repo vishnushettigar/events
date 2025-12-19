@@ -375,6 +375,57 @@ const Results = ({
           <div className="flex gap-2">
             <button
               onClick={() => {
+                const isTeamType = type === 'Team';
+                const isIndividualType = type === 'Individual';
+                
+                const generateWinnerRows = (result) => {
+                  const sortedWinners = [...result.allWinners].sort((a, b) => {
+                    if (a.rank === b.rank) {
+                      return (b.points || 0) - (a.points || 0);
+                    }
+                    const rankOrder = { 'FIRST': 1, 'SECOND': 2, 'THIRD': 3, 'NA': 4 };
+                    return (rankOrder[a.rank] || 5) - (rankOrder[b.rank] || 5);
+                  });
+                  
+                  return sortedWinners.map(winner => {
+                    const rankDisplay = winner.rank === 'FIRST' ? '🥇 FIRST' :
+                      winner.rank === 'SECOND' ? '🥈 SECOND' :
+                      winner.rank === 'THIRD' ? '🥉 THIRD' : '-';
+                    
+                    const nameDisplay = isTeamType ? winner.temple : winner.name;
+                    
+                    let extraCols = '';
+                    if (isTeamType && result.gender === 'MIXED') {
+                      const maleNames = winner.maleParticipants && winner.maleParticipants.length > 0 
+                        ? winner.maleParticipants.map(p => p.first_name + ' ' + p.last_name).join(', ')
+                        : 'No male participants';
+                      const femaleNames = winner.femaleParticipants && winner.femaleParticipants.length > 0
+                        ? winner.femaleParticipants.map(p => p.first_name + ' ' + p.last_name).join(', ')
+                        : 'No female participants';
+                      extraCols = '<td>' + maleNames + '</td><td>' + femaleNames + '</td>';
+                    } else if (isIndividualType) {
+                      extraCols = '<td>' + (winner.temple || 'N/A') + '</td><td>' + (winner.aadhar || 'N/A') + '</td>';
+                    }
+                    
+                    return '<tr><td class="rank-cell medal">' + rankDisplay + '</td><td>' + nameDisplay + '</td>' + extraCols + '<td>' + (winner.points || 0) + '</td></tr>';
+                  }).join('');
+                };
+                
+                const generateEventHtml = (result) => {
+                  const headerCols = isTeamType && result.gender === 'MIXED' 
+                    ? '<th>Male Participants</th><th>Female Participants</th>'
+                    : isIndividualType ? '<th>Temple</th><th>Aadhar</th>' : '';
+                  
+                  // For team events, show only gender; for individual events, show full category
+                  const displayCategory = isTeamType ? result.gender : result.category;
+                  
+                  return '<div class="event-container">' +
+                    '<div class="event-details"><div class="event-name">' + displayCategory + ' - ' + result.eventName + '</div></div>' +
+                    '<table class="winners-table"><thead><tr>' +
+                    '<th>Rank</th><th>' + (isTeamType ? 'Temple Name' : 'Participant') + '</th>' + headerCols + '<th>Points</th>' +
+                    '</tr></thead><tbody>' + generateWinnerRows(result) + '</tbody></table></div>';
+                };
+                
                 const printWindow = window.open('', '_blank');
                 const printContent = `
                   <!DOCTYPE html>
@@ -384,50 +435,33 @@ const Results = ({
                     <style>
                       body { font-family: Arial, sans-serif; margin: 20px; }
                       .header { text-align: center; margin-bottom: 20px; }
-                      .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                      .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                      .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
-                      table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                      th { background-color: #f2f2f2; font-weight: bold; }
-                      .winner-text { font-weight: bold; }
-                      .first-place { color: #ffd700; font-weight: bold; }
-                      .second-place { color: #c0c0c0; font-weight: bold; }
-                      .third-place { color: #cd7f32; font-weight: bold; }
+                      .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+                      .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+                      .place { font-size: 14px; margin-bottom: 6px; color: black; }
+                      .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: black; }
+                      .event-container { margin-bottom: 30px; page-break-inside: avoid; }
+                      .event-details { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+                      .event-name { font-size: 18px; font-weight: bold; color: #2A2A2A; }
+                      .winners-table { width: 100%; border-collapse: collapse; }
+                      .winners-table th, .winners-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+                      .winners-table th { background-color: #f2f2f2; font-weight: bold; }
+                      .rank-cell { text-align: center; }
+                      .medal { font-size: 16px; }
                       @media print {
                         body { margin: 0; }
                         .no-print { display: none; }
+                        .event-container { page-break-inside: avoid; }
                       }
                     </style>
                   </head>
                   <body>
                     <div class="header">
+                      <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
                       <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                      <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
+                      <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
                       <div class="section-title">${title}</div>
                     </div>
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Category</th>
-                          <th>Event</th>
-                          <th>1st Place</th>
-                          <th>2nd Place</th>
-                          <th>3rd Place</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${results.map((result, index) => `
-                          <tr>
-                            <td class="winner-text">${result.category}</td>
-                            <td class="winner-text">${result.eventName}</td>
-                            <td class="first-place">🥇 ${result.firstPlace}</td>
-                            <td class="second-place">🥈 ${result.secondPlace}</td>
-                            <td class="third-place">🥉 ${result.thirdPlace}</td>
-                          </tr>
-                        `).join('')}
-                      </tbody>
-                    </table>
+                    ${results.map(generateEventHtml).join('')}
                   </body>
                   </html>
                 `;
@@ -451,9 +485,7 @@ const Results = ({
                 <div>
                   <h6 className="text-md font-semibold text-[#2A2A2A]">{result.eventName}</h6>
                   <div className="flex items-center space-x-4 text-sm text-[#5A5A5A]">
-                    <span>{result.category}</span>
-                    <span>•</span>
-                    <span>3 Participants</span>
+                    <span>{allResultsActiveTab === 'team' ? result.gender : result.category}</span>
                   </div>
                 </div>
                 <button
@@ -463,13 +495,14 @@ const Results = ({
                       <!DOCTYPE html>
                       <html>
                       <head>
-                        <title>${result.eventName} - ${result.category}</title>
+                        <title>${result.eventName} - ${allResultsActiveTab === 'team' ? result.gender : result.category}</title>
                         <style>
                           body { font-family: Arial, sans-serif; margin: 20px; }
                           .header { text-align: center; margin-bottom: 20px; }
-                          .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-                          .place { font-size: 16px; margin-bottom: 10px; color: #666; }
-                          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #D35D38; }
+                          .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+                          .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+                          .place { font-size: 14px; margin-bottom: 6px; color: black; }
+                          .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; color: black; }
                           .event-details { background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
                           .event-name { font-size: 20px; font-weight: bold; color: #2A2A2A; margin-bottom: 5px; }
                           .event-category { font-size: 16px; color: #5A5A5A; }
@@ -486,13 +519,12 @@ const Results = ({
                       </head>
                       <body>
                         <div class="header">
+                          <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
                           <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                          <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
-                          <div class="section-title">${result.eventName}</div>
+                          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>                 
                         </div>
                         <div class="event-details">
-                          <div class="event-name">${result.eventName}</div>
-                          <div class="event-category">${result.category}</div>
+                          <div class="event-name">${allResultsActiveTab === 'team' ? result.gender : result.category} - ${result.eventName}</div>
                         </div>
                         <table class="winners-table">
                           <thead>
@@ -517,9 +549,9 @@ const Results = ({
                               .map(winner => `
                               <tr>
                                 <td class="rank-cell medal">${
-                                  winner.rank === 'FIRST' ? '🥇' :
-                                  winner.rank === 'SECOND' ? '🥈' :
-                                  winner.rank === 'THIRD' ? '🥉' : '-'
+                                  winner.rank === 'FIRST' ? '🥇 FIRST' :
+                                  winner.rank === 'SECOND' ? '🥈 SECOND' :
+                                  winner.rank === 'THIRD' ? '🥉 THIRD' : '-'
                                 }</td>
                                 <td>${allResultsActiveTab === 'team' ? winner.temple : winner.name}</td>
                                 ${allResultsActiveTab === 'team' && result.gender === 'MIXED' ? `
@@ -742,7 +774,7 @@ const Results = ({
                   </select>
                 </div>
               </div>
-              {renderResultsTable(individualResults, "🏃 Individual Events", "Individual")}
+              {renderResultsTable(individualResults, " Individual Events", "Individual")}
             </div>
           )}
 
@@ -765,7 +797,7 @@ const Results = ({
                   </select>
                 </div>
               </div>
-              {renderResultsTable(teamResults, "🤝 Team Events", "Team")}
+              {renderResultsTable(teamResults, "Team Events", "Team")}
             </div>
           )}
         </div>
@@ -802,8 +834,9 @@ const Results = ({
                   </head>
                   <body>
                     <div class="header">
+                     <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
                       <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                      <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
+                      <div class="subtitle">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
                       <div class="section-title">📊 Results Summary</div>
                     </div>
                     <div class="summary-grid">

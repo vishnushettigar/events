@@ -589,6 +589,9 @@ const TeamsManagement = () => {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [selectedTemple, setSelectedTemple] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  
+  // Batch data for mixed team members (keyed by team registration ID)
+  const [mixedTeamBatchData, setMixedTeamBatchData] = useState({});
 
   useEffect(() => {
     fetchTeamsData();
@@ -651,11 +654,41 @@ const TeamsManagement = () => {
       }
       
       setTeams(data.teams);
+      
+      // Batch fetch mixed team member data
+      await fetchMixedTeamBatchData(data.teams);
     } catch (err) {
       console.error('Error fetching teams data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Fetch batch data for all mixed team events
+  const fetchMixedTeamBatchData = async (teamsData) => {
+    try {
+      // Find mixed events and collect all team registration IDs
+      const mixedTeamIds = teamsData
+        .filter(team => team.event?.gender === 'MIXED')
+        .map(team => team.id)
+        .filter(id => id);
+      
+      if (mixedTeamIds.length === 0) {
+        return;
+      }
+      
+      console.log('Batch fetching data for', mixedTeamIds.length, 'mixed team registrations');
+      
+      // Fetch all data in a single batch call
+      const batchData = await eventAPI.getBatchTeamData(mixedTeamIds);
+      setMixedTeamBatchData(batchData);
+      
+      console.log('Batch fetch complete for mixed teams');
+    } catch (error) {
+      console.error('Error fetching mixed team batch data:', error);
+      // Don't fail silently - set empty object so rows show as loaded but empty
+      setMixedTeamBatchData({});
     }
   };
 
@@ -847,7 +880,7 @@ const TeamsManagement = () => {
                         </h3>
                       </div>
                       {mixedEvents.map((event, eventIndex) => (
-                        <ViewerEventTableWithMembers key={`all-${eventIndex}`} event={event} getTeamMemberDetails={getTeamMemberDetails} />
+                        <ViewerEventTableWithMembers key={`all-${eventIndex}`} event={event} batchTeamData={mixedTeamBatchData} />
                       ))}
                     </div>
                   )}
@@ -1134,7 +1167,7 @@ const ViewerEventTable = ({ event, gender = "male", onViewTeams }) => {
 };
 
 // Helper component for Mixed/All Gender events with team members
-const ViewerEventTableWithMembers = ({ event, getTeamMemberDetails }) => (
+const ViewerEventTableWithMembers = ({ event, batchTeamData }) => (
   <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
     {/* Event Header */}
     <div className="bg-[#e0e0e0] px-6 py-4">
@@ -1180,7 +1213,7 @@ const ViewerEventTableWithMembers = ({ event, getTeamMemberDetails }) => (
                 team={team}
                 temple={temple}
                 index={teamIndex}
-                getTeamMemberDetails={getTeamMemberDetails}
+                batchTeamData={batchTeamData}
               />
             ))
           )}
@@ -1190,26 +1223,12 @@ const ViewerEventTableWithMembers = ({ event, getTeamMemberDetails }) => (
   </div>
 );
 
-// Helper component for team member rows
-const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => {
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadTeamMembers();
-  }, [team.id]);
-
-  const loadTeamMembers = async () => {
-    setLoading(true);
-    try {
-      const memberDetails = await getTeamMemberDetails(team);
-      setMembers(memberDetails);
-    } catch (error) {
-      console.error('Error loading team members:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+// Helper component for team member rows - uses pre-fetched batch data
+const ViewerTeamMembersRow = ({ team, temple, index, batchTeamData }) => {
+  // Get data from pre-fetched batch data
+  const teamData = batchTeamData?.[team.id] || null;
+  const members = teamData?.participants || [];
+  const loading = !batchTeamData; // Loading if batch data not yet available
 
   return (
     <tr className="hover:bg-orange-50 transition">
@@ -1224,11 +1243,11 @@ const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => 
         ) : members.length > 0 ? (
           <div className="space-y-1">
             {members.map((member, idx) => (
-              <div key={member.id} className="text-sm">
+              <div key={member.id || idx} className="text-sm">
                 <span className="font-medium text-[#2A2A2A]">
-                  {member.profile?.first_name} {member.profile?.last_name}
+                  {member.first_name} {member.last_name}
                 </span>
-                <span className="text-gray-500 ml-2">({member.profile?.gender || 'N/A'})</span>
+                <span className="text-gray-500 ml-2">({member.gender || 'N/A'})</span>
               </div>
             ))}
           </div>
@@ -1247,8 +1266,8 @@ const ViewerTeamMembersRow = ({ team, temple, index, getTeamMemberDetails }) => 
         ) : members.length > 0 ? (
           <div className="space-y-1">
             {members.map((member, idx) => (
-              <div key={member.id} className="text-xs text-gray-600">
-                {member.profile?.aadhar_number || 'N/A'}
+              <div key={member.id || idx} className="text-xs text-gray-600">
+                {member.aadhar_number || 'N/A'}
               </div>
             ))}
           </div>

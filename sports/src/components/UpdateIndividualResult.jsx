@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { eventAPI, systemAPI } from '../utils/api';
+import { eventAPI, systemAPI, userAPI } from '../utils/api';
 
 const UpdateIndividualResult = () => {
   // State management
@@ -41,6 +41,13 @@ const UpdateIndividualResult = () => {
   
   // State for lane count from settings
   const [laneCount, setLaneCount] = useState(8); // Default to 8 if not fetched
+
+  // State for Add Participant Modal
+  const [showAddParticipantModal, setShowAddParticipantModal] = useState(false);
+  const [addParticipantEventId, setAddParticipantEventId] = useState(null);
+  const [addParticipantEventName, setAddParticipantEventName] = useState('');
+  const [temples, setTemples] = useState([]);
+  const [loadingTemples, setLoadingTemples] = useState(false);
 
   // Helper functions for collapsible state management
   const getCollapsibleState = (eventId) => {
@@ -193,6 +200,48 @@ const UpdateIndividualResult = () => {
     };
     fetchLaneCount();
   }, []);
+
+  // Fetch temples for add participant modal
+  const fetchTemples = async () => {
+    if (temples.length > 0) return; // Already fetched
+    try {
+      setLoadingTemples(true);
+      const templesData = await userAPI.getAllTemples();
+      setTemples(templesData);
+    } catch (error) {
+      console.error('Error fetching temples:', error);
+    } finally {
+      setLoadingTemples(false);
+    }
+  };
+
+  // Open add participant modal
+  const openAddParticipantModal = (eventId, eventName) => {
+    setAddParticipantEventId(eventId);
+    setAddParticipantEventName(eventName);
+    fetchTemples();
+    setShowAddParticipantModal(true);
+  };
+
+  // Close add participant modal
+  const closeAddParticipantModal = () => {
+    setShowAddParticipantModal(false);
+    setAddParticipantEventId(null);
+    setAddParticipantEventName('');
+  };
+
+  // Handle successful participant addition
+  const handleParticipantAdded = async (eventId) => {
+    // Refresh the participants data for the event
+    try {
+      const updatedData = await eventAPI.getEventParticipants(eventId);
+      setEventParticipants(eventId, updatedData);
+      showSuccessModal('Participant Added', 'Participant has been successfully added to the event.');
+    } catch (error) {
+      console.error('Error refreshing participants:', error);
+    }
+    closeAddParticipantModal();
+  };
 
   // Load data on mount and when filters change
   useEffect(() => {
@@ -510,7 +559,8 @@ const UpdateIndividualResult = () => {
     setSelectedHeatForEvent,
     isFinalHeatSelected,
     setFinalHeatSelectedForEvent,
-    laneCount
+    laneCount,
+    openAddParticipantModal
   }) => {
     // Use parent-managed state
     const eventParticipants = getEventParticipants(eventId);
@@ -1294,12 +1344,13 @@ const UpdateIndividualResult = () => {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>Event Participants - ${printTitle}</title>
+          <title> ${printTitle}</title>
           <style>
             body { font-family: Arial, sans-serif; margin: 20px; }
             .header { text-align: center; margin-bottom: 20px; }
-            .main-title { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
-            .place { font-size: 16px; margin-bottom: 10px; color: #666; }
+            .title { font-size: 20px; font-weight: normal; margin-bottom: 6px; }
+            .main-title { font-size: 24px; font-weight: bold; margin-bottom: 6px; }
+            .place { font-size: 14px; margin-bottom: 6px; color: black; }
             .event-details { font-size: 16px; margin-bottom: 20px; }
             .event-details span { margin-right: 20px; }
             .heat-info { background-color: #f8f9fa; padding: 10px; border-radius: 5px; margin-bottom: 15px; }
@@ -1322,8 +1373,9 @@ const UpdateIndividualResult = () => {
         </head>
         <body>
           <div class="header">
+            <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
             <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-            <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
+            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
             <div class="event-details">
               <span><strong>Age Category:</strong> ${ageCategory}</span>
               <span><strong>Gender:</strong> ${gender}</span>
@@ -1350,6 +1402,7 @@ const UpdateIndividualResult = () => {
                 <th>NAME</th>
                 <th>TEMPLE</th>
                 <th>AADHAR NO</th>
+                <th>DATE OF BIRTH</th>
                 ${isTrialEvent() ? `
                   <th>TRIAL 1</th>
                   <th>TRIAL 2</th>
@@ -1376,12 +1429,28 @@ const UpdateIndividualResult = () => {
                 const timing = participant.performance_1 || participant.timing || timings[participant.id] || '';
                 const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
                 
+                // Format date of birth as DD/MM/YYYY
+                const formatDob = (dateString) => {
+                  if (!dateString) return 'N/A';
+                  try {
+                    const date = new Date(dateString);
+                    const day = String(date.getDate()).padStart(2, '0');
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const year = String(date.getFullYear());
+                    return day + '/' + month + '/' + year;
+                  } catch (error) {
+                    return 'N/A';
+                  }
+                };
+                const dob = formatDob(participant.date_of_birth);
+                
                 return `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${participantName}</td>
                     <td>${participant.temple_name}</td>
                     <td>${participant.aadhar_number || 'N/A'}</td>
+                    <td>${dob}</td>
                     ${isTrialEvent() ? `
                       <td class="trial-data">${trial1 ? trial1 + 'm' : ''}</td>
                       <td class="trial-data">${trial2 ? trial2 + 'm' : ''}</td>
@@ -1392,6 +1461,22 @@ const UpdateIndividualResult = () => {
                   </tr>
                 `;
               }).join('')}
+              ${[1, 2, 3, 4, 5].map((_, index) => `
+                <tr>
+                  <td>${participantsToPrint.length + index + 1}</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  <td>&nbsp;</td>
+                  ${isTrialEvent() ? `
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                    <td>&nbsp;</td>
+                  ` : ''}
+                  ${isHeatEvent() ? `<td>&nbsp;</td>` : ''}
+                  <td>&nbsp;</td>
+                </tr>
+              `).join('')}
             </tbody>
           </table>
         </body>
@@ -1608,6 +1693,20 @@ const UpdateIndividualResult = () => {
                     </p>
                   </div>
                 )}
+
+                {/* Add Participant Button */}
+                <div className="flex justify-end mb-4">
+                  <button
+                    onClick={() => openAddParticipantModal(eventId, title)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm md:text-base"
+                  >
+                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span className="hidden md:inline">Add Participant</span>
+                    <span className="md:hidden">Add</span>
+                  </button>
+                </div>
 
                 {/* Final Heat Management - Desktop Only */}
                 {isHeatEvent() && showFinalHeat && Object.keys(heats).length > 0 && (
@@ -2388,10 +2487,392 @@ const UpdateIndividualResult = () => {
     );
   };
 
+  // Add Participant Modal Component
+  const AddParticipantModal = () => {
+    const [selectedTemple, setSelectedTemple] = useState(null);
+    const [templeParticipantsCount, setTempleParticipantsCount] = useState(null);
+    const [loadingTempleCount, setLoadingTempleCount] = useState(false);
+    const [aadharSearch, setAadharSearch] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [loadingSearch, setLoadingSearch] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [userRegistrationInfo, setUserRegistrationInfo] = useState(null);
+    const [loadingUserInfo, setLoadingUserInfo] = useState(false);
+    const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
+    const [registering, setRegistering] = useState(false);
+    const [step, setStep] = useState(1); // 1: Select Temple, 2: Search User, 3: Confirm
+
+    if (!showAddParticipantModal) return null;
+
+    // Handle temple selection
+    const handleTempleSelect = async (temple) => {
+      setSelectedTemple(temple);
+      setLoadingTempleCount(true);
+      try {
+        const countData = await eventAPI.getTempleParticipantsCount(addParticipantEventId, temple.id);
+        setTempleParticipantsCount(countData);
+        if (countData.canAdd) {
+          setStep(2);
+        }
+      } catch (error) {
+        console.error('Error getting temple participants count:', error);
+        setTempleParticipantsCount({ count: 0, maxAllowed: 3, canAdd: true });
+        setStep(2);
+      } finally {
+        setLoadingTempleCount(false);
+      }
+    };
+
+    // Handle aadhar search
+    const handleAadharSearch = async (value) => {
+      setAadharSearch(value);
+      setSelectedUser(null);
+      setUserRegistrationInfo(null);
+      setIsAlreadyRegistered(false);
+
+      if (value.length < 3) {
+        setSearchResults([]);
+        return;
+      }
+
+      setLoadingSearch(true);
+      try {
+        const results = await eventAPI.searchUsersForEvent(addParticipantEventId, value);
+        // Filter results to only show users from selected temple
+        const filteredResults = results.filter(user => user.temple_id === selectedTemple.id);
+        setSearchResults(filteredResults);
+      } catch (error) {
+        console.error('Error searching users:', error);
+        setSearchResults([]);
+      } finally {
+        setLoadingSearch(false);
+      }
+    };
+
+    // Handle user selection
+    const handleUserSelect = async (user) => {
+      setSelectedUser(user);
+      setAadharSearch(user.aadhar_number);
+      setSearchResults([]);
+      setLoadingUserInfo(true);
+
+      try {
+        // Check if user is already registered for this event
+        const registrationCheck = await eventAPI.checkUserEventRegistration(addParticipantEventId, user.id);
+        setIsAlreadyRegistered(registrationCheck.isRegistered);
+
+        if (!registrationCheck.isRegistered) {
+          // Get user's registration count
+          const regInfo = await eventAPI.getUserRegistrationCount(user.id);
+          setUserRegistrationInfo(regInfo);
+          setStep(3);
+        }
+      } catch (error) {
+        console.error('Error checking user registration:', error);
+      } finally {
+        setLoadingUserInfo(false);
+      }
+    };
+
+    // Handle registration
+    const handleRegister = async () => {
+      if (!selectedUser || !addParticipantEventId) return;
+
+      setRegistering(true);
+      try {
+        await eventAPI.staffRegisterParticipant(addParticipantEventId, selectedUser.id);
+        handleParticipantAdded(addParticipantEventId);
+      } catch (error) {
+        console.error('Error registering participant:', error);
+        showErrorModal('Registration Failed', error.message || 'Failed to register participant');
+      } finally {
+        setRegistering(false);
+      }
+    };
+
+    // Reset to step 1
+    const resetModal = () => {
+      setSelectedTemple(null);
+      setTempleParticipantsCount(null);
+      setAadharSearch('');
+      setSearchResults([]);
+      setSelectedUser(null);
+      setUserRegistrationInfo(null);
+      setIsAlreadyRegistered(false);
+      setStep(1);
+    };
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-black/30 z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-semibold text-[#2A2A2A]">Add Participant</h2>
+              <p className="text-sm text-gray-500">{addParticipantEventName}</p>
+            </div>
+            <button
+              onClick={closeAddParticipantModal}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6">
+            {/* Step Indicator */}
+            <div className="flex items-center justify-center mb-6">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 1 ? 'bg-[#D35D38] text-white' : 'bg-gray-200 text-gray-500'}`}>1</div>
+              <div className={`w-12 h-1 ${step >= 2 ? 'bg-[#D35D38]' : 'bg-gray-200'}`}></div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 2 ? 'bg-[#D35D38] text-white' : 'bg-gray-200 text-gray-500'}`}>2</div>
+              <div className={`w-12 h-1 ${step >= 3 ? 'bg-[#D35D38]' : 'bg-gray-200'}`}></div>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= 3 ? 'bg-[#D35D38] text-white' : 'bg-gray-200 text-gray-500'}`}>3</div>
+            </div>
+
+            {/* Step 1: Select Temple */}
+            {step === 1 && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-[#2A2A2A]">Step 1: Select Temple</h3>
+                <p className="text-sm text-gray-500">Select the temple to add participant from</p>
+                
+                {loadingTemples ? (
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#D35D38]"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                    {temples.map((temple) => (
+                      <button
+                        key={temple.id}
+                        onClick={() => handleTempleSelect(temple)}
+                        disabled={loadingTempleCount}
+                        className={`px-3 py-2 text-sm border rounded-lg transition-colors text-left ${
+                          selectedTemple?.id === temple.id
+                            ? 'border-[#D35D38] bg-[#F8DFBE] text-[#2A2A2A]'
+                            : 'border-gray-200 hover:border-[#D35D38] text-gray-700'
+                        }`}
+                      >
+                        {temple.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {loadingTempleCount && (
+                  <div className="flex items-center justify-center py-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#D35D38]"></div>
+                    <span className="ml-2 text-sm text-gray-500">Checking temple limit...</span>
+                  </div>
+                )}
+
+                {templeParticipantsCount && !templeParticipantsCount.canAdd && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-700 text-sm font-medium">
+                      ⚠️ This temple already has {templeParticipantsCount.count} participants (maximum {templeParticipantsCount.maxAllowed} allowed)
+                    </p>
+                    <p className="text-red-600 text-xs mt-1">Please select a different temple.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: Search User */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-[#2A2A2A]">Step 2: Search Participant</h3>
+                  <button
+                    onClick={resetModal}
+                    className="text-sm text-[#D35D38] hover:underline"
+                  >
+                    ← Change Temple
+                  </button>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-blue-700 text-sm">
+                    <strong>Temple:</strong> {selectedTemple?.name} (
+                    {templeParticipantsCount?.isUnlimited 
+                      ? `${templeParticipantsCount?.count || 0} participants - Unlimited allowed` 
+                      : `${templeParticipantsCount?.count || 0}/${templeParticipantsCount?.maxAllowed || 3} participants`
+                    })
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Search by Aadhar Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter at least 3 digits..."
+                    value={aadharSearch}
+                    onChange={(e) => handleAadharSearch(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent"
+                  />
+                </div>
+
+                {loadingSearch && (
+                  <div className="flex items-center justify-center py-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#D35D38]"></div>
+                    <span className="ml-2 text-sm text-gray-500">Searching...</span>
+                  </div>
+                )}
+
+                {searchResults.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto">
+                    {searchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => handleUserSelect(user)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                      >
+                        <div className="font-medium text-[#2A2A2A]">{user.name}</div>
+                        <div className="text-sm text-gray-500">
+                          Aadhar: {user.aadhar_number} | Temple: {user.temple_name}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {aadharSearch.length >= 3 && !loadingSearch && searchResults.length === 0 && (
+                  <p className="text-gray-500 text-sm text-center py-2">
+                    No matching participants found from {selectedTemple?.name} for this event's age category and gender.
+                  </p>
+                )}
+
+                {loadingUserInfo && (
+                  <div className="flex items-center justify-center py-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#D35D38]"></div>
+                    <span className="ml-2 text-sm text-gray-500">Checking registration status...</span>
+                  </div>
+                )}
+
+                {isAlreadyRegistered && selectedUser && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <p className="text-yellow-700 text-sm font-medium">
+                      ⚠️ {selectedUser.name} is already registered for this event.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: Confirm Registration */}
+            {step === 3 && selectedUser && userRegistrationInfo && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-[#2A2A2A]">Step 3: Confirm Registration</h3>
+                  <button
+                    onClick={() => {
+                      setSelectedUser(null);
+                      setUserRegistrationInfo(null);
+                      setAadharSearch('');
+                      setStep(2);
+                    }}
+                    className="text-sm text-[#D35D38] hover:underline"
+                  >
+                    ← Search Again
+                  </button>
+                </div>
+
+                {/* Participant Details */}
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2">
+                  <h4 className="font-medium text-[#2A2A2A]">Participant Details</h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-gray-500">Name:</span>
+                      <span className="ml-1 font-medium">{selectedUser.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500">Temple:</span>
+                      <span className="ml-1 font-medium">{selectedUser.temple_name}</span>
+                    </div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Aadhar:</span>
+                      <span className="ml-1 font-medium">{selectedUser.aadhar_number}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Registration Status */}
+                <div className={`border rounded-lg p-4 ${
+                  userRegistrationInfo.count >= userRegistrationInfo.maxAllowed 
+                    ? 'bg-red-50 border-red-200' 
+                    : 'bg-green-50 border-green-200'
+                }`}>
+                  <h4 className={`font-medium ${
+                    userRegistrationInfo.count >= userRegistrationInfo.maxAllowed 
+                      ? 'text-red-700' 
+                      : 'text-green-700'
+                  }`}>
+                    Individual Event Registrations: {userRegistrationInfo.count}/{userRegistrationInfo.maxAllowed}
+                  </h4>
+                  
+                  {userRegistrationInfo.registrations.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <p className="text-xs font-medium text-gray-600">Registered Events:</p>
+                      {userRegistrationInfo.registrations.map((reg, index) => (
+                        <p key={reg.id} className="text-xs text-gray-500">
+                          {index + 1}. {reg.event_name} ({reg.age_category}) - {reg.status}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {userRegistrationInfo.count >= userRegistrationInfo.maxAllowed && (
+                    <p className="mt-2 text-red-600 text-sm font-medium">
+                      ⚠️ This user has reached the maximum number of individual event registrations.
+                    </p>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                {userRegistrationInfo.count < userRegistrationInfo.maxAllowed && (
+                  <button
+                    onClick={handleRegister}
+                    disabled={registering}
+                    className="w-full px-4 py-3 bg-[#D35D38] text-white rounded-lg font-medium hover:bg-[#B84A2E] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {registering ? (
+                      <span className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Registering...
+                      </span>
+                    ) : (
+                      'Register Participant'
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end">
+            <button
+              onClick={closeAddParticipantModal}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Modal */}
       <Modal />
+      
+      {/* Add Participant Modal */}
+      <AddParticipantModal />
       
       {/* Filters */}
       <div className="space-y-4 mb-6 sm:mb-8">
@@ -2498,6 +2979,7 @@ const UpdateIndividualResult = () => {
                       isFinalHeatSelected={isFinalHeatSelected}
                       setFinalHeatSelectedForEvent={setFinalHeatSelectedForEvent}
                       laneCount={laneCount}
+                      openAddParticipantModal={openAddParticipantModal}
                     />
                   ))}
                 </div>

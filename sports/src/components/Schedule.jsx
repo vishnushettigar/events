@@ -83,15 +83,110 @@ const Schedule = ({
     );
   }
 
-  // Group individual events by age category and gender
-  const groupedIndividualEvents = scheduleData.individual.reduce((acc, event) => {
-    const key = `${event.age_category?.name || 'Unknown'}::${event.gender}`;
-    if (!acc[key]) {
-      acc[key] = [];
+  // Helper function to format start time
+  // The backend stores time in UTC, but it represents the actual event time in IST
+  // We need to display the UTC time as-is without local timezone conversion
+  const formatStartTime = (startTime) => {
+    if (!startTime) return 'TBD';
+    
+    try {
+      const date = new Date(startTime);
+      // Use UTC methods to get the stored time without local timezone conversion
+      const hours = date.getUTCHours();
+      const minutes = date.getUTCMinutes();
+      
+      // Convert to 12-hour format
+      const period = hours >= 12 ? 'PM' : 'AM';
+      const displayHours = hours % 12 || 12;
+      const displayMinutes = minutes.toString().padStart(2, '0');
+      
+      return `${displayHours}:${displayMinutes} ${period}`;
+    } catch (error) {
+      return 'TBD';
     }
-    acc[key].push(event);
+  };
+
+  // Helper function to determine event type based on event name
+  const getEventType = (eventName) => {
+    const name = eventName?.toLowerCase() || '';
+    
+    // Running events
+    if (name.includes('100m') || name.includes('200m') || name.includes('400m') || 
+        name.includes('800m') || name.includes('1500m') || name.includes('relay') || 
+        name.includes('race') || name.includes('sprint') || name.includes('marathon') ||
+        name.includes('run') || name.includes('walking') || name.includes('walk') ||
+        name.includes('meter') || name.includes('metre') || name.includes('dash')) {
+      return 'Running';
+    }
+    
+    // Throwing events
+    if (name.includes('shotput') || name.includes('shot put') || name.includes('shot-put') ||
+        name.includes('discus') || name.includes('javelin') || name.includes('hammer') ||
+        name.includes('throw')) {
+      return 'Throwing';
+    }
+    
+    // Jumping events
+    if (name.includes('jump') || name.includes('long jump') || name.includes('high jump') ||
+        name.includes('triple jump') || name.includes('pole vault') || name.includes('vault')) {
+      return 'Jumping';
+    }
+    
+    return 'Other';
+  };
+
+  // Helper function to get age category group
+  const getAgeCategoryGroup = (ageCategory) => {
+    const name = ageCategory?.name || 'Unknown';
+    if (name.includes('0-5') || name.includes('0 - 5')) return '0-5';
+    if (name.includes('6-10') || name.includes('6 - 10')) return '6-10';
+    if (name.includes('61+') || name.includes('61 +') || name.includes('61 and above') || 
+        name.includes('Senior') || name.includes('60+') || name.includes('60 +')) return '61+';
+    return name; // Return original name for other categories
+  };
+
+  // Define the order for age categories and event types
+  const ageCategoryOrder = ['0-5', '6-10', '61+'];
+  const eventTypeOrder = ['Running', 'Throwing', 'Jumping', 'Other'];
+
+  // Group individual events by age category group, then by event type
+  const groupedIndividualEvents = scheduleData.individual.reduce((acc, event) => {
+    const ageGroup = getAgeCategoryGroup(event.age_category);
+    const eventType = getEventType(event.name);
+    const key = `${ageGroup}::${eventType}`;
+    
+    if (!acc[key]) {
+      acc[key] = {
+        ageGroup,
+        eventType,
+        events: []
+      };
+    }
+    acc[key].events.push(event);
     return acc;
   }, {});
+
+  // Sort grouped events by age category order, then by event type order
+  const sortedGroupKeys = Object.keys(groupedIndividualEvents).sort((a, b) => {
+    const [ageA, typeA] = a.split('::');
+    const [ageB, typeB] = b.split('::');
+    
+    const ageOrderA = ageCategoryOrder.indexOf(ageA);
+    const ageOrderB = ageCategoryOrder.indexOf(ageB);
+    
+    // If age category is in our priority list, use its order; otherwise put at end
+    const effectiveAgeOrderA = ageOrderA === -1 ? 999 : ageOrderA;
+    const effectiveAgeOrderB = ageOrderB === -1 ? 999 : ageOrderB;
+    
+    if (effectiveAgeOrderA !== effectiveAgeOrderB) {
+      return effectiveAgeOrderA - effectiveAgeOrderB;
+    }
+    
+    // Same age category, sort by event type
+    const typeOrderA = eventTypeOrder.indexOf(typeA);
+    const typeOrderB = eventTypeOrder.indexOf(typeB);
+    return typeOrderA - typeOrderB;
+  });
 
   // Group team events by gender
   const groupedTeamEvents = scheduleData.team.reduce((acc, event) => {
@@ -119,58 +214,77 @@ const Schedule = ({
         </div>
         
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age Category</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {scheduleData.individual.length > 0 ? (
-                scheduleData.individual.map((event, index) => (
-                  <tr key={event.id || index} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      10:00 AM
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.name}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.age_category?.name || 'N/A'}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.gender || 'N/A'}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {event.has_results ? (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                          Pending
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
-                    No individual events found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          {scheduleData.individual.length > 0 ? (
+            sortedGroupKeys.map((groupKey) => {
+              const group = groupedIndividualEvents[groupKey];
+              const eventTypeEmoji = {
+                'Running': '🏃',
+                'Throwing': '🎯',
+                'Jumping': '🦘',
+                'Other': '🏅'
+              };
+              
+              return (
+                <div key={groupKey} className="mb-6">
+                  {/* Group Header */}
+                  <div className="bg-gradient-to-r from-[#D35D38] to-[#E07650] px-4 py-3 rounded-t-lg">
+                    <h4 className="text-white font-semibold text-sm sm:text-base">
+                      {eventTypeEmoji[group.eventType] || '🏅'} Age: {group.ageGroup} - {group.eventType} Events ({group.events.length})
+                    </h4>
+                  </div>
+                  
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age Category</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {group.events.map((event, index) => (
+                        <tr key={event.id || index} className="hover:bg-gray-50">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {index + 1}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {formatStartTime(event.start_time)}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {event.name}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {event.age_category?.name || 'N/A'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {event.gender || 'N/A'}
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            {event.has_results ? (
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                Completed
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                                Pending
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })
+          ) : (
+            <div className="px-4 py-8 text-center text-gray-500">
+              No individual events found
+            </div>
+          )}
         </div>
       </div>
 
@@ -200,7 +314,7 @@ const Schedule = ({
                       {index + 1}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      10:00 AM
+                      {formatStartTime(event.start_time)}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                       {event.name}
