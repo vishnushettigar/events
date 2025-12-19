@@ -150,8 +150,8 @@ async function main() {
     { event_type_id: 4, age_category_id: 2, gender: 'FEMALE', is_deleted: false, is_closed: false },
   
     // 11-14 years
-    { event_type_id: 4, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
-    { event_type_id: 4, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 6, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 5, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 5, age_category_id: 3, gender: 'FEMALE', is_deleted: false, is_closed: false },
     { event_type_id: 9, age_category_id: 3, gender: 'MALE', is_deleted: false, is_closed: false },
@@ -217,8 +217,8 @@ async function main() {
     { event_type_id: 10, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 10, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
   
-    // 61+ years
-    { event_type_id: 11, age_category_id: 9, gender: 'MIXED', is_deleted: false, is_closed: false },
+    // 61+ years MALE
+    { event_type_id: 11, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
   
     // Team games category
     // Couple Relay mixed includes both MALE and FEMALE to participate together .
@@ -233,6 +233,8 @@ async function main() {
     // Tug of War for both MALE and FEMALE.
     { event_type_id: 16, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  
     { event_type_id: 16, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    // 61+ years FEMALE
+    { event_type_id: 11, age_category_id: 9, gender: 'FEMALE', is_deleted: false, is_closed: false },
   ];
   
 

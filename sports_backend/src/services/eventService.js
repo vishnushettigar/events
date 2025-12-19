@@ -129,7 +129,7 @@ async function registerParticipant(user_id, event_id, temple_id) {
 
     // Check if this age category has unlimited participants (0-5, 6-10, 61-90)
     const ageCategoryName = event.age_category.name;
-    const isUnlimitedAgeCategory = ['0-5', '6-10', '61-90'].includes(ageCategoryName);
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '61+'].includes(ageCategoryName);
     
     let registration;
     
@@ -421,13 +421,34 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
 
     console.log('Creating team registration...');
 
+    // For mixed gender events, check the count of ACCEPTED teams (limit: 3)
+    let registrationStatus = 'ACCEPTED';
+    if (event.gender === 'MIXED') {
+      const acceptedTeamsCount = await prisma.team_event_registration.count({
+        where: {
+          temple_id: temple_id,
+          event_id: event_id,
+          is_deleted: false,
+          status: 'ACCEPTED'
+        }
+      });
+      
+      console.log('MIXED event - Current accepted teams count:', acceptedTeamsCount);
+      
+      // If already 3 or more ACCEPTED teams, set new registration to PENDING
+      if (acceptedTeamsCount >= 3) {
+        registrationStatus = 'PENDING';
+        console.log('Setting registration status to PENDING (limit reached)');
+      }
+    }
+
   const registration = await prisma.team_event_registration.create({
     data: {
       year: new Date().getFullYear(),
       temple_id,
       event_id,
         member_user_ids: member_user_ids.join(','),
-        status: 'ACCEPTED' // Temple admins can directly register teams as accepted
+        status: registrationStatus
     }
   });
 
@@ -817,17 +838,21 @@ async function getTempleTeams(temple_id, filters = {}) {
 
   const where = {
     temple_id: temple_id,
-      is_deleted: false,
-      status: 'ACCEPTED' // Only include accepted team registrations
+      is_deleted: false
   };
 
   if (filters.event_id) {
     where.event_id = filters.event_id;
   }
 
-    // If filters.status is provided, override the default
+    // If filters.status is provided, use it; otherwise return ACCEPTED and PENDING
     if (filters.status) {
       where.status = filters.status;
+    } else {
+      // Return both ACCEPTED and PENDING statuses
+      where.status = {
+        in: ['ACCEPTED', 'PENDING']
+      };
     }
 
     console.log('Using where clause:', where);
@@ -1112,10 +1137,11 @@ async function getTeamEvents() {
       const teamRegistrations = await prisma.team_event_registration.findMany({
         where: {
           event_id: event.id,
-          is_deleted: false
+          is_deleted: false,
+          status: 'ACCEPTED'
         },
         include: {
-          temple: true,
+          temple: true, 
           event_result: true
         }
       });
@@ -1334,6 +1360,7 @@ async function getEventParticipants(eventId) {
           gender: reg.user.gender,
           phone: reg.user.phone,
           aadhar_number: reg.user.aadhar_number,
+          date_of_birth: reg.user.dob,
           registration_status: reg.status,
           result: reg.event_result ? {
             rank: reg.event_result.rank,
@@ -1866,6 +1893,308 @@ async function getTeamRegistrationDetails(registrationId) {
   }
 }
 
+// Batch fetch team registrations with participants for multiple registration IDs
+async function getBatchTeamData(registrationIds) {
+  try {
+    console.log('Batch fetching team data for registrations:', registrationIds);
+
+    if (!registrationIds || registrationIds.length === 0) {
+      return {};
+    }
+
+    // Parse all IDs to integers
+    const parsedIds = registrationIds.map(id => parseInt(id)).filter(id => !isNaN(id));
+
+    // Fetch all registrations in a single query
+    const registrations = await prisma.team_event_registration.findMany({
+      where: { 
+        id: { in: parsedIds }
+      },
+      include: {
+        temple: true,
+        event_result: {
+          select: {
+            rank: true,
+            points: true
+          }
+        }
+      }
+    });
+
+    // Collect all member user IDs across all registrations
+    const allMemberIds = new Set();
+    registrations.forEach(registration => {
+      if (registration.member_user_ids) {
+        registration.member_user_ids.split(',').forEach(id => {
+          const parsedId = parseInt(id.trim());
+          if (!isNaN(parsedId)) {
+            allMemberIds.add(parsedId);
+          }
+        });
+      }
+    });
+
+    // Fetch all participants in a single query
+    const participants = await prisma.profile.findMany({
+      where: {
+        id: { in: Array.from(allMemberIds) }
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        aadhar_number: true,
+        phone: true,
+        email: true,
+        gender: true,
+        dob: true
+      }
+    });
+
+    // Create a map of participant ID to participant data
+    const participantMap = {};
+    participants.forEach(p => {
+      participantMap[p.id] = p;
+    });
+
+    // Build the result object keyed by registration ID
+    const result = {};
+    registrations.forEach(registration => {
+      const memberUserIds = registration.member_user_ids 
+        ? registration.member_user_ids.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+        : [];
+      
+      const teamParticipants = memberUserIds
+        .map(id => participantMap[id])
+        .filter(p => p !== undefined);
+
+      result[registration.id] = {
+        registration: {
+          id: registration.id,
+          temple_id: registration.temple_id,
+          event_id: registration.event_id,
+          temple: registration.temple,
+          event_result: registration.event_result
+        },
+        participants: teamParticipants
+      };
+    });
+
+    console.log('Batch fetched team data for', Object.keys(result).length, 'registrations');
+    return result;
+  } catch (error) {
+    console.error('Error in getBatchTeamData:', error);
+    throw error;
+  }
+}
+
+// Delete a team registration (soft delete)
+async function deleteTeamRegistration(registrationId, templeId) {
+  // Check if team event registration deadline has passed
+  const lastDateSetting = await prisma.settings.findUnique({
+    where: { name: 'REG_LAST_DATE_TEAM' }
+  });
+
+  console.log('Team deletion deadline check:', {
+    settingFound: !!lastDateSetting,
+    settingValue: lastDateSetting?.value
+  });
+
+  if (lastDateSetting && lastDateSetting.value) {
+    try {
+      // Parse the date string (format: 'YYYY-MM-DD' or 'YYYY-M-D')
+      // Create date in local timezone to avoid timezone issues
+      const dateParts = lastDateSetting.value.split('-');
+      if (dateParts.length === 3) {
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // Month is 0-indexed
+        const day = parseInt(dateParts[2], 10);
+        
+        // Validate parsed values
+        if (isNaN(year) || isNaN(month) || isNaN(day)) {
+          console.error('Invalid date values:', { year, month, day, original: lastDateSetting.value });
+          throw new Error('Invalid date format in team registration deadline');
+        }
+        
+        // Compare dates at day level (ignore time) using local timezone
+        // Create dates in local timezone to avoid timezone conversion issues
+        const lastDateOnly = new Date(year, month, day);
+        lastDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        const currentDateOnly = new Date();
+        currentDateOnly.setHours(0, 0, 0, 0); // Set to start of day for comparison
+        
+        // Format dates for logging (YYYY-MM-DD)
+        const lastDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const currentDateStr = `${currentDateOnly.getFullYear()}-${String(currentDateOnly.getMonth() + 1).padStart(2, '0')}-${String(currentDateOnly.getDate()).padStart(2, '0')}`;
+        
+        console.log('Team deletion date comparison:', {
+          lastDateString: lastDateSetting.value,
+          lastDateParsed: lastDateStr,
+          currentDateStr: currentDateStr,
+          lastDateTimestamp: lastDateOnly.getTime(),
+          currentDateTimestamp: currentDateOnly.getTime(),
+          isAfterDeadline: currentDateOnly > lastDateOnly
+        });
+
+        // Block team deletion if current date is AFTER the last date
+        // This blocks team deletions after the last date
+        if (currentDateOnly > lastDateOnly) {
+          throw new Error(`Team registration deletion closed. The last date for team registration changes was ${lastDateSetting.value}.`);
+        }
+      } else {
+        console.error('Invalid date format - expected YYYY-MM-DD, got:', lastDateSetting.value);
+        throw new Error('Invalid date format in team registration deadline');
+      }
+    } catch (dateError) {
+      // If date parsing fails, log and block team deletion for safety
+      console.error('Error parsing team registration deadline date:', dateError);
+      // Re-throw the error to block team deletion if date parsing fails
+      throw dateError;
+    }
+  } else {
+    console.log('No team registration deadline setting found - allowing team deletion');
+  }
+
+  try {
+    console.log('deleteTeamRegistration called with:', { registrationId, templeId });
+
+    // Find the registration
+    const registration = await prisma.team_event_registration.findUnique({
+      where: { id: registrationId },
+      include: {
+        event: true
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Team registration not found');
+    }
+
+    // Verify the registration belongs to the temple
+    if (registration.temple_id !== templeId) {
+      throw new Error('You can only delete registrations from your own temple');
+    }
+
+    // Log the action before deleting
+    await prisma.audit_log.create({
+      data: {
+        user_id: null,
+        action: 'DELETE_TEAM_REGISTRATION',
+        table_name: 'Team_event_registration',
+        record_id: registrationId,
+        old_value: JSON.stringify(registration),
+        new_value: null
+      }
+    });
+
+    // Hard delete the registration (completely remove from database)
+    await prisma.team_event_registration.delete({
+      where: { id: registrationId }
+    });
+
+    console.log('Team registration permanently deleted:', registrationId);
+    return { success: true, message: 'Team registration deleted successfully' };
+  } catch (error) {
+    console.error('Error in deleteTeamRegistration:', error);
+    throw error;
+  }
+}
+
+// Accept a PENDING team registration (only for mixed gender events with less than 3 ACCEPTED)
+async function acceptTeamRegistration(registrationId, templeId) {
+  try {
+    console.log('acceptTeamRegistration called with:', { registrationId, templeId });
+
+    // Find the registration
+    const registration = await prisma.team_event_registration.findUnique({
+      where: { id: registrationId },
+      include: {
+        event: true
+      }
+    });
+
+    if (!registration) {
+      throw new Error('Team registration not found');
+    }
+
+    // Verify the registration belongs to the temple
+    if (registration.temple_id !== templeId) {
+      throw new Error('You can only accept registrations from your own temple');
+    }
+
+    // Check if registration is PENDING
+    if (registration.status !== 'PENDING') {
+      throw new Error('Only PENDING registrations can be accepted');
+    }
+
+    // Check if it's a mixed gender event
+    if (registration.event.gender !== 'MIXED') {
+      throw new Error('Accept functionality is only for mixed gender events');
+    }
+
+    // Check the count of ACCEPTED teams for this event
+    const acceptedTeamsCount = await prisma.team_event_registration.count({
+      where: {
+        temple_id: templeId,
+        event_id: registration.event_id,
+        is_deleted: false,
+        status: 'ACCEPTED'
+      }
+    });
+
+    console.log('Current ACCEPTED teams count:', acceptedTeamsCount);
+
+    if (acceptedTeamsCount >= 3) {
+      throw new Error('Cannot accept more teams. Maximum 3 teams with ACCEPTED status allowed for mixed gender events.');
+    }
+
+    // Update the registration status to ACCEPTED
+    const updatedRegistration = await prisma.team_event_registration.update({
+      where: { id: registrationId },
+      data: {
+        status: 'ACCEPTED'
+      }
+    });
+
+    // Log the action
+    await prisma.audit_log.create({
+      data: {
+        user_id: null,
+        action: 'ACCEPT_TEAM_REGISTRATION',
+        table_name: 'Team_event_registration',
+        record_id: registrationId,
+        old_value: JSON.stringify(registration),
+        new_value: JSON.stringify(updatedRegistration)
+      }
+    });
+
+    console.log('Team registration accepted successfully:', registrationId);
+    return { success: true, message: 'Team registration accepted successfully' };
+  } catch (error) {
+    console.error('Error in acceptTeamRegistration:', error);
+    throw error;
+  }
+}
+
+// Get count of ACCEPTED teams for an event in a temple
+async function getAcceptedTeamsCount(templeId, eventId) {
+  try {
+    const count = await prisma.team_event_registration.count({
+      where: {
+        temple_id: templeId,
+        event_id: eventId,
+        is_deleted: false,
+        status: 'ACCEPTED'
+      }
+    });
+    return count;
+  } catch (error) {
+    console.error('Error in getAcceptedTeamsCount:', error);
+    throw error;
+  }
+}
+
 export {
   registerParticipant,
   unregisterParticipant,
@@ -1885,5 +2214,9 @@ export {
   getEventResultId,
   getEventResultIdWithZeroPoints,
   getTeamParticipants,
-  getTeamRegistrationDetails
+  getTeamRegistrationDetails,
+  getBatchTeamData,
+  deleteTeamRegistration,
+  acceptTeamRegistration,
+  getAcceptedTeamsCount
 }; 

@@ -15,7 +15,6 @@ router.get('/test-auth', authenticate, requireRole('TEMPLE_ADMIN'), (req, res) =
 
 //Individual event registration
 router.post('/register-participant', authenticate, [
-  body('user_id').isInt().withMessage('Invalid user ID'),
   body('event_id').isInt().withMessage('Invalid event ID')
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -23,8 +22,9 @@ router.post('/register-participant', authenticate, [
     console.error('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
-  // TODO : remove user_id, read from req.user
-  const { user_id, event_id } = req.body;
+  
+  const user_id = req.user.id; // Get user ID from authenticated user (token)
+  const { event_id } = req.body;
   console.log("user id from req", req.user)
   console.log('Registration attempt:', { user_id: req.user.id, event_id});
 
@@ -247,6 +247,154 @@ router.get('/temple-teams', authenticate, requireRole(2), async (req, res) => {
   } catch (error) {
     console.error('Error in /temple-teams route:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch teams' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/delete-team/{registrationId}:
+ *   delete:
+ *     tags: [Events]
+ *     summary: Delete a team registration
+ *     description: Soft delete a team registration (Temple Admin only)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: registrationId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Team registration ID to delete
+ *     responses:
+ *       200:
+ *         description: Team registration deleted successfully
+ *       400:
+ *         description: Invalid registration ID
+ *       403:
+ *         description: Not authorized to delete this registration
+ *       404:
+ *         description: Registration not found
+ *       500:
+ *         description: Server error
+ */
+router.delete('/delete-team/:registrationId', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    
+    if (!registrationId || isNaN(parseInt(registrationId))) {
+      return res.status(400).json({ error: 'Valid registration ID is required' });
+    }
+
+    const result = await eventService.deleteTeamRegistration(parseInt(registrationId), req.user.temple_id);
+    res.json(result);
+  } catch (error) {
+    console.error('Error deleting team registration:', error);
+    
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('own temple') || error.message.includes('only')) {
+      return res.status(403).json({ error: error.message });
+    }
+    if (error.message.includes('deletion closed') || error.message.includes('last date')) {
+      return res.status(403).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Failed to delete team registration' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/accept-team/{registrationId}:
+ *   put:
+ *     tags: [Events]
+ *     summary: Accept a pending team registration
+ *     description: Accept a PENDING team registration for mixed gender events (max 3 ACCEPTED teams allowed)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: registrationId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Team registration ID to accept
+ *     responses:
+ *       200:
+ *         description: Team registration accepted successfully
+ *       400:
+ *         description: Invalid registration ID or cannot accept more teams
+ *       403:
+ *         description: Not authorized or max teams reached
+ *       404:
+ *         description: Registration not found
+ *       500:
+ *         description: Server error
+ */
+router.put('/accept-team/:registrationId', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+  try {
+    const { registrationId } = req.params;
+    
+    if (!registrationId || isNaN(parseInt(registrationId))) {
+      return res.status(400).json({ error: 'Valid registration ID is required' });
+    }
+
+    const result = await eventService.acceptTeamRegistration(parseInt(registrationId), req.user.temple_id);
+    res.json(result);
+  } catch (error) {
+    console.error('Error accepting team registration:', error);
+    
+    if (error.message.includes('not found')) {
+      return res.status(404).json({ error: error.message });
+    }
+    if (error.message.includes('own temple') || error.message.includes('only') || error.message.includes('Maximum')) {
+      return res.status(403).json({ error: error.message });
+    }
+    if (error.message.includes('PENDING') || error.message.includes('mixed gender')) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: error.message || 'Failed to accept team registration' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/events/accepted-teams-count/{eventId}:
+ *   get:
+ *     tags: [Events]
+ *     summary: Get count of accepted teams for an event
+ *     description: Returns the count of ACCEPTED team registrations for a specific event
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: eventId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Count retrieved successfully
+ *       400:
+ *         description: Invalid event ID
+ *       500:
+ *         description: Server error
+ */
+router.get('/accepted-teams-count/:eventId', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    if (!eventId || isNaN(parseInt(eventId))) {
+      return res.status(400).json({ error: 'Valid event ID is required' });
+    }
+
+    const count = await eventService.getAcceptedTeamsCount(req.user.temple_id, parseInt(eventId));
+    res.json({ count });
+  } catch (error) {
+    console.error('Error getting accepted teams count:', error);
+    res.status(500).json({ error: error.message || 'Failed to get accepted teams count' });
   }
 });
 
@@ -564,6 +712,49 @@ router.get('/team-registration/:registrationId', authenticate, async (req, res) 
 
 /**
  * @swagger
+ * /events/batch-team-data:
+ *   post:
+ *     summary: Batch fetch team registrations and participants for multiple registration IDs
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               registration_ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *     responses:
+ *       200:
+ *         description: Batch team data retrieved successfully
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Server error
+ */
+router.post('/batch-team-data', authenticate, async (req, res) => {
+  try {
+    const { registration_ids } = req.body;
+    
+    if (!registration_ids || !Array.isArray(registration_ids) || registration_ids.length === 0) {
+      return res.status(400).json({ error: 'Valid registration IDs array is required' });
+    }
+
+    const batchData = await eventService.getBatchTeamData(registration_ids);
+    res.json(batchData);
+  } catch (error) {
+    console.error('Error fetching batch team data:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch batch team data' });
+  }
+});
+
+/**
+ * @swagger
  * /events/all-events:
  *   get:
  *     summary: Get all events with complete details
@@ -592,6 +783,11 @@ router.get('/all-events', authenticate, async (req, res) => {
       include: {
         event_type: true,
         age_category: true,
+        schedules: {
+          where: { is_deleted: false },
+          orderBy: { start_time: 'asc' },
+          take: 1
+        },
         registrations: {
           where: { is_deleted: false },
           select: {
@@ -623,6 +819,8 @@ router.get('/all-events', authenticate, async (req, res) => {
       const hasTeamResults = event.team_registrations.some(reg => reg.event_result_id !== null);
       // Event has results if either individual or team registrations have results
       const has_results = hasIndividualResults || hasTeamResults;
+      // Get the first schedule's start_time if available
+      const start_time = event.schedules?.[0]?.start_time || null;
 
       return {
         id: event.id,
@@ -635,7 +833,8 @@ router.get('/all-events', authenticate, async (req, res) => {
         registrations_count: event.registrations.length,
         team_registrations_count: event.team_registrations.length,
         total_registrations: event.registrations.length + event.team_registrations.length,
-        has_results: has_results
+        has_results: has_results,
+        start_time: start_time
       };
     });
 
@@ -888,60 +1087,52 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
       // No temple separation needed - place all participants in single heat
       heats[0].participants = [...participants];
     } else {
-      // Apply temple separation logic
-      let remainingParticipants = [...participants];
+      // Apply temple separation logic to ALL participants
+      // Track how many participants from each temple are in each heat (globally)
+      const templeCountsPerHeat = {};
       
-      // Get temples with 3+ participants that need separation
-      const templesNeedingSeparation = Object.entries(templeGroups)
-        .filter(([temple, templeParticipants]) => templeParticipants.length >= 3)
-        .map(([temple, templeParticipants]) => ({ temple, participants: templeParticipants }));
-
-      // Sort temples by participant count (descending) for better distribution
-      templesNeedingSeparation.sort((a, b) => b.participants.length - a.participants.length);
-
-      // First, distribute participants from temples that need separation
-      templesNeedingSeparation.forEach(({ temple, participants: templeParticipants }) => {
-        // Remove these participants from remaining list
-        remainingParticipants = remainingParticipants.filter(p => p.temple_name !== temple);
-        
-        if (heats.length === 2) {
-          // 2 heats: Place 2 in heat with more participants, 1 in heat with fewer
-          const heat1Count = heats[0].participants.length;
-          const heat2Count = heats[1].participants.length;
-          
-          // Find which heat has more participants
-          const largerHeatIndex = heat1Count >= heat2Count ? 0 : 1;
-          const smallerHeatIndex = heat1Count >= heat2Count ? 1 : 0;
-          
-          // Distribute: 2 in larger heat, rest in smaller heat
-          templeParticipants.forEach((participant, index) => {
-            if (index < 2) {
-              heats[largerHeatIndex].participants.push(participant);
-            } else {
-              heats[smallerHeatIndex].participants.push(participant);
-            }
-          });
-        } else if (heats.length >= 3) {
-          // 3+ heats: Distribute temple participants across different heats
-          templeParticipants.forEach((participant, index) => {
-            const targetHeatIndex = index % heats.length;
-            heats[targetHeatIndex].participants.push(participant);
-          });
-        }
+      // Initialize temple counts for all temples
+      Object.keys(templeGroups).forEach(temple => {
+        templeCountsPerHeat[temple] = new Array(heats.length).fill(0);
       });
-
-      // Then, distribute remaining participants (from temples with <3 participants) 
-      // using round-robin to fill heats evenly
-      let currentHeatIndex = 0;
-      remainingParticipants.forEach(participant => {
-        // Find the next heat that's not full
-        while (heats[currentHeatIndex % heats.length].participants.length >= heatSizes[currentHeatIndex % heats.length]) {
-          currentHeatIndex++;
+      
+      // Sort participants by temple size (largest temples first for better distribution)
+      const sortedParticipants = [...participants].sort((a, b) => {
+        return templeGroups[b.temple_name].length - templeGroups[a.temple_name].length;
+      });
+      
+      // Distribute each participant with temple separation
+      sortedParticipants.forEach(participant => {
+        const temple = participant.temple_name;
+        const templeCounts = templeCountsPerHeat[temple];
+        
+        // Find the best heat for this participant
+        let targetHeatIndex = -1;
+        let minTempleCount = Infinity;
+        let minTotalCount = Infinity;
+        
+        for (let i = 0; i < heats.length; i++) {
+          // Check if heat has capacity
+          if (heats[i].participants.length < heatSizes[i]) {
+            const templeCount = templeCounts[i];
+            const totalCount = heats[i].participants.length;
+            
+            // Priority 1: Prefer heats with fewer participants from same temple (separation)
+            // Priority 2: If same temple count, prefer heats with fewer total participants (balance)
+            if (templeCount < minTempleCount || 
+                (templeCount === minTempleCount && totalCount < minTotalCount)) {
+              minTempleCount = templeCount;
+              minTotalCount = totalCount;
+              targetHeatIndex = i;
+            }
+          }
         }
         
-        const targetHeatIndex = currentHeatIndex % heats.length;
-        heats[targetHeatIndex].participants.push(participant);
-        currentHeatIndex++;
+        // Place participant in the best available heat
+        if (targetHeatIndex >= 0) {
+          heats[targetHeatIndex].participants.push(participant);
+          templeCounts[targetHeatIndex]++;
+        }
       });
     }
 
@@ -1061,7 +1252,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         SELECT ep.id, ep.registration_id, ep.event_id, ep.heat_number,
                ep.performance_1, ep.performance_2, ep.performance_3,
                ir.id as reg_id,
-               u.first_name, u.last_name, u.aadhar_number,
+               u.first_name, u.last_name, u.aadhar_number, u.dob,
                t.name as temple_name,
                er.rank, er.points
         FROM event_performance ep
@@ -1081,7 +1272,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
                  NULL as performance_2,
                  NULL as performance_3,
                  ir.id as reg_id,
-                 u.first_name, u.last_name, u.aadhar_number,
+                 u.first_name, u.last_name, u.aadhar_number, u.dob,
                  t.name as temple_name,
                  er.rank, er.points
           FROM event_performance ep
@@ -1111,6 +1302,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         participant_name: (heat.first_name || '') + ' ' + (heat.last_name || ''),
         temple_name: heat.temple_name,
         aadhar_number: heat.aadhar_number,
+        date_of_birth: heat.dob,
         performance_1: heat.performance_1,
         performance_2: heat.performance_2,
         performance_3: heat.performance_3,
@@ -1670,6 +1862,335 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
   } catch (error) {
     console.error('Error saving trials:', error);
     res.status(500).json({ error: error.message || 'Failed to save trial measurements' });
+  }
+});
+
+// Search users by Aadhar with age category and gender filtering for staff
+router.get('/search-users-for-event/:eventId', authenticate, requireRole('STAFF'), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { aadharNumber } = req.query;
+
+    if (!aadharNumber || aadharNumber.length < 3) {
+      return res.status(400).json({ error: 'Please enter at least 3 digits of Aadhar number' });
+    }
+
+    // Get the event details to determine age category and gender
+    const event = await prisma.mst_event.findUnique({
+      where: { id: parseInt(eventId) },
+      include: {
+        age_category: true
+      }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Get age cutoff date from settings
+    const ageCutoffSetting = await prisma.settings.findUnique({
+      where: { name: 'AGE_CUTOFF_DATE' }
+    });
+    
+    const cutoffDate = ageCutoffSetting?.value 
+      ? new Date(ageCutoffSetting.value) 
+      : new Date();
+
+    // Search for users by Aadhar number (partial match)
+    const users = await prisma.profile.findMany({
+      where: {
+        aadhar_number: {
+          contains: aadharNumber
+        },
+        gender: event.gender,
+        is_deleted: false
+      },
+      include: {
+        temple: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      take: 10
+    });
+
+    // Filter users by age category
+    const { calculateAge, getAgeCategory } = await import('../utils/ageUtils.js');
+    
+    const filteredUsers = users.filter(user => {
+      if (!user.dob) return false;
+      const age = calculateAge(user.dob, cutoffDate);
+      const userAgeCategory = getAgeCategory(age);
+      return userAgeCategory === event.age_category.name;
+    }).map(user => ({
+      id: user.id,
+      name: `${user.first_name} ${user.last_name || ''}`.trim(),
+      aadhar_number: user.aadhar_number,
+      temple_id: user.temple_id,
+      temple_name: user.temple?.name || 'Unknown',
+      gender: user.gender,
+      dob: user.dob
+    }));
+
+    res.json(filteredUsers);
+  } catch (error) {
+    console.error('Error searching users for event:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+// Get user's individual registration count
+router.get('/user-registration-count/:userId', authenticate, requireRole('STAFF'), async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const currentYear = new Date().getFullYear();
+
+    // Get all individual event registrations for the user
+    const registrations = await prisma.ind_event_registration.findMany({
+      where: {
+        user_id: parseInt(userId),
+        is_deleted: false,
+        year: currentYear,
+        status: {
+          in: ['PENDING', 'ACCEPTED']
+        }
+      },
+      include: {
+        event: {
+          include: {
+            event_type: true,
+            age_category: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      count: registrations.length,
+      maxAllowed: 3,
+      registrations: registrations.map(reg => ({
+        id: reg.id,
+        event_id: reg.event_id,
+        event_name: reg.event?.event_type?.name || 'Unknown',
+        age_category: reg.event?.age_category?.name || 'Unknown',
+        status: reg.status
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting user registration count:', error);
+    res.status(500).json({ error: 'Failed to get registration count' });
+  }
+});
+
+// Get temple participants count for an event
+router.get('/temple-participants-count/:eventId/:templeId', authenticate, requireRole('STAFF'), async (req, res) => {
+  try {
+    const { eventId, templeId } = req.params;
+    const currentYear = new Date().getFullYear();
+
+    // Get event details to check age category
+    const event = await prisma.mst_event.findUnique({
+      where: { id: parseInt(eventId) },
+      include: { age_category: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Check if this age category has unlimited participants (0-5, 6-10, 61+)
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '61+'].includes(event.age_category.name);
+
+    // Count accepted participants from this temple for this event
+    const count = await prisma.ind_event_registration.count({
+      where: {
+        event_id: parseInt(eventId),
+        is_deleted: false,
+        year: currentYear,
+        status: 'ACCEPTED',
+        user: {
+          temple_id: parseInt(templeId)
+        }
+      }
+    });
+
+    res.json({
+      count,
+      maxAllowed: isUnlimitedAgeCategory ? null : 3,
+      canAdd: isUnlimitedAgeCategory ? true : count < 3,
+      isUnlimited: isUnlimitedAgeCategory
+    });
+  } catch (error) {
+    console.error('Error getting temple participants count:', error);
+    res.status(500).json({ error: 'Failed to get temple participants count' });
+  }
+});
+
+// Check if user is already registered for event
+router.get('/check-user-event-registration/:eventId/:userId', authenticate, requireRole('STAFF'), async (req, res) => {
+  try {
+    const { eventId, userId } = req.params;
+    const currentYear = new Date().getFullYear();
+
+    const existingRegistration = await prisma.ind_event_registration.findFirst({
+      where: {
+        event_id: parseInt(eventId),
+        user_id: parseInt(userId),
+        is_deleted: false,
+        year: currentYear
+      }
+    });
+
+    res.json({
+      isRegistered: !!existingRegistration,
+      status: existingRegistration?.status || null
+    });
+  } catch (error) {
+    console.error('Error checking user event registration:', error);
+    res.status(500).json({ error: 'Failed to check registration' });
+  }
+});
+
+// Staff register participant for event (on behalf of user)
+router.post('/staff-register-participant', authenticate, requireRole('STAFF'), [
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('user_id').isInt().withMessage('Invalid user ID')
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { event_id, user_id } = req.body;
+
+  try {
+    const currentYear = new Date().getFullYear();
+
+    // Get user details
+    const user = await prisma.profile.findUnique({
+      where: { id: user_id },
+      select: { id: true, temple_id: true, first_name: true, last_name: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Check if user is already registered for this event
+    const existingRegistration = await prisma.ind_event_registration.findFirst({
+      where: {
+        event_id,
+        user_id,
+        is_deleted: false,
+        year: currentYear
+      }
+    });
+
+    if (existingRegistration) {
+      return res.status(409).json({ error: 'User is already registered for this event' });
+    }
+
+    // Get event details first to check age category
+    const event = await prisma.mst_event.findUnique({
+      where: { id: event_id },
+      include: { age_category: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Check if this age category has unlimited participants (0-5, 6-10, 61+)
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '61+'].includes(event.age_category.name);
+
+    // Check user's total individual event registrations (applies to all age categories)
+    const userRegistrations = await prisma.ind_event_registration.count({
+      where: {
+        user_id,
+        is_deleted: false,
+        year: currentYear,
+        status: { in: ['PENDING', 'ACCEPTED'] }
+      }
+    });
+
+    if (userRegistrations >= 3) {
+      return res.status(403).json({ 
+        error: 'User has already registered for 3 individual events (maximum allowed)' 
+      });
+    }
+
+    // Check temple's participant count for this event (only for limited age categories)
+    let templeParticipantCount = 0;
+    if (!isUnlimitedAgeCategory) {
+      templeParticipantCount = await prisma.ind_event_registration.count({
+        where: {
+          event_id,
+          is_deleted: false,
+          year: currentYear,
+          status: 'ACCEPTED',
+          user: { temple_id: user.temple_id }
+        }
+      });
+
+      if (templeParticipantCount >= 3) {
+        return res.status(403).json({ 
+          error: 'This temple already has 3 participants registered for this event (maximum allowed)' 
+        });
+      }
+    }
+
+    // Create the registration
+    let registration;
+    if (isUnlimitedAgeCategory) {
+      // For unlimited age categories, create as ACCEPTED directly
+      registration = await prisma.ind_event_registration.create({
+        data: {
+          year: currentYear,
+          user_id,
+          event_id,
+          status: 'ACCEPTED',
+          is_deleted: false
+        }
+      });
+    } else {
+      // For limited age categories, create as ACCEPTED if temple has room
+      registration = await prisma.ind_event_registration.create({
+        data: {
+          year: currentYear,
+          user_id,
+          event_id,
+          status: templeParticipantCount < 3 ? 'ACCEPTED' : 'PENDING',
+          is_deleted: false
+        }
+      });
+    }
+
+    // Create audit log
+    await prisma.audit_log.create({
+      data: {
+        user_id: req.user.id, // Staff user who performed the action
+        action: 'STAFF_REGISTER_PARTICIPANT',
+        table_name: 'Ind_event_registration',
+        record_id: registration.id,
+        new_value: JSON.stringify({
+          ...registration,
+          registered_for_user: user_id,
+          registered_by_staff: req.user.id
+        })
+      }
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Successfully registered ${user.first_name} ${user.last_name || ''} for the event`,
+      registration
+    });
+
+  } catch (error) {
+    console.error('Staff registration error:', error);
+    res.status(500).json({ error: error.message || 'Failed to register participant' });
   }
 });
 

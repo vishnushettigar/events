@@ -1111,7 +1111,8 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
  *         schema:
  *           type: string
  *           enum: [PENDING, ACCEPTED, DECLINED]
- *         description: Filter by team status
+ *           default: ACCEPTED
+ *         description: Filter by team status (defaults to ACCEPTED)
  *     responses:
  *       200:
  *         description: Teams retrieved successfully
@@ -1187,7 +1188,8 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
     
     if (temple_id) whereClause.temple_id = parseInt(temple_id);
     if (event_id) whereClause.event_id = parseInt(event_id);
-    if (status) whereClause.status = status;
+    // Default to ACCEPTED status, but allow override via query param
+    whereClause.status = status || 'ACCEPTED';
 
     console.log('Where clause:', whereClause);
 
@@ -1315,6 +1317,11 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
       include: {
         event_type: true,
         age_category: true,
+        schedules: {
+          where: { is_deleted: false },
+          orderBy: { start_time: 'asc' },
+          take: 1
+        },
         registrations: {
           where: { is_deleted: false },
           select: {
@@ -1345,6 +1352,8 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
       const hasTeamResults = event.team_registrations.some(reg => reg.event_result_id !== null);
       // Event has results if either individual or team registrations have results
       const has_results = hasIndividualResults || hasTeamResults;
+      // Get the first schedule's start_time if available
+      const start_time = event.schedules?.[0]?.start_time || null;
 
       return {
         id: event.id,
@@ -1354,7 +1363,8 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
         gender: event.gender,
         is_closed: event.is_closed,
         registrations_count: event.registrations.length,
-        has_results: has_results
+        has_results: has_results,
+        start_time: start_time
       };
     });
 
