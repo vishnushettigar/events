@@ -1,16 +1,17 @@
 import Home from './Pages/Home';
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { LanguageProvider } from './contexts/LanguageContext';
 
 function App() {
- 
+  const location = useLocation();
+  const isAuthPage = ['/login', '/register'].includes(location.pathname);
 
   return (
     <LanguageProvider>
-       <Navbar />
+       {!isAuthPage && <Navbar />}
        {/* <Home />    */}
        <div className="min-h-screen flex flex-col">
       {/* Main Content Area */}
@@ -19,7 +20,7 @@ function App() {
       </main>
 
       {/* Footer */}
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
        {/* <SignInForm /> */}
        {/* <Register /> */}

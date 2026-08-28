@@ -23,11 +23,9 @@
   inset: 0;
   border-radius: 1rem;
   padding: 2px;
-  background: conic-gradient(
-    from var(--angle, 0deg),
-    #e0e0e0,
-    #d35d38
-  );
+  background: conic-gradient(from var(--angle, 0deg),
+      #e0e0e0,
+      #d35d38);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   animation: spin 3s linear infinite;
@@ -57,6 +55,7 @@
   from {
     --angle: 0deg;
   }
+
   to {
     --angle: 360deg;
   }
@@ -70,6 +69,7 @@
 .underline-accent {
   text-decoration-color: #D35D38 !important;
 }
+
 /*Event Details css end*/
 
 /* home section css end */
@@ -87,6 +87,7 @@
   transition: 300ms;
   border-radius: 10px;
 }
+
 .burger input[type="checkbox"] {
   appearance: none;
   transition: 300ms;
@@ -102,9 +103,11 @@
 .burger::before {
   transform: translateY(8px);
 }
+
 .burger::after {
   transform: translateY(-8px);
 }
+
 .burger .line,
 .burger::before,
 .burger::after {
@@ -120,9 +123,11 @@
   width: 0;
   transition-delay: 100ms;
 }
+
 .burger:has(.line:checked)::before {
   animation: animation1 400ms ease-out 0s 1 both;
 }
+
 .burger:has(.line:checked)::after {
   animation: animation2 400ms ease-out 0s 1 both;
 }
@@ -141,24 +146,30 @@
 .burger:active {
   scale: 0.95;
 }
+
 @keyframes animation1 {
   0% {
     transform: translateY(8px) rotate(0deg);
   }
+
   50% {
     transform: translateY(0px) rotate(0deg);
   }
+
   100% {
     transform: translateY(0px) rotate(45deg);
   }
 }
+
 @keyframes animation2 {
   0% {
     transform: translateY(-8px) rotate(0deg);
   }
+
   50% {
     transform: translateY(0px) rotate(0deg);
   }
+
   100% {
     transform: translateY(0px) rotate(-45deg);
   }
@@ -166,29 +177,29 @@
 
 /* menu icon css end */
 .nav-links.get-started-btn {
-    margin-left: 30px;
-    background: #e03a3c;
-    color: #fff;
-    border-radius: 4px;
-    padding: 8px 25px;
-    white-space: nowrap;
-    transition: 0.3s;
-    font-size: 14px;
-    font-weight: 600;
-    display: inline-block;
+  margin-left: 30px;
+  background: #e03a3c;
+  color: #fff;
+  border-radius: 4px;
+  padding: 8px 25px;
+  white-space: nowrap;
+  transition: 0.3s;
+  font-size: 14px;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.nav-links.get-started-btn:hover {
+  background: #111111;
+  color: #fff;
+}
+
+@media (max-width: 992px) {
+  .get-started-btn {
+    margin: 0 15px 0 0;
+    padding: 6px 18px;
   }
-  
-  .nav-links.get-started-btn:hover {
-    background: #111111;
-    color: #fff;
-  }
-  
-  @media (max-width: 992px) {
-    .get-started-btn {
-      margin: 0 15px 0 0;
-      padding: 6px 18px;
-    }
-  }
+}
 
 /* navbar section css end*/
 /* hero section css start*/
@@ -202,35 +213,35 @@
 
 
 .what-r-u-btns {
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-    flex-direction: row;
-    white-space: nowrap;
-    flex-wrap: wrap;
-    margin-bottom: 30px;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  flex-direction: row;
+  white-space: nowrap;
+  flex-wrap: wrap;
+  margin-bottom: 30px;
 }
 
 
 
 .what-r-u-btns div a {
-    width: 100%;
-    height: 100%;
-    color: #11141c;
-    background-color: #fff;
-    display: flex
-;
-    justify-content: center;
-    align-items: center;
-    font-size: 16px;
-    font-weight: 200;
-    letter-spacing: 1px;
-    position: relative;
-    z-index: 2;
-    border-radius: 3px;
-    transform: skew(-10deg);
-    font-family: helvetica_neuebold;
+  width: 100%;
+  height: 100%;
+  color: #11141c;
+  background-color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 200;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 2;
+  border-radius: 3px;
+  transform: skew(-10deg);
+  font-family: helvetica_neuebold;
 }
+
 /* what are u buttons end*/
 
 /*Counts section css end */
@@ -238,7 +249,7 @@
 
 
 /* sponsers section css start*/
- 
+
 .testimonials .testimonials-carousel,
 .testimonials .testimonials-slider {
   overflow: hidden;
@@ -246,28 +257,29 @@
 
 /* sponser section and rules section title start*/
 .section-title {
-    text-align: center;
-    padding-bottom: 30px;
-    position: relative;
+  text-align: center;
+  padding-bottom: 30px;
+  position: relative;
 }
 
 .section-title h2 {
-    font-size: 32px;
-    font-weight: bold;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-    padding-bottom: 20px;
-    position: relative;
+  font-size: 32px;
+  font-weight: bold;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  position: relative;
 }
+
 .section-title h2::after {
-    content: "";
-    position: absolute;
-    display: block;
-    width: 50px;
-    height: 3px;
-    background: #e03a3c;
-    bottom: 0;
-    left: calc(50% - 25px);
+  content: "";
+  position: absolute;
+  display: block;
+  width: 50px;
+  height: 3px;
+  background: #e03a3c;
+  bottom: 0;
+  left: calc(50% - 25px);
 }
 
 /* sponser section and rules section title  end*/
@@ -474,10 +486,10 @@ button[type="submit"]:hover {
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 
-  0 -0.5px 0 0 rgba(0, 0, 0, 0.1) inset,
-  0 -0.5em 0.5em -0.5em rgba(0, 0, 0, 0.3) inset,
-  0 0 0 2px #f5eadbf4;   
+  box-shadow:
+    0 -0.5px 0 0 rgba(0, 0, 0, 0.1) inset,
+    0 -0.5em 0.5em -0.5em rgba(0, 0, 0, 0.3) inset,
+    0 0 0 2px #f5eadbf4;
   overflow: hidden;
   padding-right: 2px;
 }
@@ -492,7 +504,7 @@ button[type="submit"]:hover {
 
 .language-toggle:active {
   transform: translateY(0px);
-  box-shadow: 
+  box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.1),
     0 1px 2px rgba(0, 0, 0, 0.06),
     inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -535,8 +547,8 @@ button[type="submit"]:hover {
   border-radius: 6px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: -3px -3px 5px rgba(255, 255, 255, .5),
-  3px 3px 5px rgba(0, 0, 0, .25);
-transition: .3s ease-in-out;
+    3px 3px 5px rgba(0, 0, 0, .25);
+  transition: .3s ease-in-out;
   /* z-index: 1; */
 }
 
@@ -573,27 +585,27 @@ transition: .3s ease-in-out;
     min-width: 90px;
     padding: 5px;
   }
-  
+
   .language-toggle {
     width: 86px;
     height: 30px;
     border-radius: 9px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 5px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 13px;
   }
-  
+
   .toggle-slider {
     padding: 0 7px;
   }
@@ -605,28 +617,28 @@ transition: .3s ease-in-out;
     min-width: 92px;
     padding: 5px;
   }
-  
+
   .language-toggle {
     width: 80px;
     height: 30px;
     border-radius: 8px;
     padding-left: 2px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 3px);
     height: calc(100% - 4px);
     border-radius: 5px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 12px;
   }
-  
+
   .toggle-slider {
     padding: 0 6px;
   }
@@ -638,28 +650,28 @@ transition: .3s ease-in-out;
     min-width: 80px;
     padding: 4px;
   }
-  
+
   .language-toggle {
     width: 80px;
     height: 32px;
     border-radius: 7px;
     padding-left: 2px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 4px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 11px;
   }
-  
+
   .toggle-slider {
     padding: 0 5px;
   }
@@ -671,28 +683,28 @@ transition: .3s ease-in-out;
     min-width: 78px;
     padding: 4px;
   }
-  
+
   .language-toggle {
     width: 76px;
     height: 30px;
     border-radius: 6px;
     padding-left: 2px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 4px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 10px;
   }
-  
+
   .toggle-slider {
     padding: 0 4px;
   }
@@ -705,28 +717,28 @@ transition: .3s ease-in-out;
     padding: 3px;
     font-size: 80px;
   }
-  
+
   .language-toggle {
     width: 74px;
     height: 28px;
     border-radius: 6px;
     padding-left: 2px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 3px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 9px;
   }
-  
+
   .toggle-slider {
     padding: 0 3px;
   }
@@ -738,28 +750,28 @@ transition: .3s ease-in-out;
     min-width: 60px;
     padding: 3px;
   }
-  
+
   .language-toggle {
     width: 70px;
     height: 25px;
     border-radius: 5px;
     padding-left: 2px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 3px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 8px;
   }
-  
+
   .toggle-slider {
     padding: 0 3px;
   }
@@ -771,34 +783,130 @@ transition: .3s ease-in-out;
     min-width: 50px;
     padding: 2px;
   }
-  
+
   .language-toggle {
     width: 68px;
     height: 25px;
     border-radius: 4px;
     padding-left: 2px;
   }
-  
+
   .language-toggle::before {
     width: calc(50% - 4px);
     height: calc(100% - 4px);
     border-radius: 2px;
   }
-  
+
   .language-toggle.kannada::before {
     left: calc(50% + 2px);
   }
-  
+
   .toggle-text {
     font-size: 8px;
   }
-  
+
   .toggle-slider {
     padding: 2px 2px;
   }
 }
 
 /* toggle css end */
+
+/* login button css start */
+.navbar-login-btn {
+  height: 38px;
+  border-radius: 10px;
+  padding: 0 20px;
+  font-size: 14px;
+}
+
+@media (max-width: 1024px) {
+  .navbar-login-btn {
+    height: 38px;
+    border-radius: 9px;
+    padding: 0 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-login-btn {
+    height: 30px;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .navbar-login-btn {
+    height: 32px;
+    border-radius: 7px;
+    padding: 0 12px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-login-btn {
+    height: 30px;
+    border-radius: 6px;
+    padding: 0 10px;
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 400px) {
+  .navbar-login-btn {
+    height: 28px;
+    border-radius: 6px;
+    padding: 0 8px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 360px) {
+  .navbar-login-btn {
+    height: 25px;
+    border-radius: 5px;
+    padding: 0 6px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 320px) {
+  .navbar-login-btn {
+    height: 25px;
+    border-radius: 4px;
+    padding: 0 4px;
+    font-size: 8px;
+  }
+}
+
+.navbar-mobile-login-btn {
+  width: 30px;
+  height: 30px;
+}
+
+@media (max-width: 640px) {
+  .navbar-mobile-login-btn {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar-mobile-login-btn {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+
+
+
+
+/* login button css end */
 
 /* marquee css start */
 .marquee-container {
@@ -823,6 +931,7 @@ transition: .3s ease-in-out;
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-100%);
   }
@@ -995,6 +1104,7 @@ transition: .3s ease-in-out;
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1064,53 +1174,53 @@ transition: .3s ease-in-out;
     padding: 1rem;
     margin: 0.5rem;
   }
-  
+
   .sports-history-header h2 {
     font-size: 2rem;
   }
-  
+
   .sports-history-header p {
     font-size: 1rem;
   }
-  
+
   .year-scroll-container {
     margin: 0 -1rem 2rem -1rem;
   }
-  
+
   .year-scroll-wrapper {
     margin: 0;
     padding: 0.5rem 1rem;
   }
-  
+
   .year-card {
     min-width: 100px;
     padding: 0.8rem;
   }
-  
+
   .year-number {
     font-size: 1.2rem;
   }
-  
+
   .year-place {
     font-size: 0.8rem;
   }
-  
+
   .selected-event-card {
     padding: 1.5rem;
   }
-  
+
   .event-card-header h3 {
     font-size: 2.5rem;
   }
-  
+
   .event-card-place {
     font-size: 1.2rem;
   }
-  
+
   .event-card-details {
     grid-template-columns: 1fr;
   }
-  
+
   .detail-item {
     flex-direction: column;
     text-align: center;
@@ -1123,30 +1233,46 @@ transition: .3s ease-in-out;
     padding: 0.5rem;
     margin: 0.25rem;
   }
-  
+
   .year-card {
     min-width: 80px;
     padding: 0.6rem;
   }
-  
+
   .year-number {
     font-size: 1rem;
   }
-  
+
   .year-place {
     font-size: 0.7rem;
   }
-  
+
   .selected-event-card {
     padding: 1rem;
   }
-  
+
   .event-card-header h3 {
     font-size: 2rem;
   }
-  
+
   .event-card-place {
     font-size: 1rem;
   }
 }
+
 /* Sports History Home Component CSS  end */
+
+/* Hero Text Shadow Styles */
+.hero-title-shadow,
+.hero-subtitle-shadow {
+  text-shadow: none;
+}
+
+@media (min-width: 1024px) {
+  .hero-title-shadow {
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 0, 0, 0.4);
+  }
+  .hero-subtitle-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 0, 0, 0.4);
+  }
+}
