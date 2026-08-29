@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 // import userIcon from '../assets/user-icon.png';
 import { userAPI } from '../utils/api.js';
 import profile from '../assets/profile.svg';
+import './styles.css';
 
-const ProfileDropdown = () => {
+const ProfileDropdown = ({ isHomePage, isScrolled }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
@@ -92,21 +93,23 @@ const ProfileDropdown = () => {
   return (
     <div className="relative" ref={dropdownRef}>
      
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 pb-[1px] focus:outline-none"
-      >
-        <img
-          src={profile}
-          alt="Profile"
-          className="w-10 h-10 cursor-pointer rounded-full border-2 border-white"
-        />
-      </button>
+      {isLoggedIn ? (
+        <>
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="flex items-center space-x-2 pb-[1px] focus:outline-none"
+          >
+            <img
+              src={profile}
+              alt="Profile"
+              className={`w-10 h-10 cursor-pointer rounded-full border-2 transition-all duration-300 ${
+                isHomePage && !isScrolled ? 'border-orange-500/50 hover:border-orange-500' : 'border-white hover:border-gray-200'
+              }`}
+            />
+          </button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-          {isLoggedIn ? (
-            <>
+          {isOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
               <div className="px-4 py-2 border-b border-gray-200">
                 <p className="text-sm font-semibold text-gray-800">
                   {userInfo?.first_name} {userInfo?.last_name}
@@ -134,7 +137,7 @@ const ProfileDropdown = () => {
               )}
               {userInfo?.role_id === 4 && (
                 <Link
-                                      to="/viewer"
+                  to="/viewer"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
                   onClick={() => setIsOpen(false)}
                 >
@@ -165,26 +168,29 @@ const ProfileDropdown = () => {
               >
                 Logout
               </button>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/login"
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsOpen(false)}
-              >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => setIsOpen(false)}
-              >
-                Register
-              </Link>
-            </>
+            </div>
           )}
-        </div>
+        </>
+      ) : (
+        <>
+          {/* Desktop Login Button */}
+          <Link
+            to="/login"
+            className="hidden md:flex navbar-login-btn items-center justify-center gap-2 bg-[#D35D38] hover:bg-[#B84A2E] text-white font-bold shadow-md transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer"
+          >
+            <span>Login</span>
+          </Link>
+
+          {/* Mobile Login Button (Orange circular profile icon) */}
+          <Link
+            to="/login"
+            className="flex md:hidden navbar-mobile-login-btn items-center justify-center bg-[#D35D38] hover:bg-[#B84A2E] text-white shadow-md transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer rounded-full"
+          >
+            <svg className="w-[55%] h-[55%] text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </Link>
+        </>
       )}
 
       {/* Logout Confirmation Modal */}
