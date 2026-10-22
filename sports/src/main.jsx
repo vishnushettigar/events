@@ -5,6 +5,7 @@ import 'react-datepicker/dist/react-datepicker.css'
 import Home from './Pages/Home.jsx';
 import SignInForm from './Pages/SignInForm.jsx';
 import Register from './Pages/Register.jsx';
+import ForgotPassword from './Pages/ForgotPassword.jsx';
 import App from './App.jsx';
 import { BrowserRouter } from 'react-router-dom';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -22,7 +23,7 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import Viewer from './viewer/Viewer.jsx';
 
 // routing configurations//
- const appRouter = createBrowserRouter([
+const appRouter = createBrowserRouter([
   {
     path: "/",
     element: <App />,
@@ -34,6 +35,14 @@ import Viewer from './viewer/Viewer.jsx';
       {
         path: "/login",
         element: <SignInForm />
+      },
+      {
+        path: "/forgot-password",
+        element: <ForgotPassword />
+      },
+      {
+        path: "/reset-password",
+        element: <ForgotPassword />
       },
       {
         path: "/register",
@@ -88,11 +97,11 @@ import Viewer from './viewer/Viewer.jsx';
     ],
     errorElement: <Error />
   }
-  
- ]);
+
+]);
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={appRouter}/>
+    <RouterProvider router={appRouter} />
   </StrictMode>
 )

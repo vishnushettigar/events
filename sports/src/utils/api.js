@@ -13,8 +13,10 @@ class ApiService {
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
     
-    // Don't include Authorization header for login, register, and public endpoints
-    const isAuthEndpoint = endpoint === '/users/login' || endpoint === '/users/register';
+    // Don't include Authorization header for login, register, forgot-password and public endpoints
+    const isAuthEndpoint = endpoint === '/users/login' || 
+                           endpoint === '/users/register' || 
+                           endpoint.startsWith('/users/forgot-password');
     const isPublicEndpoint = endpoint === '/system/registered-users-count';
     const headers = (isAuthEndpoint || isPublicEndpoint)
       ? { 'Content-Type': 'application/json' }
@@ -155,6 +157,10 @@ export const authAPI = {
   getViewerDashboardStats: () => apiService.get('/viewer/dashboard-stats'),
   checkAadhaar: (aadhaar) => apiService.post('/users/check-aadhaar', { aadhaar }),
   checkEmail: (email) => apiService.post('/users/check-email', { email }),
+  checkAadhaarAccount: (aadhaar) => apiService.post('/users/forgot-password/check-aadhaar', { aadhaar }),
+  sendPasswordResetOtp: (data) => apiService.post('/users/forgot-password/send-otp', data),
+  verifyPasswordResetOtp: (data) => apiService.post('/users/forgot-password/verify-otp', data),
+  resetPassword: (data) => apiService.post('/users/forgot-password/reset-password', data),
 };
 
 export const userAPI = {

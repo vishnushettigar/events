@@ -57,34 +57,54 @@ const Templeparticipants = () => {
     };
 
     // Fetch participants for all events in the current view
-        const fetchParticipants = async () => {
-            try {
-                const eventIds = getAllEventIds();
-                if (eventIds.length === 0) return;
+    const fetchParticipants = async () => {
+        try {
+            const eventIds = getAllEventIds();
+            if (eventIds.length === 0) {
+                setAllParticipants([]);
+                return;
+            }
+
+            const currentYear = new Date().getFullYear();
 
             // Build query parameters
             const params = {
-                event_ids: eventIds.join(',')
+                event_ids: eventIds.join(','),
+                year: currentYear
             };
             if (selectedStatus !== 'ALL') {
                 params.status = selectedStatus;
-                }
+            }
 
             const data = await eventAPI.getTempleParticipants(params);
-                setAllParticipants(data);
-            } catch (err) {
-                console.error('Error fetching participants:', err);
-                setError(err.message);
-            }
-        };
+            
+            // Ensure only participants registered in current year are stored
+            const currentYearParticipants = Array.isArray(data)
+                ? data.filter(p => {
+                    const regYear = p.year ? Number(p.year) : (p.created_at ? new Date(p.created_at).getFullYear() : null);
+                    return regYear === currentYear;
+                })
+                : [];
+
+            setAllParticipants(currentYearParticipants);
+        } catch (err) {
+            console.error('Error fetching participants:', err);
+            setError(err.message);
+        }
+    };
 
     useEffect(() => {
         fetchParticipants();
     }, [events, selectedStatus]);
 
-    // Get participants for a specific event
+    // Get participants for a specific event (filtering strictly for current year)
     const getParticipantsForEvent = (eventId) => {
-        return allParticipants.filter(p => p.event_id === eventId);
+        const currentYear = new Date().getFullYear();
+        return allParticipants.filter(p => {
+            if (p.event_id !== eventId) return false;
+            const regYear = p.year ? Number(p.year) : (p.created_at ? new Date(p.created_at).getFullYear() : null);
+            return regYear === currentYear;
+        });
     };
 
     // Handle participant updates

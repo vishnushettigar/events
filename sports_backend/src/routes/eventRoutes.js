@@ -201,7 +201,7 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
 // Get temple participants
 router.get('/temple-participants', authenticate, requireRole(2), async (req, res) => {
   try {
-    const { event_ids, status } = req.query;
+    const { event_ids, status, year } = req.query;
 
     if (!req.user.temple_id) {
       console.error('No temple_id found in user object');
@@ -213,9 +213,13 @@ router.get('/temple-participants', authenticate, requireRole(2), async (req, res
 
     console.log('Fetching participants for events:', eventIdArray);
 
+    const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year) : currentYear;
+
     const participants = await eventService.getTempleParticipants(req.user.temple_id, {
       event_ids: eventIdArray,
-      status: status
+      status: status,
+      year: targetYear
     });
 
     res.json(participants);

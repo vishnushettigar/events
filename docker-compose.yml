@@ -11,8 +11,8 @@ services:
       - ./sports:/app
       - /app/node_modules
     environment:
-      - VITE_API_BASE_URL=https://app.shettigarevents.com
-      #  - VITE_API_URL=http://localhost/api
+      # - VITE_API_BASE_URL=https://app.shettigarevents.com
+      - VITE_API_URL=http://localhost/api
     networks:
       - shettigarevents-network
 
@@ -30,8 +30,8 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=database_url
-      - DATABASE_AUTH_TOKEN=database_auth_token
+      - DATABASE_URL=libsql://testingevents-jeevanpadmashali.aws-ap-south-1.turso.io
+      - DATABASE_AUTH_TOKEN=eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA1OTg0MDIsImlkIjoiZWViZDU3MTktMWE4OS00ZWMxLWFiYzgtYmQ3NGYwMWQ3ZDdiIiwia2lkIjoidGFYTUtWVFVhdEc4cnlhMU1nMG1yaWlKeGkzVXJpSTlFOVI1SjFnelNLZyIsInJpZCI6IjMzYmIzMGVmLTRjMzktNDY0MS05ZGY3LTE0NGY1MjliZTYyOSJ9.TVbGfNfULWWq4DFI2kO8xxzgDHb-wkmWKzXMvIA0neVPY5JU5e47zr8mIAiEbKoTqSLuyIPAtFXtHuXogRg9Dg
       - JWT_SECRET=testeststest
       - PORT=4000
     networks:
@@ -78,4 +78,4 @@ volumes:
 
 networks:
   shettigarevents-network:
-    driver: bridge 
+    driver: bridge

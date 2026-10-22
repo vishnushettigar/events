@@ -2,6 +2,8 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import * as userService from '../services/userService.js';
 import * as eventService from '../services/eventService.js';
+import * as otpService from '../services/otpService.js';
+import * as emailService from '../services/emailService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES } from '../constants.js';
 import { Gender } from '@prisma/client';
@@ -292,6 +294,385 @@ router.post('/login', [
 
 /**
  * @swagger
+ * /api/users/forgot-password/send-otp:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Send OTP for password reset
+ *     description: Sends a 6-digit OTP code to the user's registered email address
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Registered email address
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *       400:
+ *         description: Invalid email format
+ *       404:
+ *         description: Email not registered
+ *       429:
+ *         description: Too many requests (cooldown active)
+ *       500:
+ *         description: Server error
+ */
+/**
+ * @swagger
+ * /api/users/forgot-password/check-aadhaar:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Check Aadhaar and retrieve account info for password reset / adding email
+ *     description: Checks if the Aadhaar number exists and returns user name, temple name, and whether an email is already linked
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - aadhaar
+ *             properties:
+ *               aadhaar:
+ *                 type: string
+ *                 description: 12-digit Aadhaar number
+ *     responses:
+ *       200:
+ *         description: Account found
+ *       400:
+ *         description: Missing or invalid Aadhaar number
+ *       404:
+ *         description: Aadhaar not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password/check-aadhaar', async (req, res) => {
+  try {
+    const rawAadhaar = (req.body.aadhaar || req.body.aadhar || '').toString().replace(/[^0-9]/g, '').trim();
+
+    if (!rawAadhaar) {
+      return res.status(400).json({ error: 'Aadhaar number is required.' });
+    }
+    if (rawAadhaar.length !== 12) {
+      return res.status(400).json({ error: 'Please enter a valid 12-digit Aadhaar number.' });
+    }
+
+    const details = await userService.getUserDetailsByAadhaar(rawAadhaar);
+    if (!details) {
+      return res.status(404).json({ error: `No registered account found with Aadhaar number ${rawAadhaar}. Please verify or create an account.` });
+    }
+
+    res.json({
+      exists: true,
+      aadhaar: details.aadhaar,
+      name: details.name,
+      templeName: details.templeName,
+      hasEmail: details.hasEmail,
+      maskedEmail: details.maskedEmail
+    });
+  } catch (error) {
+    console.error('Error in check-aadhaar for forgot password:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/forgot-password/send-otp:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Send OTP for password reset or adding email
+ *     description: Sends a 6-digit OTP code to the verified or new email address for this Aadhaar account
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - aadhaar
+ *               - email
+ *             properties:
+ *               aadhaar:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               isAddingEmail:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *       400:
+ *         description: Validation error or email mismatch
+ *       404:
+ *         description: Aadhaar not registered
+ *       429:
+ *         description: Too many requests (cooldown active)
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password/send-otp', async (req, res) => {
+  try {
+    const rawAadhaar = (req.body.aadhaar || req.body.aadhar || '').toString().replace(/[^0-9]/g, '').trim();
+    const rawEmail = (req.body.email || '').toString().trim().toLowerCase();
+    const isAddingEmail = !!req.body.isAddingEmail;
+
+    if (!rawAadhaar) {
+      return res.status(400).json({ error: 'Aadhaar number is required.' });
+    }
+    if (!rawEmail) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    // Lookup account by Aadhaar
+    const userDetails = await userService.getUserDetailsByAadhaar(rawAadhaar);
+    if (!userDetails) {
+      return res.status(404).json({ error: `No account registered with Aadhaar number ${rawAadhaar}.` });
+    }
+
+    let destinationEmail = rawEmail;
+
+    if (!isAddingEmail) {
+      // Normal flow: Account must already have an email and input email must match
+      if (!userDetails.hasEmail || !userDetails.email) {
+        return res.status(400).json({
+          error: 'No email address is linked to this Aadhaar account. Please use the "Add Email" option to link your email address.',
+          needsAddEmail: true,
+          name: userDetails.name,
+          templeName: userDetails.templeName
+        });
+      }
+
+      const registeredEmail = userDetails.email.trim().toLowerCase();
+      if (registeredEmail !== rawEmail) {
+        return res.status(400).json({
+          error: 'The entered email does not match the email registered with this Aadhaar number.'
+        });
+      }
+
+      destinationEmail = registeredEmail;
+    }
+
+    // Generate OTP tied uniquely to this Aadhaar account
+    const otpResult = otpService.generateOtp(rawAadhaar, destinationEmail, isAddingEmail);
+    if (!otpResult.canSend) {
+      return res.status(429).json({
+        error: `Please wait ${otpResult.cooldownSeconds} seconds before requesting a new code.`,
+        cooldownSeconds: otpResult.cooldownSeconds
+      });
+    }
+
+    // Send email with OTP
+    try {
+      await emailService.sendPasswordResetOtp({
+        email: destinationEmail,
+        otp: otpResult.otp,
+        userName: userDetails.name
+      });
+    } catch (emailErr) {
+      console.warn('Email dispatch warning (handled):', emailErr.message);
+    }
+
+    // Mask destination email for privacy
+    const [localPart, domain] = destinationEmail.split('@');
+    const maskedLocal = localPart.length > 2 
+      ? `${localPart[0]}***${localPart[localPart.length - 1]}`
+      : `${localPart}***`;
+    const maskedEmail = `${maskedLocal}@${domain}`;
+
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+
+    res.json({
+      message: `A 6-digit verification code has been sent to ${maskedEmail}.`,
+      aadhaar: rawAadhaar,
+      email: destinationEmail,
+      maskedEmail,
+      name: userDetails.name,
+      templeName: userDetails.templeName,
+      isAddingEmail,
+      expiresIn: '10 minutes',
+      devOtp: isDevelopment ? otpResult.otp : undefined
+    });
+  } catch (error) {
+    console.error('Error sending password reset OTP:', error);
+    res.status(500).json({ error: error.message || 'Failed to send verification code. Please try again later.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/forgot-password/verify-otp:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Verify password reset OTP
+ *     description: Verifies the 6-digit OTP code for the given Aadhaar account and updates email if in add-email mode
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - aadhaar
+ *               - otp
+ *             properties:
+ *               aadhaar:
+ *                 type: string
+ *                 description: 12-digit Aadhaar number
+ *               otp:
+ *                 type: string
+ *                 description: 6-digit verification code
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       400:
+ *         description: Invalid or expired OTP
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password/verify-otp', async (req, res) => {
+  try {
+    const rawAadhaar = (req.body.aadhaar || req.body.aadhar || '').toString().replace(/[^0-9]/g, '').trim();
+    const rawOtp = (req.body.otp || '').toString().trim();
+
+    if (!rawAadhaar) {
+      return res.status(400).json({ error: 'Aadhaar number is required.' });
+    }
+    if (!rawOtp || rawOtp.length !== 6) {
+      return res.status(400).json({ error: 'Please enter the complete 6-digit verification code.' });
+    }
+
+    const verifyResult = otpService.verifyOtp(rawAadhaar, rawOtp);
+
+    if (!verifyResult.success) {
+      return res.status(400).json({ error: verifyResult.message });
+    }
+
+    // If OTP was for adding/updating email, save the new email to database now!
+    if (verifyResult.isAddingEmail && verifyResult.pendingEmail) {
+      const userDetails = await userService.getUserDetailsByAadhaar(rawAadhaar);
+      if (userDetails && userDetails.userId) {
+        await userService.updateUserEmail(userDetails.userId, verifyResult.pendingEmail);
+        console.log(`✅ [EMAIL LINKED] Aadhaar ${rawAadhaar} successfully linked to email ${verifyResult.pendingEmail}`);
+      }
+    }
+
+    res.json({
+      message: verifyResult.isAddingEmail 
+        ? 'Email verified and successfully linked to your account! You can now set your new password.'
+        : 'Verification code confirmed. You can now set your new password.',
+      resetToken: verifyResult.resetToken,
+      aadhaar: rawAadhaar,
+      emailUpdated: !!verifyResult.isAddingEmail
+    });
+  } catch (error) {
+    console.error('Error verifying OTP:', error);
+    res.status(500).json({ error: error.message || 'Failed to verify code. Please try again.' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/users/forgot-password/reset-password:
+ *   post:
+ *     tags: [Authentication]
+ *     summary: Set new password
+ *     description: Resets user password using the verified reset token and Aadhaar number
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - aadhaar
+ *               - resetToken
+ *               - newPassword
+ *             properties:
+ *               aadhaar:
+ *                 type: string
+ *               resetToken:
+ *                 type: string
+ *               newPassword:
+ *                 type: string
+ *                 minLength: 6
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid or expired reset token
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password/reset-password', async (req, res) => {
+  try {
+    const rawAadhaar = (req.body.aadhaar || req.body.aadhar || '').toString().trim();
+    const resetToken = (req.body.resetToken || '').toString().trim();
+    const newPassword = (req.body.newPassword || '').toString();
+
+    if (!rawAadhaar) {
+      return res.status(400).json({ error: 'Aadhaar number is required.' });
+    }
+    if (!resetToken) {
+      return res.status(400).json({ error: 'Reset session token is missing. Please restart the verification process.' });
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long.' });
+    }
+
+    // Verify and consume the reset token for this Aadhaar
+    const isTokenValid = otpService.consumeResetToken(rawAadhaar, resetToken);
+    if (!isTokenValid) {
+      return res.status(400).json({
+        error: 'Session expired or invalid reset token. Please request a new verification code.'
+      });
+    }
+
+    // Find the user by Aadhaar
+    let user = await prisma.user.findFirst({
+      where: { username: rawAadhaar }
+    });
+
+    if (!user) {
+      const profile = await prisma.profile.findFirst({
+        where: { aadhar_number: rawAadhaar },
+        include: { user: true }
+      });
+      if (profile && profile.user) {
+        user = profile.user;
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User account not found for this Aadhaar number.' });
+    }
+
+    await userService.resetPassword(user.id, newPassword);
+
+    res.json({
+      message: 'Your password has been successfully reset! You can now log in with your new password.'
+    });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: error.message || 'Failed to reset password. Please try again.' });
+  }
+});
+
+
+
+/**
+
+ * @swagger
  * /api/users/update-role:
  *   put:
  *     tags: [Users]
@@ -558,11 +939,12 @@ router.get('/participant-teams', authenticate, async (req, res) => {
       return res.status(404).json({ error: 'User profile not found' });
     }
 
-    // Get team registrations where user is a member
+    // Get team registrations where user is a member for the current year
     const teamRegistrations = await prisma.team_event_registration.findMany({
       where: {
         temple_id: userProfile.temple_id,
         is_deleted: false,
+        year: new Date().getFullYear(),
         member_user_ids: {
           contains: userProfile.id.toString()
         }

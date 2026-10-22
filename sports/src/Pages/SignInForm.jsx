@@ -54,16 +54,16 @@ const SignInForm = () => {
         setIsSubmitting(true);
         // Clear any previous errors
         setErrors({});
-        
+
         try {
             const data = await authAPI.login({
-                    username: formData.aadhaar,
-                    password: formData.password
+                username: formData.aadhaar,
+                password: formData.password
             });
 
             // Store the token in localStorage
             localStorage.setItem('token', data.token);
-            
+
             // Store user data if needed
             if (data.user) {
                 localStorage.setItem('user', JSON.stringify(data.user));
@@ -78,10 +78,10 @@ const SignInForm = () => {
             // Reset form
             setFormData({ aadhaar: '', password: '' });
             setErrors({});
-            
+
             // Check both role.id and role_id patterns
             const userRoleId = data.user?.profile?.role?.id || data.user?.profile?.role_id;
-            
+
             if (userRoleId === 4) {
                 // Viewer - redirect to viewer panel
                 navigate('/viewer');
@@ -97,8 +97,8 @@ const SignInForm = () => {
             }
         } catch (err) {
             // console.error('Login error:', err);
-            setErrors({ 
-                submit: err.message || 'An error occurred during login. Please try again.' 
+            setErrors({
+                submit: err.message || 'An error occurred during login. Please try again.'
             });
         } finally {
             setIsSubmitting(false);
@@ -123,7 +123,7 @@ const SignInForm = () => {
                 {/* Sign In Form */}
                 <div className="">
                     <form onSubmit={handleSubmit} className="space-y-6">
-                    {errors.submit && (
+                        {errors.submit && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
                                 <div className="flex items-center">
                                     <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -132,7 +132,7 @@ const SignInForm = () => {
                                     {errors.submit}
                                 </div>
                             </div>
-                    )}
+                        )}
 
                         {/* Aadhaar Number */}
                         <div>
@@ -141,13 +141,12 @@ const SignInForm = () => {
                             </label>
                             <input
                                 type="text"
-                            id="aadhaar"
-                            name="aadhaar"
-                            value={formData.aadhaar}
-                            onChange={handleChange}
-                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
-                                    errors.aadhaar ? 'border-red-300' : 'border-gray-300'
-                                }`}
+                                id="aadhaar"
+                                name="aadhaar"
+                                value={formData.aadhaar}
+                                onChange={handleChange}
+                                className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${errors.aadhaar ? 'border-red-300' : 'border-gray-300'
+                                    }`}
                                 placeholder="Enter your 12-digit Aadhaar number"
                             />
                             {errors.aadhaar && <p className="text-red-500 text-sm mt-1">{errors.aadhaar}</p>}
@@ -155,9 +154,11 @@ const SignInForm = () => {
 
                         {/* Password */}
                         <div>
-                            <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Password *
-                            </label>
+                            <div className="flex items-center justify-between mb-2">
+                                <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A]">
+                                    Password *
+                                </label>
+                            </div>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
@@ -166,9 +167,8 @@ const SignInForm = () => {
                                     value={formData.password}
                                     onChange={handleChange}
                                     autoComplete="off"
-                                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${
-                                        errors.password ? 'border-red-300' : 'border-gray-300'
-                                    }`}
+                                    className={`w-full px-4 py-3 pr-12 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${errors.password ? 'border-red-300' : 'border-gray-300'
+                                        }`}
                                     placeholder="Enter your password"
                                 />
                                 <button
@@ -189,18 +189,25 @@ const SignInForm = () => {
                                 </button>
                             </div>
                             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
-                       </div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label htmlFor="password" className="block text-sm font-semibold text-[#2A2A2A]">
+
+                                </label>
+                                <Link to="/forgot-password" className="text-xs sm:text-sm font-semibold text-[#D35D38] hover:underline">
+                                    Forgot Password?
+                                </Link>
+                            </div>
+                        </div>
 
                         {/* Submit Button */}
-                    <div>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                                className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${
-                                isSubmitting
-                                        ? 'bg-gray-400 cursor-not-allowed text-white'
-                                        : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
-                                }`}
+                        <div>
+                            <button
+                                type="submit"
+                                disabled={isSubmitting}
+                                className={`w-full py-4 px-6 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 ${isSubmitting
+                                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                                    : 'bg-[#D35D38] hover:bg-[#B84A2E] text-white transform hover:scale-105'
+                                    }`}
                             >
                                 {isSubmitting ? (
                                     <span className="flex items-center justify-center">
@@ -213,19 +220,19 @@ const SignInForm = () => {
                                 ) : (
                                     'Sign In'
                                 )}
-                        </button>
-                    </div>
+                            </button>
+                        </div>
 
                         {/* Register Link */}
                         <div className="text-center">
                             <p className="text-[#5A5A5A]">
-                        Don't have an account?{' '}
+                                Don't have an account?{' '}
                                 <Link to="/register" className="text-[#D35D38] font-semibold hover:underline">
                                     Create Account
-                        </Link>
-                    </p>
+                                </Link>
+                            </p>
                         </div>
-                </form>
+                    </form>
                 </div>
             </div>
         </div>

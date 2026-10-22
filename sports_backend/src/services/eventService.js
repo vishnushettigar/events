@@ -77,11 +77,14 @@ async function registerParticipant(user_id, event_id, temple_id) {
 
   // Use SQLite's built-in serialization - all writes are automatically serialized
   return await prisma.$transaction(async (tx) => {
-    // First check if user has already registered for 3 events
+    const currentYear = new Date().getFullYear();
+
+    // First check if user has already registered for 3 events in the current year
     const existingRegistrations = await tx.ind_event_registration.findMany({
       where: {
         user_id: user_id,
         is_deleted: false,
+        year: currentYear,
         status: {
           in: ['PENDING', 'ACCEPTED']
         }
@@ -114,11 +117,12 @@ async function registerParticipant(user_id, event_id, temple_id) {
       throw new Error('Event not found');
     }
 
-    // Check if already registered for this specific event
+    // Check if already registered for this specific event in the current year
     const existingRegistration = await tx.ind_event_registration.findFirst({
       where: {
         user_id: user_id,
         event_id: event_id,
+        year: currentYear,
         is_deleted: false
       }
     });
@@ -158,7 +162,7 @@ async function registerParticipant(user_id, event_id, temple_id) {
       });
 
       // Now atomically try to promote to ACCEPTED using a single query
-      // This query will only update if we have less than 3 ACCEPTED registrations
+      // This query will only update if we have less than 3 ACCEPTED registrations in the current year
       const updateResult = await tx.$executeRaw`
         UPDATE Ind_event_registration 
         SET status = 'ACCEPTED'
@@ -170,6 +174,7 @@ async function registerParticipant(user_id, event_id, temple_id) {
             WHERE ier2.event_id = ${event_id}
               AND ier2.is_deleted = false
               AND ier2.status = 'ACCEPTED'
+              AND ier2.year = ${currentYear}
               AND p2.temple_id = ${temple_id}
           ) < 3
       `;
@@ -268,11 +273,14 @@ async function unregisterParticipant(user_id, event_id) {
       console.log('No cancellation deadline setting found - allowing cancellation');
     }
 
-    // Check if registration exists
+    const currentYear = new Date().getFullYear();
+
+    // Check if registration exists for the current year
     const existingRegistration = await prisma.ind_event_registration.findFirst({
       where: {
         user_id: user_id,
         event_id: event_id,
+        year: currentYear,
         is_deleted: false
       }
     });
@@ -402,6 +410,8 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
       throw new Error(`Event with ID ${event_id} not found`);
   }
 
+    const currentYear = new Date().getFullYear();
+
     // Check if team is already registered for this event
     // For mixed gender events (MIXED), allow multiple teams per temple
     // For single gender events (MALE/FEMALE), only allow one team per temple
@@ -410,6 +420,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
         where: {
           temple_id: temple_id,
           event_id: event_id,
+          year: currentYear,
           is_deleted: false
         }
       });
@@ -428,6 +439,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
         where: {
           temple_id: temple_id,
           event_id: event_id,
+          year: currentYear,
           is_deleted: false,
           status: 'ACCEPTED'
         }
@@ -650,12 +662,14 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
 
       // Only apply the 3-participant limit for non-unlimited age categories
       if (!isUnlimitedAgeCategory) {
-        // Count current ACCEPTED registrations for this temple and event
+        // Count current ACCEPTED registrations for this temple and event for the same year
+        const currentYear = registration.year || new Date().getFullYear();
         const acceptedCount = await tx.ind_event_registration.count({
           where: {
             event_id: registration.event.id,
             is_deleted: false,
             status: 'ACCEPTED',
+            year: currentYear,
             user: {
               temple_id: registration.user.temple_id
             }
@@ -723,10 +737,10 @@ async function getTempleParticipants(temple_id, filters = {}) {
     });
     console.log('Number of users in temple:', templeUsers);
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = filters.year ? parseInt(filters.year) : new Date().getFullYear();
   
   const where = {
-      user: {
+    user: {
       temple_id: temple_id
     },
     is_deleted: false,
