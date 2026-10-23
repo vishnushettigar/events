@@ -3,15 +3,15 @@ import { eventAPI, systemAPI } from '../utils/api';
 
 // Mixed Team Row Component - MUST be outside the main component to prevent re-mounting
 // Now uses pre-fetched data instead of making individual API calls
-const MixedTeamRow = memo(({ 
-  registrationId, 
-  temple, 
-  teamEvent, 
-  rowIndex, 
+const MixedTeamRow = memo(({
+  registrationId,
+  temple,
+  teamEvent,
+  rowIndex,
   batchTeamData,
-  getTeamRankChanges, 
-  setTeamRankChange, 
-  printTeamParticipants 
+  getTeamRankChanges,
+  setTeamRankChange,
+  printTeamParticipants
 }) => {
   // Get data from pre-fetched batch data
   const teamData = batchTeamData?.[registrationId] || null;
@@ -81,8 +81,8 @@ const MixedTeamRow = memo(({
           {teamResult?.rank ? (
             <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
               {teamResult.rank === 'FIRST' ? '🥇 1st' :
-               teamResult.rank === 'SECOND' ? '🥈 2nd' :
-               teamResult.rank === 'THIRD' ? '🥉 3rd' : teamResult.rank}
+                teamResult.rank === 'SECOND' ? '🥈 2nd' :
+                  teamResult.rank === 'THIRD' ? '🥉 3rd' : teamResult.rank}
             </span>
           ) : (
             <span className="text-xs text-[#5A5A5A]">No result</span>
@@ -93,11 +93,11 @@ const MixedTeamRow = memo(({
             onChange={(e) => {
               // Preserve scroll position to prevent jumping to top
               const scrollY = window.scrollY;
-              
+
               if (registrationId) {
                 setTeamRankChange(teamEvent.id, registrationId, e.target.value);
               }
-              
+
               // Restore scroll position after React updates the DOM
               setTimeout(() => {
                 window.scrollTo(0, scrollY);
@@ -113,10 +113,10 @@ const MixedTeamRow = memo(({
         </div>
       </td>
       <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-        <button 
+        <button
           className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
           onClick={() => printTeamParticipants(
-            { registration_id: registrationId }, 
+            { registration_id: registrationId },
             teamEvent.event_type?.name || teamEvent.name || 'Team Event',
             [registrationId]
           )}
@@ -146,13 +146,13 @@ const UpdateTeamResult = () => {
 
   // For tracking team rank changes
   const [teamRankChanges, setTeamRankChanges] = useState({});
-  
+
   // For team participant details (legacy - kept for non-mixed events)
   const [teamParticipantDetails, setTeamParticipantDetails] = useState({});
-  
+
   // For batch-fetched mixed team data (keyed by registration ID)
   const [mixedTeamBatchData, setMixedTeamBatchData] = useState({});
-  
+
   // Heat generation state
   const [showHeatModal, setShowHeatModal] = useState(false);
   const [showFinalHeatModal, setShowFinalHeatModal] = useState(false);
@@ -219,9 +219,10 @@ const UpdateTeamResult = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await eventAPI.getTeamEvents();
+      const currentYear = new Date().getFullYear();
+      const data = await eventAPI.getTeamEvents({ year: currentYear });
       setData(data);
-      
+
       // Batch fetch mixed team data
       await fetchMixedTeamBatchData(data);
     } catch (err) {
@@ -232,19 +233,19 @@ const UpdateTeamResult = () => {
       setLoading(false);
     }
   };
-  
+
   // Fetch batch data for all mixed team events
   const fetchMixedTeamBatchData = async (teamEvents) => {
     try {
       // Find mixed/ALL events and collect all registration IDs
-      const mixedEvents = teamEvents.filter(event => 
+      const mixedEvents = teamEvents.filter(event =>
         event.gender === 'MIXED' || event.gender === 'ALL'
       );
-      
+
       if (mixedEvents.length === 0) {
         return;
       }
-      
+
       // Collect all registration IDs from mixed events
       const allRegistrationIds = [];
       mixedEvents.forEach(event => {
@@ -256,17 +257,17 @@ const UpdateTeamResult = () => {
           });
         });
       });
-      
+
       if (allRegistrationIds.length === 0) {
         return;
       }
-      
+
       console.log('Batch fetching data for', allRegistrationIds.length, 'mixed team registrations');
-      
+
       // Fetch all data in a single batch call
       const batchData = await eventAPI.getBatchTeamData(allRegistrationIds);
       setMixedTeamBatchData(batchData);
-      
+
       console.log('Batch fetch complete for mixed teams');
     } catch (error) {
       console.error('Error fetching mixed team batch data:', error);
@@ -319,7 +320,7 @@ const UpdateTeamResult = () => {
 
   const generateHeatsForEvent = (teamEvent) => {
     // 1. Data Preparation
-    const allTeams = (teamEvent.registered_temples || []).flatMap(temple => 
+    const allTeams = (teamEvent.registered_temples || []).flatMap(temple =>
       (temple.registration_ids || []).map(registrationId => ({
         registration_id: registrationId,
         temple_name: temple.temple_name,
@@ -327,10 +328,10 @@ const UpdateTeamResult = () => {
         members: mixedTeamBatchData[registrationId]?.participants || []
       }))
     );
-  
+
     const totalTeams = allTeams.length;
     if (totalTeams === 0) return [];
-  
+
     // 2. Optimized Heat Size Calculation (Backend Logic)
     let heatSizes = [];
     if (totalTeams <= laneCount) {
@@ -346,19 +347,19 @@ const UpdateTeamResult = () => {
       const numHeats = Math.ceil(totalTeams / laneCount);
       const baseSize = Math.floor(totalTeams / numHeats);
       const extra = totalTeams % numHeats;
-  
+
       for (let i = 0; i < numHeats; i++) {
         heatSizes.push(baseSize + (i < extra ? 1 : 0));
       }
     }
-  
+
     // 3. Initialize Heats
     const heats = heatSizes.map((size, index) => ({
       id: index + 1,
       teams: [],
       maxSize: size
     }));
-  
+
     // 4. Distribution Logic (Temple Separation)
     if (heats.length === 1) {
       heats[0].teams = [...allTeams];
@@ -369,47 +370,47 @@ const UpdateTeamResult = () => {
         if (!templeGroups[team.temple_name]) templeGroups[team.temple_name] = [];
         templeGroups[team.temple_name].push(team);
       });
-  
+
       // Sort teams: Largest temple groups first (crucial for separation)
       const sortedTeams = [...allTeams].sort((a, b) => {
         return templeGroups[b.temple_name].length - templeGroups[a.temple_name].length;
       });
-  
+
       // Track temple counts per heat: { "Temple A": [heat1Count, heat2Count], ... }
       const templeCountsPerHeat = {};
       Object.keys(templeGroups).forEach(name => {
         templeCountsPerHeat[name] = new Array(heats.length).fill(0);
       });
-  
+
       sortedTeams.forEach(team => {
         let targetHeatIndex = -1;
         let minTempleCount = Infinity;
         let minTotalCount = Infinity;
-  
+
         // Find best heat using Backend scoring logic
         for (let i = 0; i < heats.length; i++) {
           if (heats[i].teams.length < heats[i].maxSize) {
             const currentTempleCount = templeCountsPerHeat[team.temple_name][i];
             const currentHeatTotal = heats[i].teams.length;
-  
+
             // Priority 1: Least teams from same temple
             // Priority 2: Least total teams (load balancing)
-            if (currentTempleCount < minTempleCount || 
-               (currentTempleCount === minTempleCount && currentHeatTotal < minTotalCount)) {
+            if (currentTempleCount < minTempleCount ||
+              (currentTempleCount === minTempleCount && currentHeatTotal < minTotalCount)) {
               minTempleCount = currentTempleCount;
               minTotalCount = currentHeatTotal;
               targetHeatIndex = i;
             }
           }
         }
-  
+
         if (targetHeatIndex !== -1) {
           heats[targetHeatIndex].teams.push(team);
           templeCountsPerHeat[team.temple_name][targetHeatIndex]++;
         }
       });
     }
-  
+
     // Final Lane Count Adjustment
     return heats.map(heat => ({
       ...heat,
@@ -429,7 +430,7 @@ const UpdateTeamResult = () => {
   const handleOpenFinalHeatModal = (teamEvent) => {
     setSelectedEventForHeat(teamEvent);
     // Get all teams for final heat selection
-    const allTeams = (teamEvent.registered_temples || []).flatMap(temple => 
+    const allTeams = (teamEvent.registered_temples || []).flatMap(temple =>
       (temple.registration_ids || []).map(registrationId => ({
         registration_id: registrationId,
         temple_name: temple.temple_name,
@@ -444,7 +445,7 @@ const UpdateTeamResult = () => {
 
   // Toggle team selection for final heat
   const toggleFinalHeatTeamSelection = (registrationId) => {
-    setFinalHeatTeams(prev => prev.map(team => 
+    setFinalHeatTeams(prev => prev.map(team =>
       team.registration_id === registrationId ? { ...team, selected: !team.selected } : team
     ));
   };
@@ -456,14 +457,14 @@ const UpdateTeamResult = () => {
       showInfoModal('No Selection', 'Please select at least one team for the final heat');
       return;
     }
-    
+
     const finalHeat = [{
       id: 'Final',
       teams: selectedTeams,
       laneCount: selectedTeams.length,
       isFinal: true
     }];
-    
+
     setGeneratedHeats(finalHeat);
     setShowFinalHeatModal(false);
     setShowHeatModal(true);
@@ -509,8 +510,8 @@ const UpdateTeamResult = () => {
         <body>
           <div class="header">
             <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-            <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+            <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ </div>
           </div>
           <h1>${eventName}</h1>
           <h2>${gender === 'MIXED' || gender === 'ALL' ? 'Mixed Gender' : gender} • Team Event</h2>
@@ -529,7 +530,7 @@ const UpdateTeamResult = () => {
     setModalMessage(message);
     setModalDetails(details);
     setShowModal(true);
-    
+
     // Auto-close success modal after 3 seconds
     setTimeout(() => {
       closeModal();
@@ -573,10 +574,10 @@ const UpdateTeamResult = () => {
   const handleBulkTeamResultUpdate = async (eventId, eventName, ageCategory) => {
     // Preserve scroll position to prevent jumping to top
     const scrollY = window.scrollY;
-    
+
     const changes = getTeamRankChanges(eventId);
     const changeEntries = Object.entries(changes);
-    
+
     if (changeEntries.length === 0) {
       showInfoModal('No Changes', 'No rank changes to update.');
       // Restore scroll position
@@ -591,28 +592,28 @@ const UpdateTeamResult = () => {
       const teamEvent = data.find(event => String(event.id) === String(eventId));
       console.log('Team event found:', teamEvent ? { id: teamEvent.id, name: teamEvent.event_type?.name, gender: teamEvent.gender } : 'Not found');
       console.log('Change entries:', changeEntries.map(([id, rank]) => ({ id, idType: typeof id, rank })));
-      
+
       // Check if this is a Mixed gender event
       const isMixedEvent = teamEvent && (teamEvent.gender === 'MIXED' || teamEvent.gender === 'ALL');
-      
+
       // Show confirmation modal with all changes - use cached batch data for mixed events
       const changesList = changeEntries.map(([registrationId, rank]) => {
         // Find the temple name from the specific team event
         let temple = null;
-        
+
         if (teamEvent && teamEvent.registered_temples) {
           // Search for temple with matching registration ID (handle type conversion)
-          temple = teamEvent.registered_temples.find(t => 
+          temple = teamEvent.registered_temples.find(t =>
             t.registration_ids?.some(rid => String(rid) === String(registrationId))
           );
         }
-        
+
         console.log(`Looking for registration ${registrationId} (${typeof registrationId}):`, temple ? `Found temple: ${temple.temple_name}` : 'Not found');
-        
+
         if (!temple) {
           console.warn(`Temple not found for registration ID ${registrationId} in event ${eventId}`);
         }
-        
+
         // For Mixed events, use cached batch data for participant names
         let participantNames = null;
         if (isMixedEvent && registrationId) {
@@ -620,17 +621,17 @@ const UpdateTeamResult = () => {
           if (cachedData && cachedData.participants && cachedData.participants.length > 0) {
             const maleParticipants = cachedData.participants.filter(p => p.gender === 'MALE');
             const femaleParticipants = cachedData.participants.filter(p => p.gender === 'FEMALE');
-            
+
             const maleNames = maleParticipants.map(p => `${p.first_name} ${p.last_name || ''}`.trim()).join(', ');
             const femaleNames = femaleParticipants.map(p => `${p.first_name} ${p.last_name || ''}`.trim()).join(', ');
-            
+
             participantNames = {
               male: maleNames || 'None',
               female: femaleNames || 'None'
             };
           }
         }
-        
+
         return {
           name: temple?.temple_name || 'Unknown Temple',
           temple: temple?.temple_name || 'Unknown Temple',
@@ -655,7 +656,7 @@ const UpdateTeamResult = () => {
           isTeamUpdate: true
         }
       );
-      
+
       // Restore scroll position after modal is shown
       setTimeout(() => {
         window.scrollTo(0, scrollY);
@@ -679,7 +680,7 @@ const UpdateTeamResult = () => {
 
     const { eventId, eventName, ageCategory, changes } = pendingUpdate;
     const changeEntries = Object.entries(changes);
-    
+
     try {
       // Update each team
       for (const [registrationId, rank] of changeEntries) {
@@ -688,18 +689,18 @@ const UpdateTeamResult = () => {
 
       // Clear the team rank changes
       clearTeamRankChanges(eventId);
-      
+
       // Refresh the team events data
       await fetchTeamEvents();
-      
+
       // Close the confirmation modal and show success modal
       closeModal();
-      
+
       // Restore scroll position after DOM updates
       setTimeout(() => {
         window.scrollTo(0, scrollY);
       }, 0);
-      
+
       // Use setTimeout to ensure the confirmation modal closes before showing success
       setTimeout(() => {
         showSuccessModal(
@@ -715,7 +716,7 @@ const UpdateTeamResult = () => {
           window.scrollTo(0, scrollY);
         }, 0);
       }, 100);
-      
+
       console.log('Bulk team result update successful');
     } catch (error) {
       console.error('Error updating bulk team results:', error);
@@ -788,7 +789,7 @@ const UpdateTeamResult = () => {
     try {
       const participants = await fetchTeamParticipants(registrationIds);
       const isTugOfWar = eventName && eventName.toUpperCase().includes('TUG OF WAR');
-      
+
       const printContent = `
         <!DOCTYPE html>
         <html>
@@ -862,8 +863,8 @@ const UpdateTeamResult = () => {
         <body>
           <div class="header">
             <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-            <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+            <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ </div>
             <h1>${eventName}</h1>
             <h2>Team: <span class="temple-name">${temple.temple_name || temple.registration_id}</span></h2>
             <p>Total Members: ${participants.length}</p>
@@ -894,7 +895,7 @@ const UpdateTeamResult = () => {
         </body>
         </html>
       `;
-      
+
       const printWindow = window.open('', '_blank');
       printWindow.document.write(printContent);
       printWindow.document.close();
@@ -912,7 +913,7 @@ const UpdateTeamResult = () => {
     try {
       const eventName = teamEvent.event_type?.name || teamEvent.name || 'Team Event';
       const gender = teamEvent.gender;
-      
+
       // Create print content
       const printContent = `
         <html>
@@ -939,8 +940,8 @@ const UpdateTeamResult = () => {
           <body>
             <div class="header">
               <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-              <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-              <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+              <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+              <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ  </div>
               <div class="event-name">${eventName} - ${gender}</div>
              
             </div>
@@ -958,12 +959,12 @@ const UpdateTeamResult = () => {
                     <td>${index + 1}</td>
                     <td>${temple.temple_name}</td>
                     <td class="result">
-                      ${temple.result?.rank ? 
-                        (temple.result.rank === 'FIRST' ? '🥇 1st Place' :
-                         temple.result.rank === 'SECOND' ? '🥈 2nd Place' :
-                         temple.result.rank === 'THIRD' ? '🥉 3rd Place' : temple.result.rank) : 
-                        ''
-                      }
+                      ${temple.result?.rank ?
+          (temple.result.rank === 'FIRST' ? '🥇 1st Place' :
+            temple.result.rank === 'SECOND' ? '🥈 2nd Place' :
+              temple.result.rank === 'THIRD' ? '🥉 3rd Place' : temple.result.rank) :
+          ''
+        }
                     </td>
                   </tr>
                 `).join('')}
@@ -980,15 +981,15 @@ const UpdateTeamResult = () => {
       printFrame.style.height = '0';
       printFrame.style.border = 'none';
       printFrame.style.left = '-9999px';
-      
+
       document.body.appendChild(printFrame);
-      
+
       printFrame.contentDocument.write(printContent);
       printFrame.contentDocument.close();
-      
+
       printFrame.contentWindow.focus();
       printFrame.contentWindow.print();
-      
+
       // Clean up after printing
       setTimeout(() => {
         document.body.removeChild(printFrame);
@@ -1002,27 +1003,27 @@ const UpdateTeamResult = () => {
   const printMixedTeamEventTable = (teamEvent) => {
     try {
       const eventName = teamEvent.event_type?.name || teamEvent.name || 'Team Event';
-      
+
       // Use cached batch data for mixed events
       const allTeamData = [];
       for (const temple of teamEvent.registered_temples || []) {
         const registrationIds = temple.registration_ids || [];
         for (const registrationId of registrationIds) {
           const cachedData = mixedTeamBatchData[registrationId];
-          
+
           if (cachedData) {
             const participants = cachedData.participants || [];
             const maleParticipants = participants.filter(p => p.gender === 'MALE');
             const femaleParticipants = participants.filter(p => p.gender === 'FEMALE');
-            
+
             allTeamData.push({
               templeName: temple.temple_name,
               maleParticipants: maleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', '),
               femaleParticipants: femaleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', '),
-              result: cachedData.registration?.event_result ? 
+              result: cachedData.registration?.event_result ?
                 (cachedData.registration.event_result.rank === 'FIRST' ? '🥇 1st Place' :
-                 cachedData.registration.event_result.rank === 'SECOND' ? '🥈 2nd Place' :
-                 cachedData.registration.event_result.rank === 'THIRD' ? '🥉 3rd Place' : cachedData.registration.event_result.rank) : 
+                  cachedData.registration.event_result.rank === 'SECOND' ? '🥈 2nd Place' :
+                    cachedData.registration.event_result.rank === 'THIRD' ? '🥉 3rd Place' : cachedData.registration.event_result.rank) :
                 ''
             });
           } else {
@@ -1093,15 +1094,15 @@ const UpdateTeamResult = () => {
       printFrame.style.height = '0';
       printFrame.style.border = 'none';
       printFrame.style.left = '-9999px';
-      
+
       document.body.appendChild(printFrame);
-      
+
       printFrame.contentDocument.write(printContent);
       printFrame.contentDocument.close();
-      
+
       printFrame.contentWindow.focus();
       printFrame.contentWindow.print();
-      
+
       // Clean up after printing
       setTimeout(() => {
         document.body.removeChild(printFrame);
@@ -1197,23 +1198,21 @@ const UpdateTeamResult = () => {
         <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-lg">
           <div className="flex items-center mb-4">
             {getModalIcon()}
-            <h3 className={`text-lg font-semibold ml-3 ${
-              modalType === 'success' ? 'text-green-900' : 
-              modalType === 'error' ? 'text-red-900' : 
-              'text-blue-900'
-            }`}>
+            <h3 className={`text-lg font-semibold ml-3 ${modalType === 'success' ? 'text-green-900' :
+              modalType === 'error' ? 'text-red-900' :
+                'text-blue-900'
+              }`}>
               {modalTitle}
             </h3>
           </div>
-          
-          <p className={`text-sm mb-4 ${
-            modalType === 'success' ? 'text-green-700' : 
-            modalType === 'error' ? 'text-red-700' : 
-            'text-blue-700'
-          }`}>
+
+          <p className={`text-sm mb-4 ${modalType === 'success' ? 'text-green-700' :
+            modalType === 'error' ? 'text-red-700' :
+              'text-blue-700'
+            }`}>
             {modalMessage}
           </p>
-          
+
           {modalDetails && (
             <div className="mb-4 text-sm">
               {modalDetails.changes && (
@@ -1255,7 +1254,7 @@ const UpdateTeamResult = () => {
               ))}
             </div>
           )}
-          
+
           {modalType === 'confirm' && (
             <div className="flex justify-end space-x-3">
               <button
@@ -1278,7 +1277,7 @@ const UpdateTeamResult = () => {
               </button>
             </div>
           )}
-          
+
           {/* Close button for info and error modals */}
           {(modalType === 'info' || modalType === 'error') && (
             <div className="flex justify-end">
@@ -1290,7 +1289,7 @@ const UpdateTeamResult = () => {
               </button>
             </div>
           )}
-          
+
           {/* Show auto-close message for success modals */}
           {modalType === 'success' && (
             <div className="text-center text-xs text-gray-500 mt-2">
@@ -1467,26 +1466,24 @@ const UpdateTeamResult = () => {
               <p className="text-gray-600 mb-4">
                 Select the teams that qualified for the final heat. You can select multiple teams.
               </p>
-              
+
               {finalHeatTeams.length > 0 ? (
                 <div className="space-y-3">
                   {finalHeatTeams.map((team, index) => (
-                    <div 
+                    <div
                       key={team.registration_id}
                       onClick={() => toggleFinalHeatTeamSelection(team.registration_id)}
-                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        team.selected 
-                          ? 'border-[#D35D38] bg-orange-50' 
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
+                      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${team.selected
+                        ? 'border-[#D35D38] bg-orange-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                            team.selected 
-                              ? 'border-[#D35D38] bg-[#D35D38]' 
-                              : 'border-gray-300'
-                          }`}>
+                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${team.selected
+                            ? 'border-[#D35D38] bg-[#D35D38]'
+                            : 'border-gray-300'
+                            }`}>
                             {team.selected && (
                               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
@@ -1499,7 +1496,7 @@ const UpdateTeamResult = () => {
                         </div>
                         <div className="text-right">
                           <div className="text-sm text-gray-600">
-                            {team.members && team.members.length > 0 
+                            {team.members && team.members.length > 0
                               ? team.members.map(m => `${m.first_name} ${m.last_name || ''}`).join(', ')
                               : 'No member details'
                             }
@@ -1540,7 +1537,7 @@ const UpdateTeamResult = () => {
           </div>
         </div>
       )}
-      
+
       {/* Loading State */}
       {loading && (
         <div className="flex justify-center items-center py-8">
@@ -1564,7 +1561,7 @@ const UpdateTeamResult = () => {
           {groupedTeamEvents.MALE.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-[#2A2A2A] border-b-2 border-[#D35D38] pb-2">
-                 Male Team Events
+                Male Team Events
               </h2>
               <div className="space-y-4">
                 {groupedTeamEvents.MALE.map((teamEvent, index) => (
@@ -1575,7 +1572,7 @@ const UpdateTeamResult = () => {
                         <div>
                           <h3 className="text-xl font-bold text-white">{teamEvent.event_type?.name || teamEvent.name || 'Team Event'} - {teamEvent.gender}</h3>
                           <p className="text-white/80 text-sm mt-1">
-                             {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} participants
+                            {teamEvent.gender} • {teamEvent.event_type?.participant_count || teamEvent.member_count || 'Team'} participants
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -1605,11 +1602,11 @@ const UpdateTeamResult = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Registered Temples */}
                     <div className="p-6">
                       <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Temples</h4>
-                      
+
                       {teamEvent.registered_temples && teamEvent.registered_temples.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
@@ -1632,11 +1629,10 @@ const UpdateTeamResult = () => {
                                     <span>Result & Actions</span>
                                     <button
                                       onClick={() => handleBulkTeamResultUpdate(teamEvent.id, teamEvent.event_type?.name || teamEvent.name || 'Team Event', teamEvent.age_category)}
-                                      className={`px-3 py-1 rounded text-xs transition-colors ${
-                                        Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
-                                          ? 'bg-green-600 text-white hover:bg-green-700'
-                                          : 'bg-white text-[#D35D38] hover:bg-gray-100'
-                                      }`}
+                                      className={`px-3 py-1 rounded text-xs transition-colors ${Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-white text-[#D35D38] hover:bg-gray-100'
+                                        }`}
                                       title={`Update all selected results (${Object.keys(getTeamRankChanges(teamEvent.id)).length} pending)`}
                                     >
                                       Update All {Object.keys(getTeamRankChanges(teamEvent.id)).length > 0 && `(${Object.keys(getTeamRankChanges(teamEvent.id)).length})`}
@@ -1683,8 +1679,8 @@ const UpdateTeamResult = () => {
                                       {temple.result?.rank ? (
                                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                           {temple.result.rank === 'FIRST' ? '🥇 1st' :
-                                           temple.result.rank === 'SECOND' ? '🥈 2nd' :
-                                           temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
+                                            temple.result.rank === 'SECOND' ? '🥈 2nd' :
+                                              temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
                                         </span>
                                       ) : (
                                         <span className="text-xs text-[#5A5A5A]">No result</span>
@@ -1695,11 +1691,11 @@ const UpdateTeamResult = () => {
                                         onChange={(e) => {
                                           // Preserve scroll position to prevent jumping to top
                                           const scrollY = window.scrollY;
-                                          
+
                                           if (temple.registration_ids && temple.registration_ids.length > 0) {
                                             setTeamRankChange(teamEvent.id, temple.registration_ids[0], e.target.value);
                                           }
-                                          
+
                                           // Restore scroll position after React updates the DOM
                                           setTimeout(() => {
                                             window.scrollTo(0, scrollY);
@@ -1717,10 +1713,10 @@ const UpdateTeamResult = () => {
                                     </div>
                                   </td>
                                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button 
+                                    <button
                                       className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
                                       onClick={() => printTeamParticipants(
-                                        temple, 
+                                        temple,
                                         teamEvent.event_type?.name || teamEvent.name || 'Team Event',
                                         temple.registration_ids || []
                                       )}
@@ -1738,7 +1734,7 @@ const UpdateTeamResult = () => {
                           <p className="text-[#5A5A5A]">No temples have registered for this team event yet.</p>
                         </div>
                       )}
-                      
+
                       {/* Event Details */}
                       {/* <div className="mt-6 pt-4 border-t border-[#F8DFBE]">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -1769,7 +1765,7 @@ const UpdateTeamResult = () => {
           {groupedTeamEvents.FEMALE.length > 0 && (
             <div className="space-y-4">
               <h2 className="text-2xl font-bold text-[#2A2A2A] border-b-2 border-[#D35D38] pb-2">
-                 Female Team Events
+                Female Team Events
               </h2>
               <div className="space-y-4">
                 {groupedTeamEvents.FEMALE.map((teamEvent, index) => (
@@ -1810,11 +1806,11 @@ const UpdateTeamResult = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Registered Temples */}
                     <div className="p-6">
                       <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Temples</h4>
-                      
+
                       {teamEvent.registered_temples && teamEvent.registered_temples.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
@@ -1837,11 +1833,10 @@ const UpdateTeamResult = () => {
                                     <span>Result & Actions</span>
                                     <button
                                       onClick={() => handleBulkTeamResultUpdate(teamEvent.id, teamEvent.event_type?.name || teamEvent.name || 'Team Event', teamEvent.age_category)}
-                                      className={`px-3 py-1 rounded text-xs transition-colors ${
-                                        Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
-                                          ? 'bg-green-600 text-white hover:bg-green-700'
-                                          : 'bg-white text-[#D35D38] hover:bg-gray-100'
-                                      }`}
+                                      className={`px-3 py-1 rounded text-xs transition-colors ${Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-white text-[#D35D38] hover:bg-gray-100'
+                                        }`}
                                       title={`Update all selected results (${Object.keys(getTeamRankChanges(teamEvent.id)).length} pending)`}
                                     >
                                       Update All {Object.keys(getTeamRankChanges(teamEvent.id)).length > 0 && `(${Object.keys(getTeamRankChanges(teamEvent.id)).length})`}
@@ -1888,8 +1883,8 @@ const UpdateTeamResult = () => {
                                       {temple.result?.rank ? (
                                         <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                                           {temple.result.rank === 'FIRST' ? '🥇 1st' :
-                                           temple.result.rank === 'SECOND' ? '🥈 2nd' :
-                                           temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
+                                            temple.result.rank === 'SECOND' ? '🥈 2nd' :
+                                              temple.result.rank === 'THIRD' ? '🥉 3rd' : temple.result.rank}
                                         </span>
                                       ) : (
                                         <span className="text-xs text-[#5A5A5A]">No result</span>
@@ -1900,11 +1895,11 @@ const UpdateTeamResult = () => {
                                         onChange={(e) => {
                                           // Preserve scroll position to prevent jumping to top
                                           const scrollY = window.scrollY;
-                                          
+
                                           if (temple.registration_ids && temple.registration_ids.length > 0) {
                                             setTeamRankChange(teamEvent.id, temple.registration_ids[0], e.target.value);
                                           }
-                                          
+
                                           // Restore scroll position after React updates the DOM
                                           setTimeout(() => {
                                             window.scrollTo(0, scrollY);
@@ -1922,10 +1917,10 @@ const UpdateTeamResult = () => {
                                     </div>
                                   </td>
                                   <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                                    <button 
+                                    <button
                                       className="px-3 py-2 bg-green-600 text-white rounded text-xs hover:bg-green-700 flex items-center gap-1"
                                       onClick={() => printTeamParticipants(
-                                        temple, 
+                                        temple,
                                         teamEvent.event_type?.name || teamEvent.name || 'Team Event',
                                         temple.registration_ids || []
                                       )}
@@ -1943,7 +1938,7 @@ const UpdateTeamResult = () => {
                           <p className="text-[#5A5A5A]">No temples have registered for this team event yet.</p>
                         </div>
                       )}
-                      
+
                       {/* Event Details */}
                       {/* <div className="mt-6 pt-4 border-t border-[#F8DFBE]">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -2015,11 +2010,11 @@ const UpdateTeamResult = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Registered Teams */}
                     <div className="p-6">
                       <h4 className="text-lg font-semibold text-[#2A2A2A] mb-4">Registered Teams</h4>
-                      
+
                       {teamEvent.registered_temples && teamEvent.registered_temples.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-gray-200">
@@ -2042,11 +2037,10 @@ const UpdateTeamResult = () => {
                                     <span>Result & Actions</span>
                                     <button
                                       onClick={() => handleBulkTeamResultUpdate(teamEvent.id, teamEvent.event_type?.name || teamEvent.name || 'Team Event', teamEvent.age_category)}
-                                      className={`px-3 py-1 rounded text-xs transition-colors ${
-                                        Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
-                                          ? 'bg-green-600 text-white hover:bg-green-700'
-                                          : 'bg-white text-[#D35D38] hover:bg-gray-100'
-                                      }`}
+                                      className={`px-3 py-1 rounded text-xs transition-colors ${Object.keys(getTeamRankChanges(teamEvent.id)).length > 0
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-white text-[#D35D38] hover:bg-gray-100'
+                                        }`}
                                       title={`Update all selected results (${Object.keys(getTeamRankChanges(teamEvent.id)).length} pending)`}
                                     >
                                       Update All {Object.keys(getTeamRankChanges(teamEvent.id)).length > 0 && `(${Object.keys(getTeamRankChanges(teamEvent.id)).length})`}
@@ -2061,7 +2055,7 @@ const UpdateTeamResult = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                               {/* Flatten all teams across temples for sequential numbering */}
                               {teamEvent.registered_temples
-                                .flatMap((temple, templeIndex) => 
+                                .flatMap((temple, templeIndex) =>
                                   (temple.registration_ids || []).map((registrationId, teamIndex) => ({
                                     registrationId,
                                     temple,
@@ -2090,7 +2084,7 @@ const UpdateTeamResult = () => {
                           <p className="text-[#5A5A5A]">No temples have registered for this team event yet.</p>
                         </div>
                       )}
-                      
+
                       {/* Event Details */}
                       {/* <div className="mt-6 pt-4 border-t border-[#F8DFBE]">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">

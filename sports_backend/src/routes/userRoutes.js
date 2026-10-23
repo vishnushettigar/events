@@ -1252,6 +1252,9 @@ router.get('/temple/:templeId', async (req, res) => {
  */
 router.get('/temples', async (req, res) => {
   try {
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
     const temples = await prisma.mst_temple.findMany({
       where: {
         is_deleted: false
@@ -1269,20 +1272,22 @@ router.get('/temples', async (req, res) => {
       }
     });
 
-    // Calculate total points for each temple
+    // Calculate total points and total participants for each temple for the current year
     const templesWithPoints = await Promise.all(
       temples.map(async (temple) => {
         try {
-          const templeReport = await eventService.generateTempleReport(temple.id);
+          const templeReport = await eventService.generateTempleReport(temple.id, { year: currentYear });
           return {
             ...temple,
-            total_points: templeReport.stats.total_points
+            total_points: templeReport.stats.total_points,
+            total_participants: templeReport.stats.total_participants
           };
         } catch (error) {
           console.error(`Error calculating points for temple ${temple.id}:`, error);
           return {
             ...temple,
-            total_points: 0
+            total_points: 0,
+            total_participants: 0
           };
         }
       })
@@ -1342,9 +1347,11 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
 
     console.log('Temple found:', temple.name);
 
-    // Generate detailed temple report
+    // Generate detailed temple report for current year
     console.log('Generating temple report...');
-    const templeReport = await eventService.generateTempleReport(parseInt(templeId));
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    const templeReport = await eventService.generateTempleReport(parseInt(templeId), { year: currentYear });
     console.log('Temple report generated successfully');
 
     // Transform the data for frontend consumption
@@ -1429,11 +1436,15 @@ router.get('/temple-detailed-report/:templeId', authenticate, async (req, res) =
  */
 router.get('/champions', authenticate, async (req, res) => {
   try {
-    // Get all individual events with results
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    // Get all individual events with results for the current year
     const individualRegistrations = await prisma.ind_event_registration.findMany({
       where: {
         is_deleted: false,
         status: 'ACCEPTED',
+        year: currentYear,
         event_result: {
           isNot: null
         }
@@ -1584,11 +1595,15 @@ router.get('/champions', authenticate, async (req, res) => {
  */
 router.get('/all-results', authenticate, async (req, res) => {
   try {
-    // Get all individual events with results
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    // Get all individual events with results for current year
     const individualRegistrations = await prisma.ind_event_registration.findMany({
       where: {
         is_deleted: false,
         status: 'ACCEPTED',
+        year: currentYear,
         event_result: {
           isNot: null
         }
@@ -1627,11 +1642,12 @@ router.get('/all-results', authenticate, async (req, res) => {
       ]
     });
 
-    // Get all team events with results
+    // Get all team events with results for current year
     const teamRegistrations = await prisma.team_event_registration.findMany({
       where: {
         is_deleted: false,
         status: 'ACCEPTED',
+        year: currentYear,
         event_result: {
           isNot: null
         }

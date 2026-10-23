@@ -14,7 +14,7 @@ const ProfileDropdown = () => {
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
-  
+
   // Use custom auth hook without periodic checking
   const { isLoggedIn, user, logout } = useAuth(false);
 
@@ -38,10 +38,10 @@ const ProfileDropdown = () => {
     // console.log('ProfileDropdown - user:', user);
     // console.log('ProfileDropdown - userInfo:', userInfo);
     // console.log('ProfileDropdown - isAuthenticated():', isAuthenticated());
-    
+
     // Use both useAuth hook and direct token check as fallback
     const isActuallyLoggedIn = isLoggedIn || isAuthenticated();
-    
+
     if (isActuallyLoggedIn && !userInfo && !isLoadingProfile) {
       setIsLoadingProfile(true);
       fetchUserProfile();
@@ -83,7 +83,7 @@ const ProfileDropdown = () => {
     console.log('ProfileDropdown: Handling logout');
     // Check if we're on the home page
     const isOnHomePage = window.location.pathname === '/';
-    
+
     if (isOnHomePage) {
       // Stay on home page, don't redirect
       authManager.logout(false);
@@ -91,7 +91,7 @@ const ProfileDropdown = () => {
       // Redirect to login for other pages
       authManager.logout(true);
     }
-    
+
     setUserInfo(null);
     setShowLogoutModal(false);
     setIsOpen(false);
@@ -99,7 +99,7 @@ const ProfileDropdown = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-     
+
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 pb-[1px] focus:outline-none"
@@ -130,13 +130,15 @@ const ProfileDropdown = () => {
                     </p>
                     <p className="text-xs text-gray-500">{userInfo?.temple}</p>
                   </div>
-                  <Link
-                    to="/myevents"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    My events
-                  </Link>
+                  {(![3, 4, 5].includes(userInfo?.role_id) && !['ADMIN', 'VIEWER', 'STAFF'].includes(userInfo?.role?.toUpperCase())) && (
+                    <Link
+                      to="/myevents"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      My events
+                    </Link>
+                  )}
                   {userInfo?.role_id === 5 && (
                     <Link
                       to="/admin"
@@ -144,7 +146,7 @@ const ProfileDropdown = () => {
                       onClick={() => setIsOpen(false)}
                     >
                       <span className="flex items-center">
-                        <span className="mr-2">👑</span>
+                        <span className="mr-2"></span>
                         Admin Panel
                       </span>
                     </Link>
@@ -156,8 +158,8 @@ const ProfileDropdown = () => {
                       onClick={() => setIsOpen(false)}
                     >
                       <span className="flex items-center">
-                        <span className="mr-2">🛡️</span>
-                        Viewer 
+                        <span className="mr-2"></span>
+                        Viewer
                       </span>
                     </Link>
                   )}
@@ -168,7 +170,7 @@ const ProfileDropdown = () => {
                       onClick={() => setIsOpen(false)}
                     >
                       <span className="flex items-center">
-                        <span className="mr-2">⚙️</span>
+                        <span className="mr-2"></span>
                         Staff Panel
                       </span>
                     </Link>

@@ -662,11 +662,15 @@ router.get('/results', authenticate, requireRole('VIEWER'), async (req, res) => 
  */
 router.get('/champions', authenticate, requireRole('VIEWER'), async (req, res) => {
     try {
-        // Get all individual events with results
+        const { year } = req.query;
+        const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+        // Get all individual events with results for the current year
         const individualRegistrations = await prisma.ind_event_registration.findMany({
             where: {
                 is_deleted: false,
                 status: 'ACCEPTED',
+                year: currentYear,
                 event_result: {
                     isNot: null
                 }
@@ -1073,7 +1077,9 @@ router.get('/profiles/details', authenticate, requireRole('VIEWER'), async (req,
  */
 router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
-    console.log('Fetching temple management data for viewer...');
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    console.log(`Fetching temple management data for viewer (year: ${currentYear})...`);
     
     // Get all temples
     const temples = await prisma.mst_temple.findMany({
@@ -1110,7 +1116,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
               where: {
                 user: { temple_id: temple.id },
                 is_deleted: false,
-                year: new Date().getFullYear()  // Only count current year data
+                year: currentYear  // Only count current year data
               }
             }),
             prisma.ind_event_registration.count({
@@ -1118,7 +1124,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
                 user: { temple_id: temple.id },
                 status: 'ACCEPTED',
                 is_deleted: false,
-                year: new Date().getFullYear()  // Only count current year data
+                year: currentYear  // Only count current year data
               }
             }),
             prisma.ind_event_registration.count({
@@ -1126,7 +1132,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
                 user: { temple_id: temple.id },
                 status: 'PENDING',
                 is_deleted: false,
-                year: new Date().getFullYear()  // Only count current year data
+                year: currentYear  // Only count current year data
               }
             }),
             prisma.ind_event_registration.count({
@@ -1134,7 +1140,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
                 user: { temple_id: temple.id },
                 status: 'DECLINED',
                 is_deleted: false,
-                year: new Date().getFullYear()  // Only count current year data
+                year: currentYear  // Only count current year data
               }
             })
           ]);
@@ -1147,7 +1153,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
               user: { temple_id: temple.id },
               status: 'ACCEPTED',
               is_deleted: false,
-              year: new Date().getFullYear(),  // Only count current year data
+              year: currentYear,  // Only count current year data
               event_result: {
                 isNot: null
               }
@@ -1163,6 +1169,7 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
               temple_id: temple.id,
               status: 'ACCEPTED',
               is_deleted: false,
+              year: currentYear,  // Only count current year data
               event_result: {
                 isNot: null
               }
@@ -1246,7 +1253,10 @@ router.get('/temple-management', authenticate, requireRole('VIEWER'), async (req
  */
 router.get('/event-performance', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
-    // Get all events with their registrations and results
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    // Get all events with their registrations and results for current year
     const events = await prisma.mst_event.findMany({
       where: {
         is_deleted: false
@@ -1258,6 +1268,7 @@ router.get('/event-performance', authenticate, requireRole('VIEWER'), async (req
           where: {
             is_deleted: false,
             status: 'ACCEPTED',
+            year: currentYear,
             event_result: {
               isNot: null
             }
@@ -1275,6 +1286,7 @@ router.get('/event-performance', authenticate, requireRole('VIEWER'), async (req
           where: {
             is_deleted: false,
             status: 'ACCEPTED',
+            year: currentYear,
             event_result: {
               isNot: null
             }

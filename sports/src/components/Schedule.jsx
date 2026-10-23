@@ -11,6 +11,12 @@ const Schedule = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Filter states
+  const [selectedEventType, setSelectedEventType] = useState('all'); // 'all', 'individual', 'team'
+  const [selectedAge, setSelectedAge] = useState('all');
+  const [selectedGender, setSelectedGender] = useState('all');
+  const [selectedTeamEvent, setSelectedTeamEvent] = useState('all');
+
   useEffect(() => {
     fetchScheduleData();
   }, [apiSource, currentYear]);
@@ -152,8 +158,79 @@ const Schedule = ({
   const ageCategoryOrder = ['0-5', '6-10', '61+'];
   const eventTypeOrder = ['Running', 'Throwing', 'Jumping', 'Other'];
 
+  // Available filter options derived dynamically from data
+  const availableAgeCategories = Array.from(
+    new Set(
+      [...scheduleData.individual, ...scheduleData.team]
+        .map(event => event.age_category?.name)
+        .filter(name => Boolean(name) && name.trim().toLowerCase() !== 'all')
+    )
+  ).sort((a, b) => {
+    const numA = parseInt(a);
+    const numB = parseInt(b);
+    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+    return a.localeCompare(b);
+  });
+
+  const availableGenders = Array.from(
+    new Set(
+      ['MALE', 'FEMALE', 'MIXED', ...[...scheduleData.individual, ...scheduleData.team].map(e => e.gender).filter(Boolean)]
+    )
+  ).filter(g => Boolean(g) && g.trim().toLowerCase() !== 'all');
+
+  const availableTeamEvents = Array.from(
+    new Set(
+      scheduleData.team
+        .map(e => e.name)
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const hasActiveFilters = selectedEventType !== 'all' || 
+    selectedAge !== 'all' || 
+    selectedGender !== 'all' || 
+    selectedTeamEvent !== 'all';
+
+  const resetFilters = () => {
+    setSelectedEventType('all');
+    setSelectedAge('all');
+    setSelectedGender('all');
+    setSelectedTeamEvent('all');
+  };
+
+  // Filter individual events
+  const filteredIndividualEvents = selectedEventType === 'team'
+    ? []
+    : scheduleData.individual.filter(event => {
+        if (selectedAge !== 'all' && event.age_category?.name !== selectedAge) {
+          return false;
+        }
+        if (selectedGender !== 'all' && event.gender !== selectedGender) {
+          return false;
+        }
+        return true;
+      });
+
+  // Filter team events
+  const filteredTeamEvents = selectedEventType === 'individual'
+    ? []
+    : scheduleData.team.filter(event => {
+        if (selectedAge !== 'all') {
+          if (!event.age_category || event.age_category?.name !== selectedAge) {
+            return false;
+          }
+        }
+        if (selectedGender !== 'all' && event.gender !== selectedGender) {
+          return false;
+        }
+        if (selectedTeamEvent !== 'all' && event.name !== selectedTeamEvent) {
+          return false;
+        }
+        return true;
+      });
+
   // Group individual events by age category group, then by event type
-  const groupedIndividualEvents = scheduleData.individual.reduce((acc, event) => {
+  const groupedIndividualEvents = filteredIndividualEvents.reduce((acc, event) => {
     const ageGroup = getAgeCategoryGroup(event.age_category);
     const eventType = getEventType(event.name);
     const key = `${ageGroup}::${eventType}`;
@@ -191,16 +268,6 @@ const Schedule = ({
     return typeOrderA - typeOrderB;
   });
 
-  // Group team events by gender
-  const groupedTeamEvents = scheduleData.team.reduce((acc, event) => {
-    const key = event.gender || 'ALL';
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(event);
-    return acc;
-  }, {});
-
   return (
     <div className={`space-y-8 ${className}`}>
       {/* Header */}
@@ -224,167 +291,266 @@ const Schedule = ({
         </button>
       </div>
 
-      {/* Individual Events Section */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
-          <h3 className="text-base sm:text-lg font-semibold text-black">🏃 Individual Events ({scheduleData.individual.length})</h3>
-          <p className="text-xs sm:text-sm text-black/80 mt-1">Individual competitions by age category and gender</p>
-        </div>
-        
-        <div className="overflow-x-auto">
-          {scheduleData.individual.length > 0 ? (
-            sortedGroupKeys.map((groupKey) => {
-              const group = groupedIndividualEvents[groupKey];
-              const eventTypeEmoji = {
-                'Running': '🏃',
-                'Throwing': '🎯',
-                'Jumping': '🦘',
-                'Other': '🏅'
-              };
-              
-              return (
-                <div key={groupKey} className="mb-6">
-                  {/* Group Header */}
-                  <div className="bg-gradient-to-r from-[#D35D38] to-[#E07650] px-4 py-3 rounded-t-lg">
-                    <h4 className="text-white font-semibold text-sm sm:text-base">
-                      {eventTypeEmoji[group.eventType] || '🏅'} Age: {group.ageGroup} - {group.eventType} Events ({group.events.length})
-                    </h4>
-                  </div>
-                  
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age Category</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {group.events.map((event, index) => (
-                        <tr key={event.id || index} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {index + 1}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatStartTime(event.start_time)}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {event.name}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {event.age_category?.name || 'N/A'}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {event.gender || 'N/A'}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            {event.has_results ? (
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                Completed
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                                Pending
-                              </span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })
-          ) : (
-            <div className="px-4 py-8 text-center text-gray-500">
-              No individual events found
-            </div>
+      {/* Filter Section */}
+      <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🔍</span>
+            <h3 className="font-semibold text-[#2A2A2A] text-base sm:text-lg">Filter Schedule</h3>
+          </div>
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="text-xs sm:text-sm text-[#D35D38] hover:text-[#B84A2A] font-medium transition-colors"
+            >
+              Clear all filters
+            </button>
           )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {/* Event Type Filter */}
+          <div className="flex flex-col">
+            <label className="mb-1.5 text-xs sm:text-sm font-medium text-[#2A2A2A]">Event Type</label>
+            <select
+              className="p-2 sm:p-2.5 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-xs sm:text-sm text-[#2A2A2A]"
+              value={selectedEventType}
+              onChange={(e) => setSelectedEventType(e.target.value)}
+            >
+              <option value="all">All Events</option>
+              <option value="individual">Individual Events Only</option>
+              <option value="team">Team Events Only</option>
+            </select>
+          </div>
+
+          {/* Age Category Filter */}
+          <div className="flex flex-col">
+            <label className="mb-1.5 text-xs sm:text-sm font-medium text-[#2A2A2A]">Age Category</label>
+            <select
+              className="p-2 sm:p-2.5 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-xs sm:text-sm text-[#2A2A2A] disabled:opacity-50 disabled:bg-gray-50"
+              value={selectedAge}
+              onChange={(e) => setSelectedAge(e.target.value)}
+              disabled={selectedEventType === 'team' && availableAgeCategories.length === 0}
+            >
+              <option value="all">All Age Categories</option>
+              {availableAgeCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Gender Filter */}
+          <div className="flex flex-col">
+            <label className="mb-1.5 text-xs sm:text-sm font-medium text-[#2A2A2A]">Gender</label>
+            <select
+              className="p-2 sm:p-2.5 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-xs sm:text-sm text-[#2A2A2A]"
+              value={selectedGender}
+              onChange={(e) => setSelectedGender(e.target.value)}
+            >
+              <option value="all">All Genders</option>
+              {availableGenders.map((gender) => (
+                <option key={gender} value={gender}>
+                  {gender}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Team Events Filter */}
+          <div className="flex flex-col">
+            <label className="mb-1.5 text-xs sm:text-sm font-medium text-[#2A2A2A]">Team Event</label>
+            <select
+              className="p-2 sm:p-2.5 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-xs sm:text-sm text-[#2A2A2A] disabled:opacity-50 disabled:bg-gray-50"
+              value={selectedTeamEvent}
+              onChange={(e) => setSelectedTeamEvent(e.target.value)}
+              disabled={selectedEventType === 'individual'}
+            >
+              <option value="all">All Team Events</option>
+              {availableTeamEvents.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Team Events Section */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
-          <h3 className="text-base sm:text-lg font-semibold text-black">🤝 Team Events ({scheduleData.team.length})</h3>
-          <p className="text-xs sm:text-sm text-black/80 mt-1">Team competitions by gender</p>
+      {/* Individual Events Section */}
+      {selectedEventType !== 'team' && (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-black">
+              🏃 Individual Events ({filteredIndividualEvents.length}
+              {hasActiveFilters && scheduleData.individual.length !== filteredIndividualEvents.length ? ` of ${scheduleData.individual.length}` : ''})
+            </h3>
+            <p className="text-xs sm:text-sm text-black/80 mt-1">Individual competitions by age category and gender</p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            {filteredIndividualEvents.length > 0 ? (
+              sortedGroupKeys.map((groupKey) => {
+                const group = groupedIndividualEvents[groupKey];
+                const eventTypeEmoji = {
+                  'Running': '🏃',
+                  'Throwing': '🎯',
+                  'Jumping': '🦘',
+                  'Other': '🏅'
+                };
+                
+                return (
+                  <div key={groupKey} className="mb-6">
+                    {/* Group Header */}
+                    <div className="bg-gradient-to-r from-[#D35D38] to-[#E07650] px-4 py-3 rounded-t-lg">
+                      <h4 className="text-white font-semibold text-sm sm:text-base">
+                        {eventTypeEmoji[group.eventType] || '🏅'} Age: {group.ageGroup} - {group.eventType} Events ({group.events.length})
+                      </h4>
+                    </div>
+                    
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age Category</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {group.events.map((event, index) => (
+                          <tr key={event.id || index} className="hover:bg-gray-50">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {index + 1}
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {formatStartTime(event.start_time)}
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {event.name}
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {event.age_category?.name || 'N/A'}
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {event.gender || 'N/A'}
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              {event.has_results ? (
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                                  Completed
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                                  Pending
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="px-4 py-8 text-center text-gray-500">
+                {hasActiveFilters ? 'No individual events match the selected filters.' : 'No individual events found.'}
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {scheduleData.team.length > 0 ? (
-                scheduleData.team.map((event, index) => (
-                  <tr key={event.id || index} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatStartTime(event.start_time)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.name}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {event.gender || 'N/A'}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {event.has_results ? (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
-                          Pending
-                        </span>
-                      )}
+      )}
+
+      {/* Team Events Section */}
+      {selectedEventType !== 'individual' && (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-6 py-4 bg-[#F8DFBE] border-b border-gray-200">
+            <h3 className="text-base sm:text-lg font-semibold text-black">
+              🤝 Team Events ({filteredTeamEvents.length}
+              {hasActiveFilters && scheduleData.team.length !== filteredTeamEvents.length ? ` of ${scheduleData.team.length}` : ''})
+            </h3>
+            <p className="text-xs sm:text-sm text-black/80 mt-1">Team competitions by gender</p>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredTeamEvents.length > 0 ? (
+                  filteredTeamEvents.map((event, index) => (
+                    <tr key={event.id || index} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {formatStartTime(event.start_time)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.name}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {event.gender || 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {event.has_results ? (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            Completed
+                          </span>
+                        ) : (
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                      {hasActiveFilters ? 'No team events match the selected filters.' : 'No team events found.'}
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
-                    No team events found
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Summary Statistics */}
       {(() => {
-        const totalEventsCount = scheduleData.individual.length + scheduleData.team.length;
-        const completedEventsCount = scheduleData.individual.filter(e => e.has_results).length + 
-          scheduleData.team.filter(e => e.has_results).length;
+        const totalEventsCount = filteredIndividualEvents.length + filteredTeamEvents.length;
+        const completedEventsCount = filteredIndividualEvents.filter(e => e.has_results).length + 
+          filteredTeamEvents.filter(e => e.has_results).length;
         const pendingEventsCount = totalEventsCount - completedEventsCount;
 
         return (
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-[#D35D38] mb-4 text-center">📊 Event Summary ({currentYear})</h3>
+            <h3 className="text-lg font-semibold text-[#D35D38] mb-4 text-center">
+              📊 Event Summary ({currentYear}){hasActiveFilters ? ' (Filtered)' : ''}
+            </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
               <div className="bg-[#F8DFBE] rounded-lg p-4">
                 <p className="text-2xl font-bold text-[#D35D38]">
-                  {scheduleData.individual.length}
+                  {filteredIndividualEvents.length}
                 </p>
                 <p className="text-sm text-[#5A5A5A]">Individual Events</p>
               </div>
               <div className="bg-[#F8DFBE] rounded-lg p-4">
                 <p className="text-2xl font-bold text-[#D35D38]">
-                  {scheduleData.team.length}
+                  {filteredTeamEvents.length}
                 </p>
                 <p className="text-sm text-[#5A5A5A]">Team Events</p>
               </div>

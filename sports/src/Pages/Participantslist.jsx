@@ -158,7 +158,7 @@ const Participantslist = () => {
           {/* Header Section */}
           <div className="hidden md:block text-center mb-8">
             <h1 className="text-4xl md:text-5xl font-extrabold text-[#2A2A2A] mb-4">
-              33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025
+              34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026
             </h1>
             {loading ? (
               <div className="flex justify-center items-center py-4">
@@ -327,8 +327,8 @@ const Participantslist = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap" style={{ width: '100px' }}>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${participant.gender === 'MALE'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-pink-100 text-pink-800'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-pink-100 text-pink-800'
                             }`}>
                             {participant.gender}
                           </span>
@@ -366,8 +366,8 @@ const Participantslist = () => {
                           {participant.name}
                         </h3>
                         <span className={`inline-flex items-start px-2.5 py-0.5 rounded-full whitespace-nowrap text-xs font-medium ${participant.gender === 'MALE'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-pink-100 text-pink-800'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-pink-100 text-pink-800'
                           }`}>
                           {participant.gender} &nbsp;| &nbsp;
                           <span>

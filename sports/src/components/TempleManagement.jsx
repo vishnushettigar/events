@@ -6,8 +6,10 @@ const TempleManagement = ({
   showSummaryCards = true,
   showContactInfo = true,
   showParticipants = true,
-  className = ""
+  className = "",
+  year = new Date().getFullYear()
 }) => {
+  const currentYear = year || new Date().getFullYear();
   const [temples, setTemples] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -16,7 +18,7 @@ const TempleManagement = ({
   useEffect(() => {
     fetchTempleData();
     fetchRegisteredUsersCount();
-  }, [apiSource]);
+  }, [apiSource, currentYear]);
 
   const fetchTempleData = async () => {
     setLoading(true);
@@ -28,7 +30,7 @@ const TempleManagement = ({
       // Fetch data based on API source
       switch (apiSource) {
         case 'admin':
-          data = await templeAPI.getTempleManagement();
+          data = await templeAPI.getTempleManagement({ year: currentYear });
           if (!data.temples) {
             throw new Error('Invalid response format: temples data not found');
           }
@@ -36,7 +38,7 @@ const TempleManagement = ({
           break;
           
         case 'viewer':
-          data = await viewerAPI.getTempleManagement();
+          data = await viewerAPI.getTempleManagement({ year: currentYear });
           if (!data.temples) {
             throw new Error('Invalid response format: temples data not found');
           }
@@ -44,9 +46,9 @@ const TempleManagement = ({
           break;
           
         case 'staff':
-          const templesData = await userAPI.getAllTemples();
+          const templesData = await userAPI.getAllTemples({ year: currentYear });
           // userAPI.getAllTemples() returns data directly (not wrapped in temples property)
-          // and already includes total_points, so we can use it directly
+          // and already includes total_points and total_participants, so we can use it directly
           setTemples(templesData);
           break;
           
@@ -141,11 +143,11 @@ const TempleManagement = ({
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">{temple.total_points}</td>
+                    <td className="px-6 py-4 text-[#D35D38] font-bold text-lg">{temple.total_points ?? 0}</td>
                     {showParticipants && (
                       <td className="px-6 py-4">
                         <div className="text-center">
-                          <div className="font-bold text-lg text-[#2A2A2A]">{temple.total_participants}</div>
+                          <div className="font-bold text-lg text-[#2A2A2A]">{temple.total_participants ?? 0}</div>
                           <div className="text-xs text-gray-500">Total</div>
                         </div>
                       </td>

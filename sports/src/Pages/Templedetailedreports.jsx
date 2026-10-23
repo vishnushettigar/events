@@ -25,10 +25,10 @@ const Templedetailedreports = () => {
   // Function to group and aggregate individual events
   const groupIndividualEvents = (events) => {
     const grouped = {};
-    
+
     events.forEach(event => {
       const key = `${event.event}|${event.age}|${event.gender}`;
-      
+
       if (!grouped[key]) {
         grouped[key] = {
           event: event.event,
@@ -40,7 +40,7 @@ const Templedetailedreports = () => {
           points: 0
         };
       }
-      
+
       // Collect winners
       if (event.first) {
         grouped[key].first.push(event.first);
@@ -51,11 +51,11 @@ const Templedetailedreports = () => {
       if (event.third) {
         grouped[key].third.push(event.third);
       }
-      
+
       // Sum points
       grouped[key].points += event.points || 0;
     });
-    
+
     // Convert to array, format winners as comma-separated strings, and sort by age category
     return Object.values(grouped)
       .map(item => ({
@@ -79,10 +79,10 @@ const Templedetailedreports = () => {
   // Function to group and aggregate team events
   const groupTeamEvents = (events) => {
     const grouped = {};
-    
+
     events.forEach(event => {
       const key = `${event.event}|${event.gender}`;
-      
+
       if (!grouped[key]) {
         grouped[key] = {
           event: event.event,
@@ -91,16 +91,16 @@ const Templedetailedreports = () => {
           points: 0
         };
       }
-      
+
       // Collect results
       if (event.result) {
         grouped[key].result.push(event.result);
       }
-      
+
       // Sum points
       grouped[key].points += event.points || 0;
     });
-    
+
     // Convert to array and format results as comma-separated strings
     return Object.values(grouped).map(item => ({
       ...item,
@@ -113,22 +113,22 @@ const Templedetailedreports = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         const templeId = searchParams.get('temple_id');
         if (!templeId) {
           throw new Error('Temple ID is required');
         }
 
         const data = await userAPI.getTempleDetailedReport(templeId);
-        
+
         // Group and aggregate individual events
         const groupedIndividualEvents = groupIndividualEvents(data.individualEvents || []);
         setIndividualEvents(groupedIndividualEvents);
-        
+
         // Group and aggregate team events
         const groupedTeamEvents = groupTeamEvents(data.teamEvents || []);
         setTeamEvents(groupedTeamEvents);
-        
+
         // Recalculate total points based on grouped data
         const recalculatedTotalPoints = {
           individual: groupedIndividualEvents.reduce((sum, event) => sum + event.points, 0),
@@ -137,7 +137,7 @@ const Templedetailedreports = () => {
         };
         recalculatedTotalPoints.total = recalculatedTotalPoints.individual + recalculatedTotalPoints.team;
         setTotalPoints(recalculatedTotalPoints);
-        
+
         setTempleInfo(data.temple);
       } catch (err) {
         console.error('Error fetching temple detailed report:', err);
@@ -188,9 +188,9 @@ const Templedetailedreports = () => {
   // Print function for temple detailed report
   const handlePrint = () => {
     if (!templeInfo) return;
-    
+
     const printWindow = window.open('', '_blank');
-    
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -217,8 +217,8 @@ const Templedetailedreports = () => {
       <body>
         <div class="header">
           <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-          <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ  </div>
           <div class="section-title">${templeInfo.name}</div>
           <div class="section-title">Detailed Report</div>
         </div>
@@ -308,7 +308,7 @@ const Templedetailedreports = () => {
       </body>
       </html>
     `;
-    
+
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.focus();
@@ -340,116 +340,116 @@ const Templedetailedreports = () => {
           </div>
         )}
 
-      {/* Temple Header */}
-      {templeInfo && (
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl font-extrabold text-[#D35D38] mb-2">{templeInfo.name} - Detailed Report</h1>
-          {/* <p className="text-lg text-gray-600">Temple Name: {templeInfo.code}</p> */}
-        </div>
-      )}
+        {/* Temple Header */}
+        {templeInfo && (
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-extrabold text-[#D35D38] mb-2">{templeInfo.name} - Detailed Report</h1>
+            {/* <p className="text-lg text-gray-600">Temple Name: {templeInfo.code}</p> */}
+          </div>
+        )}
 
-      {/* Individual Events */}
-      <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Individual Events</h2>
-        <div className="overflow-x-auto rounded-xl shadow bg-white">
-          <table className="min-w-full divide-y divide-orange-200">
-            <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
-              <tr>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Event</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Age Category</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Gender</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">First</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Second</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Third</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Points</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-orange-100">
-              {individualEvents.length > 0 ? (
-                individualEvents.map((row, idx) => (
-                <tr key={idx} className="hover:bg-orange-50 transition">
-                  <td className="px-4 py-2 font-semibold text-[#D35D38]">{idx + 1}</td>
-                  <td className="px-4 py-2">{row.event}</td>
-                  <td className="px-4 py-2">{row.age}</td>
-                  <td className="px-4 py-2">{row.gender}</td>
-                  <td className="px-4 py-2">{row.first}</td>
-                  <td className="px-4 py-2">{row.second}</td>
-                  <td className="px-4 py-2">{row.third}</td>
-                  <td className="px-4 py-2 font-bold text-[#D35D38]">{row.points}</td>
-                </tr>
-                ))
-              ) : (
+        {/* Individual Events */}
+        <div className="mb-10">
+          <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Individual Events</h2>
+          <div className="overflow-x-auto rounded-xl shadow bg-white">
+            <table className="min-w-full divide-y divide-orange-200">
+              <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
                 <tr>
-                  <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
-                    No individual events with results found
-                  </td>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Event</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Age Category</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Gender</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">First</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Second</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Third</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Points</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-orange-100">
+                {individualEvents.length > 0 ? (
+                  individualEvents.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-orange-50 transition">
+                      <td className="px-4 py-2 font-semibold text-[#D35D38]">{idx + 1}</td>
+                      <td className="px-4 py-2">{row.event}</td>
+                      <td className="px-4 py-2">{row.age}</td>
+                      <td className="px-4 py-2">{row.gender}</td>
+                      <td className="px-4 py-2">{row.first}</td>
+                      <td className="px-4 py-2">{row.second}</td>
+                      <td className="px-4 py-2">{row.third}</td>
+                      <td className="px-4 py-2 font-bold text-[#D35D38]">{row.points}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+                      No individual events with results found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Team Events */}
-      <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Team Events</h2>
-        <div className="overflow-x-auto rounded-xl shadow bg-white">
-          <table className="min-w-full divide-y divide-orange-200">
-            <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
-              <tr>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Event</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Gender</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Result</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Points</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-orange-100">
-              {teamEvents.length > 0 ? (
-                teamEvents.map((row, idx) => (
-                <tr key={idx} className="hover:bg-orange-50 transition">
-                  <td className="px-4 py-2 font-semibold text-[#D35D38]">{idx + 1}</td>
-                  <td className="px-4 py-2">{row.event}</td>
-                  <td className="px-4 py-2">{row.gender}</td>
-                  <td className="px-4 py-2">{row.result}</td>
-                  <td className="px-4 py-2 font-bold text-[#D35D38]">{row.points}</td>
-                </tr>
-                ))
-              ) : (
+        {/* Team Events */}
+        <div className="mb-10">
+          <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Team Events</h2>
+          <div className="overflow-x-auto rounded-xl shadow bg-white">
+            <table className="min-w-full divide-y divide-orange-200">
+              <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
                 <tr>
-                  <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
-                    No team events with results found
-                  </td>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">SL.NO</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Event</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Gender</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Result</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Points</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-orange-100">
+                {teamEvents.length > 0 ? (
+                  teamEvents.map((row, idx) => (
+                    <tr key={idx} className="hover:bg-orange-50 transition">
+                      <td className="px-4 py-2 font-semibold text-[#D35D38]">{idx + 1}</td>
+                      <td className="px-4 py-2">{row.event}</td>
+                      <td className="px-4 py-2">{row.gender}</td>
+                      <td className="px-4 py-2">{row.result}</td>
+                      <td className="px-4 py-2 font-bold text-[#D35D38]">{row.points}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                      No team events with results found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
 
-      {/* Total Points */}
-      <div className="mb-10">
-        <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Total Points</h2>
-        <div className="overflow-x-auto rounded-xl shadow bg-white max-w-md mx-auto">
-          <table className="min-w-full divide-y divide-orange-200">
-            <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
-              <tr>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Individual Event Points</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Team Event Points</th>
-                <th className="px-4 py-2 text-xs font-bold text-white uppercase">Total Points</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-orange-100">
-              <tr>
-                <td className="px-4 py-2 font-bold text-[#D35D38]">{totalPoints.individual}</td>
-                <td className="px-4 py-2 font-bold text-[#D35D38]">{totalPoints.team}</td>
-                <td className="px-4 py-2 font-bold text-[#B84A2E]">{totalPoints.total}</td>
-              </tr>
-            </tbody>
-          </table>
+        {/* Total Points */}
+        <div className="mb-10">
+          <h2 className="text-3xl font-extrabold text-[#D35D38] mb-4">Total Points</h2>
+          <div className="overflow-x-auto rounded-xl shadow bg-white max-w-md mx-auto">
+            <table className="min-w-full divide-y divide-orange-200">
+              <thead className="bg-gradient-to-r from-[#D35D38] to-[#B84A2E]">
+                <tr>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Individual Event Points</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Team Event Points</th>
+                  <th className="px-4 py-2 text-xs font-bold text-white uppercase">Total Points</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-orange-100">
+                <tr>
+                  <td className="px-4 py-2 font-bold text-[#D35D38]">{totalPoints.individual}</td>
+                  <td className="px-4 py-2 font-bold text-[#D35D38]">{totalPoints.team}</td>
+                  <td className="px-4 py-2 font-bold text-[#B84A2E]">{totalPoints.total}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       </div>
     </>
   )

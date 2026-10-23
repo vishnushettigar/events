@@ -60,9 +60,10 @@ const StaffPanel = () => {
   // Fetch champions data
   const fetchChampions = async () => {
     try {
-    setLoading(true);
+      setLoading(true);
       setError(null);
-      const data = await reportAPI.getChampions();
+      const currentYear = new Date().getFullYear();
+      const data = await reportAPI.getChampions({ year: currentYear });
       setData(data);
     } catch (err) {
       console.error('Error fetching champions:', err);
@@ -78,8 +79,9 @@ const StaffPanel = () => {
     try {
       setLoading(true);
       setError(null);
+      const currentYear = new Date().getFullYear();
       console.log('Making request to all-results endpoint...');
-      const data = await reportAPI.getAllResults();
+      const data = await reportAPI.getAllResults({ year: currentYear });
       console.log('All Results Data:', data); // Debug logging
       setData(data);
     } catch (err) {
@@ -344,9 +346,9 @@ const StaffPanel = () => {
         ) : activeTab === 'teams' ? (
           <UpdateTeamResult />
         ) : activeTab === 'champions' ? (
-          <Champions apiSource="staff" />
+          <Champions apiSource="staff" year={new Date().getFullYear()} />
         ) : activeTab === 'all-result' ? (
-          <Results apiSource="staff" />
+          <Results apiSource="staff" year={new Date().getFullYear()} />
         ) : activeTab === 'schedule' ? (
           <Schedule apiSource="staff" />
         ) : null}

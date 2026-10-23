@@ -20,7 +20,7 @@ import authManager from "../utils/authManager";
 const Home = () => {
   const { isEnglish } = useLanguage();
   const navigate = useNavigate();
-  
+
   // Use custom auth hook with periodic checking enabled
   const { isLoggedIn } = useAuth(true, 30000);
 
@@ -45,13 +45,13 @@ const Home = () => {
         {/* Top Organization Name */}
         <div className="absolute top-4 left-0 right-0 z-20 text-center px-4 md:mt-4">
           <p className="text-2xl md:text-3xl lg:text-4xl font-semibold text-[#D35D38] mb-4 md:mb-0">
-            {isEnglish 
+            {isEnglish
               ? "D.K. Jilla Padmashali Mahasabha® Mangaluru"
               : "ದ.ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ® ಮಂಗಳೂರು"
             }
           </p>
         </div>
-        
+
         {/* Foreground Content */}
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-start px-4 py-4 max-w-7xl mx-auto w-full mt-16 md:mt-8">
           {/* Left Side - Charaka Image */}
@@ -66,9 +66,9 @@ const Home = () => {
           {/* Right Side - Content */}
           <div className="flex-1 flex flex-col items-start md:items-start md:text-left mb-6">
             <h1 className="text-4xl md:text-5xl font-bold text-[#2A2A2A]  mb-3 whitespace-pre-line">
-              {isEnglish 
-                ? <>33<sup>rd</sup> Padmashali Kreedothsava - 2025</>
-                : <>33ನೇ ಪದ್ಮಶಾಲಿ <br/> ಕ್ರೀಡೋತ್ಸವ - 2025</>
+              {isEnglish
+                ? <>34<sup>th</sup> Padmashali Kreedothsava - 2026</>
+                : <>34ನೇ ಪದ್ಮಶಾಲಿ <br /> ಕ್ರೀಡೋತ್ಸವ - 2026</>
               }
             </h1>
             {/* <p className="text-[16px] md:text-[20px] text-[#5A5A5A] mb-2">
@@ -105,12 +105,12 @@ const Home = () => {
                 >
                 {isEnglish ? "Registration will start soon" : "ನೋಂದಣಿ ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"}
               </button> */}
-             
+
 
             </div>
           </div>
         </div>
-      </section>     
+      </section>
       <div className="bg-[#F0F0F0]">
         <div>
           {" "}
@@ -135,7 +135,7 @@ const Home = () => {
         </div>
       </div>
 
-      
+
     </>
   );
 };

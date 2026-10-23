@@ -1,57 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { eventAPI, viewerAPI, reportAPI } from '../utils/api.js';
 
-const Results = ({ 
+const Results = ({
   apiSource = 'staff', // 'staff', 'admin', or 'viewer'
-  className = ""
+  className = "",
+  year = null
 }) => {
+  const currentYear = year ? parseInt(year) : new Date().getFullYear();
   const [data, setData] = useState({ individual: [], team: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [allResultsActiveTab, setAllResultsActiveTab] = useState('individual');
-  
+
   // Separate filter states for individual and team events
   const [individualSelectedAge, setIndividualSelectedAge] = useState('all');
   const [individualSelectedGender, setIndividualSelectedGender] = useState('all');
   const [teamSelectedGender, setTeamSelectedGender] = useState('all');
-  
+
   // Age groups for filtering
   const [ageGroups, setAgeGroups] = useState([]);
 
   useEffect(() => {
     fetchResults();
     fetchAgeGroups();
-  }, [apiSource]);
+  }, [apiSource, currentYear]);
 
   const fetchResults = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       let data;
-      
+
       // Fetch data based on API source
       switch (apiSource) {
         case 'staff':
-          data = await reportAPI.getAllResults();
+          data = await reportAPI.getAllResults({ year: currentYear });
           break;
-          
+
         case 'admin':
-          const adminData = await eventAPI.getEventPerformance();
+          const adminData = await eventAPI.getEventPerformance({ year: currentYear });
           // Transform admin data to match expected structure
           data = transformEventPerformanceData(adminData);
           break;
-          
+
         case 'viewer':
-          const viewerData = await viewerAPI.getEventPerformance();
+          const viewerData = await viewerAPI.getEventPerformance({ year: currentYear });
           // Transform viewer data to match expected structure
           data = transformEventPerformanceData(viewerData);
           break;
-          
+
         default:
           throw new Error('Invalid API source');
       }
-      
+
       setData(data);
     } catch (err) {
       console.error('Error fetching results:', err);
@@ -64,7 +66,7 @@ const Results = ({
   const fetchAgeGroups = async () => {
     try {
       const response = await eventAPI.getAllEventsComplete();
-      const ageCategories = [...new Set(response.individual.concat(response.team).map(event => event.age_category?.name).filter(Boolean))];
+      const ageCategories = [...new Set(response.individual.concat(response.team).map(event => event.age_category?.name).filter(name => Boolean(name) && name.trim().toLowerCase() !== 'all'))];
       setAgeGroups(ageCategories.map(category => ({
         id: category,
         name: category,
@@ -103,6 +105,9 @@ const Results = ({
       // Process registrations with results
       if (event.registrations) {
         event.registrations.forEach(reg => {
+          const regYear = reg.year ? Number(reg.year) : (reg.created_at ? new Date(reg.created_at).getFullYear() : null);
+          if (regYear && regYear !== currentYear) return;
+
           if (reg.event_result) {
             const winner = {
               name: `${reg.user?.first_name || ''} ${reg.user?.last_name || ''}`.trim(),
@@ -148,6 +153,9 @@ const Results = ({
       // Process team registrations with results
       if (event.team_registrations) {
         event.team_registrations.forEach(reg => {
+          const regYear = reg.year ? Number(reg.year) : (reg.created_at ? new Date(reg.created_at).getFullYear() : null);
+          if (regYear && regYear !== currentYear) return;
+
           if (reg.event_result) {
             const winner = {
               temple: reg.temple?.name || 'Unknown',
@@ -209,7 +217,7 @@ const Results = ({
   // Helper function to get winner display text
   const getWinnerText = (winners, isIndividual = true) => {
     if (!winners || winners.length === 0) return 'No winner';
-    
+
     if (isIndividual) {
       return winners.map(winner => `${winner.name} (${winner.temple})`).join(', ');
     } else {
@@ -220,7 +228,7 @@ const Results = ({
   // Helper function to get winner data for detailed display
   const getWinnerData = (winners, isIndividual = true) => {
     if (!winners || winners.length === 0) return null;
-    
+
     if (isIndividual) {
       return winners[0]; // Return first winner for individual events
     } else {
@@ -248,21 +256,21 @@ const Results = ({
       category.events.forEach(event => {
         // Combine all winners into a single array with rank information
         const allWinners = [];
-        
+
         // Add first place winners
         if (event.first && event.first.length > 0) {
           event.first.forEach(winner => {
             allWinners.push({ ...winner, rank: 'FIRST' });
           });
         }
-        
+
         // Add second place winners
         if (event.second && event.second.length > 0) {
           event.second.forEach(winner => {
             allWinners.push({ ...winner, rank: 'SECOND' });
           });
         }
-        
+
         // Add third place winners
         if (event.third && event.third.length > 0) {
           event.third.forEach(winner => {
@@ -290,48 +298,48 @@ const Results = ({
       category.events.forEach(event => {
         // Combine all winners into a single array with rank information
         const allWinners = [];
-        
+
         // Add first place winners
         if (event.first && event.first.length > 0) {
           event.first.forEach(winner => {
             const winnerData = { ...winner, rank: 'FIRST' };
-            
+
             // For mixed events, we need to separate male and female participants
             if (category.gender === 'MIXED' && winner.participants) {
               winnerData.maleParticipants = winner.participants.filter(p => p.gender === 'MALE');
               winnerData.femaleParticipants = winner.participants.filter(p => p.gender === 'FEMALE');
             }
-            
+
             allWinners.push(winnerData);
           });
         }
-        
+
         // Add second place winners
         if (event.second && event.second.length > 0) {
           event.second.forEach(winner => {
             const winnerData = { ...winner, rank: 'SECOND' };
-            
+
             // For mixed events, we need to separate male and female participants
             if (category.gender === 'MIXED' && winner.participants) {
               winnerData.maleParticipants = winner.participants.filter(p => p.gender === 'MALE');
               winnerData.femaleParticipants = winner.participants.filter(p => p.gender === 'FEMALE');
             }
-            
+
             allWinners.push(winnerData);
           });
         }
-        
+
         // Add third place winners
         if (event.third && event.third.length > 0) {
           event.third.forEach(winner => {
             const winnerData = { ...winner, rank: 'THIRD' };
-            
+
             // For mixed events, we need to separate male and female participants
             if (category.gender === 'MIXED' && winner.participants) {
               winnerData.maleParticipants = winner.participants.filter(p => p.gender === 'MALE');
               winnerData.femaleParticipants = winner.participants.filter(p => p.gender === 'FEMALE');
             }
-            
+
             allWinners.push(winnerData);
           });
         }
@@ -377,7 +385,7 @@ const Results = ({
               onClick={() => {
                 const isTeamType = type === 'Team';
                 const isIndividualType = type === 'Individual';
-                
+
                 const generateWinnerRows = (result) => {
                   const sortedWinners = [...result.allWinners].sort((a, b) => {
                     if (a.rank === b.rank) {
@@ -386,17 +394,17 @@ const Results = ({
                     const rankOrder = { 'FIRST': 1, 'SECOND': 2, 'THIRD': 3, 'NA': 4 };
                     return (rankOrder[a.rank] || 5) - (rankOrder[b.rank] || 5);
                   });
-                  
+
                   return sortedWinners.map(winner => {
                     const rankDisplay = winner.rank === 'FIRST' ? '🥇 FIRST' :
                       winner.rank === 'SECOND' ? '🥈 SECOND' :
-                      winner.rank === 'THIRD' ? '🥉 THIRD' : '-';
-                    
+                        winner.rank === 'THIRD' ? '🥉 THIRD' : '-';
+
                     const nameDisplay = isTeamType ? winner.temple : winner.name;
-                    
+
                     let extraCols = '';
                     if (isTeamType && result.gender === 'MIXED') {
-                      const maleNames = winner.maleParticipants && winner.maleParticipants.length > 0 
+                      const maleNames = winner.maleParticipants && winner.maleParticipants.length > 0
                         ? winner.maleParticipants.map(p => p.first_name + ' ' + p.last_name).join(', ')
                         : 'No male participants';
                       const femaleNames = winner.femaleParticipants && winner.femaleParticipants.length > 0
@@ -406,26 +414,26 @@ const Results = ({
                     } else if (isIndividualType) {
                       extraCols = '<td>' + (winner.temple || 'N/A') + '</td><td>' + (winner.aadhar || 'N/A') + '</td>';
                     }
-                    
+
                     return '<tr><td class="rank-cell medal">' + rankDisplay + '</td><td>' + nameDisplay + '</td>' + extraCols + '<td>' + (winner.points || 0) + '</td></tr>';
                   }).join('');
                 };
-                
+
                 const generateEventHtml = (result) => {
-                  const headerCols = isTeamType && result.gender === 'MIXED' 
+                  const headerCols = isTeamType && result.gender === 'MIXED'
                     ? '<th>Male Participants</th><th>Female Participants</th>'
                     : isIndividualType ? '<th>Temple</th><th>Aadhar</th>' : '';
-                  
+
                   // For team events, show only gender; for individual events, show full category
                   const displayCategory = isTeamType ? result.gender : result.category;
-                  
+
                   return '<div class="event-container">' +
                     '<div class="event-details"><div class="event-name">' + displayCategory + ' - ' + result.eventName + '</div></div>' +
                     '<table class="winners-table"><thead><tr>' +
                     '<th>Rank</th><th>' + (isTeamType ? 'Temple Name' : 'Participant') + '</th>' + headerCols + '<th>Points</th>' +
                     '</tr></thead><tbody>' + generateWinnerRows(result) + '</tbody></table></div>';
                 };
-                
+
                 const printWindow = window.open('', '_blank');
                 const printContent = `
                   <!DOCTYPE html>
@@ -457,8 +465,8 @@ const Results = ({
                   <body>
                     <div class="header">
                       <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-                      <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                      <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                      <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+                      <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ  </div>
                       <div class="section-title">${title}</div>
                     </div>
                     ${results.map(generateEventHtml).join('')}
@@ -477,7 +485,7 @@ const Results = ({
             </button>
           </div>
         </div>
-        
+
         <div className="space-y-8 p-6">
           {results.map((result, index) => (
             <div key={index} className="border border-gray-200 rounded-lg p-4">
@@ -520,8 +528,8 @@ const Results = ({
                       <body>
                         <div class="header">
                           <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-                          <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>                 
+                          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+                          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ   </div>                 
                         </div>
                         <div class="event-details">
                           <div class="event-name">${allResultsActiveTab === 'team' ? result.gender : result.category} - ${result.eventName}</div>
@@ -531,36 +539,35 @@ const Results = ({
                             <tr>
                               <th>Rank</th>
                               <th>${allResultsActiveTab === 'team' ? 'Temple Name' : 'Participant'}</th>
-                              ${allResultsActiveTab === 'team' && result.gender === 'MIXED' ? 
-                                '<th>Male Participants</th><th>Female Participants</th>' : 
-                                allResultsActiveTab === 'individual' ? '<th>Temple</th><th>Aadhar</th>' : ''}
+                              ${allResultsActiveTab === 'team' && result.gender === 'MIXED' ?
+                        '<th>Male Participants</th><th>Female Participants</th>' :
+                        allResultsActiveTab === 'individual' ? '<th>Temple</th><th>Aadhar</th>' : ''}
                               <th>Points</th>
                             </tr>
                           </thead>
                           <tbody>
                             ${result.allWinners
-                              .sort((a, b) => {
-                                if (a.rank === b.rank) {
-                                  return (b.points || 0) - (a.points || 0);
-                                }
-                                const rankOrder = { 'FIRST': 1, 'SECOND': 2, 'THIRD': 3, 'NA': 4 };
-                                return (rankOrder[a.rank] || 5) - (rankOrder[b.rank] || 5);
-                              })
-                              .map(winner => `
+                        .sort((a, b) => {
+                          if (a.rank === b.rank) {
+                            return (b.points || 0) - (a.points || 0);
+                          }
+                          const rankOrder = { 'FIRST': 1, 'SECOND': 2, 'THIRD': 3, 'NA': 4 };
+                          return (rankOrder[a.rank] || 5) - (rankOrder[b.rank] || 5);
+                        })
+                        .map(winner => `
                               <tr>
-                                <td class="rank-cell medal">${
-                                  winner.rank === 'FIRST' ? '🥇 FIRST' :
-                                  winner.rank === 'SECOND' ? '🥈 SECOND' :
-                                  winner.rank === 'THIRD' ? '🥉 THIRD' : '-'
-                                }</td>
+                                <td class="rank-cell medal">${winner.rank === 'FIRST' ? '🥇 FIRST' :
+                            winner.rank === 'SECOND' ? '🥈 SECOND' :
+                              winner.rank === 'THIRD' ? '🥉 THIRD' : '-'
+                          }</td>
                                 <td>${allResultsActiveTab === 'team' ? winner.temple : winner.name}</td>
                                 ${allResultsActiveTab === 'team' && result.gender === 'MIXED' ? `
-                                  <td>${winner.maleParticipants && winner.maleParticipants.length > 0 ? 
-                                    winner.maleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', ') : 
-                                    'No male participants'}</td>
-                                  <td>${winner.femaleParticipants && winner.femaleParticipants.length > 0 ? 
-                                    winner.femaleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', ') : 
-                                    'No female participants'}</td>
+                                  <td>${winner.maleParticipants && winner.maleParticipants.length > 0 ?
+                              winner.maleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', ') :
+                              'No male participants'}</td>
+                                  <td>${winner.femaleParticipants && winner.femaleParticipants.length > 0 ?
+                              winner.femaleParticipants.map(p => `${p.first_name} ${p.last_name}`).join(', ') :
+                              'No female participants'}</td>
                                 ` : allResultsActiveTab === 'individual' ? `
                                   <td>${winner.temple || 'N/A'}</td>
                                   <td>${winner.aadhar || 'N/A'}</td>
@@ -620,21 +627,20 @@ const Results = ({
                       .map((winner, index) => (
                         <tr key={`winner-${index}`} className="hover:bg-orange-50 transition">
                           <td className="px-4 py-3">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                              winner.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${winner.rank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
                               winner.rank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                              winner.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                              'bg-gray-100 text-gray-600'
-                            }`}>
+                                winner.rank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-gray-100 text-gray-600'
+                              }`}>
                               {winner.rank === 'FIRST' ? '🥇' :
-                               winner.rank === 'SECOND' ? '🥈' :
-                               winner.rank === 'THIRD' ? '🥉' : '-'}
+                                winner.rank === 'SECOND' ? '🥈' :
+                                  winner.rank === 'THIRD' ? '🥉' : '-'}
                             </span>
                           </td>
                           <td className="px-4 py-3">
                             <div className="font-medium text-[#2A2A2A]">
-                              {allResultsActiveTab === 'team' 
-                                ? winner.temple 
+                              {allResultsActiveTab === 'team'
+                                ? winner.temple
                                 : winner.name
                               }
                             </div>
@@ -711,21 +717,19 @@ const Results = ({
           <nav className="flex space-x-8 px-6" aria-label="Tabs">
             <button
               onClick={() => setAllResultsActiveTab('individual')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                allResultsActiveTab === 'individual'
-                  ? 'border-[#D35D38] text-[#D35D38]'
-                  : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${allResultsActiveTab === 'individual'
+                ? 'border-[#D35D38] text-[#D35D38]'
+                : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-gray-300'
+                }`}
             >
               🏃 Individual Events
             </button>
             <button
               onClick={() => setAllResultsActiveTab('team')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                allResultsActiveTab === 'team'
-                  ? 'border-[#D35D38] text-[#D35D38]'
-                  : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-gray-300'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${allResultsActiveTab === 'team'
+                ? 'border-[#D35D38] text-[#D35D38]'
+                : 'border-transparent text-[#5A5A5A] hover:text-[#2A2A2A] hover:border-gray-300'
+                }`}
             >
               🤝 Team Events
             </button>
@@ -742,7 +746,7 @@ const Results = ({
                 {/* Age Category Filter */}
                 <div className="flex flex-col">
                   <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Age Category</label>
-                  <select 
+                  <select
                     className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
                     value={individualSelectedAge}
                     onChange={(e) => setIndividualSelectedAge(e.target.value)}
@@ -763,7 +767,7 @@ const Results = ({
                 {/* Gender Filter */}
                 <div className="flex flex-col">
                   <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Gender</label>
-                  <select 
+                  <select
                     className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
                     value={individualSelectedGender}
                     onChange={(e) => setIndividualSelectedGender(e.target.value)}
@@ -785,7 +789,7 @@ const Results = ({
                 {/* Gender Filter for Teams */}
                 <div className="flex flex-col">
                   <label className="mb-2 text-[#2A2A2A] font-medium text-sm sm:text-base">Filter by Gender</label>
-                  <select 
+                  <select
                     className="p-2 sm:p-3 border border-[#F8DFBE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white text-sm sm:text-base"
                     value={teamSelectedGender}
                     onChange={(e) => setTeamSelectedGender(e.target.value)}
@@ -835,8 +839,8 @@ const Results = ({
                   <body>
                     <div class="header">
                      <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-                      <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                      <div class="subtitle">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                      <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+                      <div class="subtitle">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ  </div>
                       <div class="section-title">📊 Results Summary</div>
                     </div>
                     <div class="summary-grid">

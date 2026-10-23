@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { reportAPI, viewerAPI, userAPI } from '../utils/api.js';
 
-const Champions = ({ 
+const Champions = ({
   apiSource = 'staff', // 'staff', 'admin', or 'viewer'
+  year = null,
   className = ""
 }) => {
+  const currentYear = year ? parseInt(year) : new Date().getFullYear();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,33 +17,34 @@ const Champions = ({
   useEffect(() => {
     fetchChampions();
     fetchTopTemples();
-  }, [apiSource]);
+  }, [apiSource, currentYear]);
 
   const fetchChampions = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       let data;
-      
+      const params = { year: currentYear };
+
       // Fetch data based on API source
       switch (apiSource) {
         case 'staff':
-          data = await reportAPI.getChampions();
+          data = await reportAPI.getChampions(params);
           break;
-          
+
         case 'admin':
-          data = await reportAPI.getChampions();
+          data = await reportAPI.getChampions(params);
           break;
-          
+
         case 'viewer':
-          data = await viewerAPI.getChampions();
+          data = await viewerAPI.getChampions(params);
           break;
-          
+
         default:
           throw new Error('Invalid API source');
       }
-      
+
       setData(data);
     } catch (err) {
       console.error('Error fetching champions:', err);
@@ -55,9 +58,9 @@ const Champions = ({
     try {
       setLoadingTopTemples(true);
       setTopTemplesError(null);
-      
-      const temples = await userAPI.getAllTemples();
-      
+
+      const temples = await userAPI.getAllTemples({ year: currentYear });
+
       // Calculate total points for each temple and get top 5
       const topTemplesData = temples
         .map(temple => ({
@@ -67,7 +70,7 @@ const Champions = ({
         }))
         .sort((a, b) => b.total_points - a.total_points)
         .slice(0, 5); // Top 5 temples
-      
+
       setTopTemples(topTemplesData);
     } catch (err) {
       console.error('Error fetching top temples:', err);
@@ -143,11 +146,11 @@ const Champions = ({
   allChampions.sort((a, b) => {
     const ageOrderA = ageCategoryOrder[a.age_category] || 999;
     const ageOrderB = ageCategoryOrder[b.age_category] || 999;
-    
+
     if (ageOrderA !== ageOrderB) {
       return ageOrderA - ageOrderB;
     }
-    
+
     // Within same age category, sort by points (highest first)
     return b.points - a.points;
   });
@@ -221,8 +224,8 @@ const Champions = ({
                 <body>
                   <div class="header">
                     <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-                    <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                    <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                    <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+                    <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ  </div>
                     <div class="section-title">Overall Champions</div>
                   </div>
                   <table>
@@ -237,10 +240,10 @@ const Champions = ({
                       ${topTemples.map((temple, index) => `
                         <tr>
                           <td>
-                            ${index === 0 ? '🥇' : 
-                              index === 1 ? '🥈' : 
-                              index === 2 ? '🥉' : 
-                              index + 1}
+                            ${index === 0 ? '🥇' :
+                  index === 1 ? '🥈' :
+                    index === 2 ? '🥉' :
+                      index + 1}
                           </td>
                           <td>${temple.temple_name}</td>
                           <td><strong>${temple.total_points}</strong></td>
@@ -262,7 +265,7 @@ const Champions = ({
             🖨️ Print
           </button>
         </div>
-        
+
         {loadingTopTemples ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
@@ -344,7 +347,7 @@ const Champions = ({
                   '<table class="champions-table"><thead><tr>' +
                   '<th>SL.NO</th><th>Name</th><th>Temple</th><th>Aadhar No</th><th>Points</th><th>Events Won</th>' +
                   '</tr></thead><tbody>' +
-                  category.champions.map((champion, index) => 
+                  category.champions.map((champion, index) =>
                     '<tr><td>' + (index + 1) + '</td>' +
                     '<td>' + (champion.name || 'N/A') + '</td>' +
                     '<td>' + (champion.temple || 'N/A') + '</td>' +
@@ -383,8 +386,8 @@ const Champions = ({
                 <body>
                   <div class="header">
                     <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-                    <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                    <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                    <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+                    <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ </div>
                     <div class="section-title">Individual Champions</div>
                   </div>
                   ${groupedCategories.map(generateCategoryHtml).join('')}
@@ -402,7 +405,7 @@ const Champions = ({
             🖨️ Print All
           </button>
         </div>
-        
+
         <div className="space-y-6 p-4 sm:p-6">
           {groupedCategories.map((categoryGroup, categoryIndex) => (
             <div key={categoryIndex} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -438,8 +441,8 @@ const Champions = ({
                       <body>
                         <div class="header">
                           <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-                          <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-                          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+                          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+                          <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ </div>
                          <div class="section-title">Individual Champions</div>
                         </div>
                         <div class="category-header">${categoryGroup.category}</div>

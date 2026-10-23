@@ -4,7 +4,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 const Location = () => {
   const { isEnglish } = useLanguage();
 
-  
+
 
   return (
     <section className="w-[90%] mx-auto my-12">
@@ -22,13 +22,12 @@ const Location = () => {
             className="rounded-xl w-100 lg:w-[38rem] shadow-lg"
             width="100%"
             height="320"
-            frameBorder="0"
-            scrolling="no"
-            marginHeight="0"
-            marginWidth="0"
+            style={{ border: 0 }}
             title="Google Map"
-            src="https://maps.google.com/maps?width=100%25&amp;height=320&amp;hl=en&amp;q=Government%20Junior%20College%2C%20Karnad%2C%20Mulki%2C%20Karnataka%20574154+(Government%20Junior%20College)&amp;t=&amp;z=14&amp;ie=UTF8&amp;iwloc=B&amp;output=embed"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3882.2926247371597!2d74.74045887521196!3d13.332064606872637!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bbcbb72fab4a6cf%3A0x650cd705041331c9!2sMahatma%20Gandhi%20District%20Stadium!5e0!3m2!1sen!2sin!4v1792737049005!5m2!1sen!2sin"
             allowFullScreen
+            loading="lazy"
+            referrerPolicy="strict-origin-when-cross-origin"
           ></iframe>
         </div>
         <div className="w-full md:w-1/2 flex flex-col items-start md:items-center justify-center ">
@@ -59,13 +58,13 @@ const Location = () => {
             <p className="text-base text-start md:text-center text-[#5A5A5A] font-medium">
               {isEnglish ? (
                 <>
-                  Government Junior College <br />
-                  19-31, Karnad, Mulki, Karnataka 574154
+                  Mahatma Gandhi District Stadium <br />
+                  Ajjarkaad, Udupi, Karnataka 576101
                 </>
               ) : (
                 <>
-                  ಸರ್ಕಾರಿ ಪದವಿ ಪೂರ್ವ ಕಾಲೇಜು <br />
-                  19-31, ಕರ್ನಾಡ್, ಮುಲ್ಕಿ, ಕರ್ನಾಟಕ 574154
+                  ಮಹಾತ್ಮ ಗಾಂಧಿ ಕ್ರೀಡಾಂಗಣ, ಅಜ್ಜರಕಾಡು, <br />
+                  ಉಡುಪಿ, ಕರ್ನಾಟಕ 576101
                 </>
               )}
             </p>

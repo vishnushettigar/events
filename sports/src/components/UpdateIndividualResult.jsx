@@ -21,24 +21,24 @@ const UpdateIndividualResult = () => {
 
   // For collapsible event states
   const [collapsibleStates, setCollapsibleStates] = useState({});
-  
+
   // For event participants data
   const [eventParticipantsData, setEventParticipantsData] = useState({});
   const [loadingParticipants, setLoadingParticipants] = useState({});
   const [participantErrors, setParticipantErrors] = useState({});
-  
+
   // For tracking rank changes
   const [rankChanges, setRankChanges] = useState({});
-  
+
   // State for all heats data
   const [allHeatsData, setAllHeatsData] = useState({});
-  
+
   // State for selected heat per event
   const [selectedHeats, setSelectedHeats] = useState({});
-  
+
   // State for tracking if Final Heat is selected per event
   const [finalHeatSelected, setFinalHeatSelected] = useState({});
-  
+
   // State for lane count from settings
   const [laneCount, setLaneCount] = useState(8); // Default to 8 if not fetched
 
@@ -62,7 +62,7 @@ const UpdateIndividualResult = () => {
       }
       // If closing, just close this one
       return {
-      ...prev,
+        ...prev,
         [eventId]: false
       };
     });
@@ -70,13 +70,25 @@ const UpdateIndividualResult = () => {
 
   // Helper functions for participants data management
   const getEventParticipants = (eventId) => {
-    return eventParticipantsData[eventId] || [];
+    const list = eventParticipantsData[eventId] || [];
+    const currentYear = new Date().getFullYear();
+    return list.filter(p => {
+      const regYear = p.year ? Number(p.year) : (p.registered_at ? new Date(p.registered_at).getFullYear() : (p.created_at ? new Date(p.created_at).getFullYear() : null));
+      return regYear ? regYear === currentYear : true;
+    });
   };
 
   const setEventParticipants = (eventId, participants) => {
+    const currentYear = new Date().getFullYear();
+    const filteredParticipants = Array.isArray(participants)
+      ? participants.filter(p => {
+        const regYear = p.year ? Number(p.year) : (p.registered_at ? new Date(p.registered_at).getFullYear() : (p.created_at ? new Date(p.created_at).getFullYear() : null));
+        return regYear ? regYear === currentYear : true;
+      })
+      : [];
     setEventParticipantsData(prev => ({
       ...prev,
-      [eventId]: participants
+      [eventId]: filteredParticipants
     }));
   };
 
@@ -168,7 +180,7 @@ const UpdateIndividualResult = () => {
         ageCategory: selectedAge,
         gender: selectedGender
       });
-      
+
       // Filter out the 'All' option from age groups
       const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
       setAgeGroups(filteredAgeGroups);
@@ -234,7 +246,8 @@ const UpdateIndividualResult = () => {
   const handleParticipantAdded = async (eventId) => {
     // Refresh the participants data for the event
     try {
-      const updatedData = await eventAPI.getEventParticipants(eventId);
+      const currentYear = new Date().getFullYear();
+      const updatedData = await eventAPI.getEventParticipants(eventId, { year: currentYear });
       setEventParticipants(eventId, updatedData);
       showSuccessModal('Participant Added', 'Participant has been successfully added to the event.');
     } catch (error) {
@@ -255,7 +268,7 @@ const UpdateIndividualResult = () => {
     setModalMessage(message);
     setModalDetails(details);
     setShowModal(true);
-    
+
     // Auto-close success modal after 3 seconds
     setTimeout(() => {
       closeModal();
@@ -330,22 +343,23 @@ const UpdateIndividualResult = () => {
     try {
       console.log('Calling API with:', pendingUpdate.registrationId, pendingUpdate.rank);
       await eventAPI.updateIndividualResult(pendingUpdate.registrationId, pendingUpdate.rank);
-      
+
       // Close the confirmation modal
       closeModal();
-      
+
       // Refresh the participants data for the current event
       // We need to find which event this participant belongs to
-      const eventId = Object.keys(eventParticipantsData).find(id => 
+      const eventId = Object.keys(eventParticipantsData).find(id =>
         eventParticipantsData[id].some(p => p.id === pendingUpdate.registrationId)
       );
-      
+
       if (eventId) {
         console.log('Refreshing participants data for event:', eventId);
         try {
-          const updatedData = await eventAPI.getEventParticipants(eventId);
+          const currentYear = new Date().getFullYear();
+          const updatedData = await eventAPI.getEventParticipants(eventId, { year: currentYear });
           setEventParticipants(eventId, updatedData);
-          
+
           // Also refresh heats data if this is a heat event (needed for final heat rank updates)
           const currentEvent = events.find(e => e.id === parseInt(eventId));
           if (currentEvent && currentEvent.event_type && currentEvent.event_type.name) {
@@ -354,20 +368,20 @@ const UpdateIndividualResult = () => {
             if (isHeat) {
               console.log('Refreshing heats data for heat event:', eventId);
               try {
-                const updatedHeatsData = await eventAPI.getHeats(eventId);
+                const updatedHeatsData = await eventAPI.getHeats(eventId, { year: currentYear });
                 setHeatsData(eventId, updatedHeatsData); // Update parent state, which will trigger useEffect in CollapsibleEvent
               } catch (heatsError) {
                 console.error('Error refreshing heats data after individual update:', heatsError);
               }
             }
           }
-          
+
           console.log('Participants data refreshed successfully');
         } catch (refreshError) {
           console.error('Error refreshing participants data:', refreshError);
         }
       }
-      
+
       console.log('Result updated successfully');
     } catch (error) {
       console.error('Error updating individual result:', error);
@@ -390,10 +404,10 @@ const UpdateIndividualResult = () => {
   const handleBulkResultUpdate = async (eventId, eventName, ageCategory) => {
     // Preserve scroll position to prevent jumping to top
     const scrollY = window.scrollY;
-    
+
     const changes = getRankChanges(eventId);
     const changeEntries = Object.entries(changes);
-    
+
     if (changeEntries.length === 0) {
       showInfoModal('No Changes', 'No rank changes to update.');
       // Restore scroll position
@@ -408,16 +422,16 @@ const UpdateIndividualResult = () => {
       const participants = getEventParticipants(eventId);
       console.log('Available participants:', participants.map(p => ({ id: p.id, idType: typeof p.id, name: p.participant_name || p.team_name })));
       console.log('Change entries:', changeEntries.map(([id, rank]) => ({ id, idType: typeof id, rank })));
-      
+
       const changesList = changeEntries.map(([participantId, rank]) => {
         // Convert both IDs to strings for comparison to handle type mismatches
         const participant = participants.find(p => String(p.id) === String(participantId));
         console.log(`Looking for participant ${participantId} (${typeof participantId}):`, participant ? 'Found' : 'Not found');
-        
+
         if (!participant) {
           console.warn(`Participant with ID ${participantId} not found in event ${eventId}`);
         }
-        
+
         return {
           name: participant?.participant_name || participant?.team_name || 'Unknown',
           temple: participant?.temple_name || 'Unknown',
@@ -439,7 +453,7 @@ const UpdateIndividualResult = () => {
           changes: changes
         }
       );
-      
+
       // Restore scroll position after modal is shown
       setTimeout(() => {
         window.scrollTo(0, scrollY);
@@ -463,7 +477,7 @@ const UpdateIndividualResult = () => {
 
     const { eventId, eventName, ageCategory, changes } = pendingUpdate;
     const changeEntries = Object.entries(changes);
-    
+
     try {
       // Update each participant
       for (const [participantId, rank] of changeEntries) {
@@ -472,11 +486,12 @@ const UpdateIndividualResult = () => {
 
       // Clear the rank changes
       clearRankChanges(eventId);
-      
+
       // Refresh the participants data
-      const updatedData = await eventAPI.getEventParticipants(eventId);
+      const currentYear = new Date().getFullYear();
+      const updatedData = await eventAPI.getEventParticipants(eventId, { year: currentYear });
       setEventParticipants(eventId, updatedData);
-      
+
       // Also refresh heats data if this is a heat event (needed for final heat rank updates)
       const currentEvent = events.find(e => e.id === parseInt(eventId));
       if (currentEvent && currentEvent.event_type && currentEvent.event_type.name) {
@@ -485,22 +500,22 @@ const UpdateIndividualResult = () => {
         if (isHeat) {
           console.log('Bulk update - refreshing heats data for heat event:', eventId);
           try {
-            const updatedHeatsData = await eventAPI.getHeats(eventId);
+            const updatedHeatsData = await eventAPI.getHeats(eventId, { year: currentYear });
             setHeatsData(eventId, updatedHeatsData); // Update parent state, which will trigger useEffect in CollapsibleEvent
           } catch (heatsError) {
             console.error('Error refreshing heats data after bulk update:', heatsError);
           }
         }
       }
-      
+
       // Close the confirmation modal and show success modal
       closeModal();
-      
+
       // Restore scroll position after DOM updates
       setTimeout(() => {
         window.scrollTo(0, scrollY);
       }, 0);
-      
+
       // Use setTimeout to ensure the confirmation modal closes before showing success
       setTimeout(() => {
         showSuccessModal(
@@ -516,7 +531,7 @@ const UpdateIndividualResult = () => {
           window.scrollTo(0, scrollY);
         }, 0);
       }, 100);
-      
+
       console.log('Bulk result update successful');
     } catch (error) {
       console.error('Error updating bulk results:', error);
@@ -536,12 +551,12 @@ const UpdateIndividualResult = () => {
   };
 
   // Collapsible component for events
-  const CollapsibleEvent = ({ 
-    title, 
-    eventId, 
-    ageCategory, 
-    gender, 
-    isOpen, 
+  const CollapsibleEvent = ({
+    title,
+    eventId,
+    ageCategory,
+    gender,
+    isOpen,
     setIsOpen,
     getEventParticipants,
     setEventParticipants,
@@ -566,7 +581,7 @@ const UpdateIndividualResult = () => {
     const eventParticipants = getEventParticipants(eventId);
     const loadingParticipants = getLoadingParticipants(eventId);
     const participantError = getParticipantError(eventId);
-    
+
     // Get heats and selectedHeat from parent state, and manage local states
     const [trialMeasurements, setTrialMeasurements] = useState({});
     const [heats, setHeats] = useState(() => getHeatsData(eventId)); // Initialize from parent state
@@ -589,7 +604,7 @@ const UpdateIndividualResult = () => {
           name: p.participant_name || p.team_name,
           timing: p.timing
         })));
-        
+
         // Verify all participants have valid IDs
         const allIds = finalHeatParticipants.map(p => String(p.id));
         console.log('All participant IDs (as strings):', allIds);
@@ -600,14 +615,14 @@ const UpdateIndividualResult = () => {
 
     // Use ref to track previous parent heats data to detect changes
     const prevParentHeatsRef = React.useRef({});
-    
+
     // Sync local heats state with parent state when eventId changes
     React.useEffect(() => {
       const parentHeats = getHeatsData(eventId);
       if (Object.keys(parentHeats).length > 0) {
         setHeats(parentHeats);
         prevParentHeatsRef.current[eventId] = parentHeats;
-        
+
         // Also ensure selectedHeat is set if it's the first time loading
         // But don't reset if Final Heat is currently selected
         const currentSelectedHeat = getSelectedHeat(eventId);
@@ -617,18 +632,18 @@ const UpdateIndividualResult = () => {
           setSelectedHeatForEvent(eventId, heatNumbers[0]);
         }
       }
-      
+
       // Sync showFinalHeat with parent's finalHeatSelected state
       const isFinalSelected = isFinalHeatSelected(eventId);
       setShowFinalHeat(isFinalSelected);
     }, [eventId]); // Run when eventId changes
-    
+
     // Check for parent heats data changes on every render (for rank updates)
     React.useEffect(() => {
       const parentHeats = getHeatsData(eventId);
       const parentHeatsStr = JSON.stringify(parentHeats);
       const prevParentHeatsStr = JSON.stringify(prevParentHeatsRef.current[eventId] || {});
-      
+
       // Update if parent heats data changed (e.g., after rank update)
       if (Object.keys(parentHeats).length > 0 && parentHeatsStr !== prevParentHeatsStr) {
         setHeats(parentHeats);
@@ -664,7 +679,7 @@ const UpdateIndividualResult = () => {
           return prevParticipants.map(prevParticipant => {
             let updatedParticipant = null;
             let foundHeatNumber = null;
-            
+
             // First, search through all heats to find this participant with updated data
             for (const [heatNumber, heatParticipants] of Object.entries(heats)) {
               const found = heatParticipants.find(p => String(p.id) === String(prevParticipant.id));
@@ -674,10 +689,10 @@ const UpdateIndividualResult = () => {
                 break;
               }
             }
-            
+
             // Also check eventParticipants for rank data (result.rank) - this is where ranks are stored
             const participantWithRank = eventParticipants.find(p => String(p.id) === String(prevParticipant.id));
-            
+
             // Merge data: use heats data for performance/timing, but use eventParticipants for rank data
             if (updatedParticipant || participantWithRank) {
               return {
@@ -690,7 +705,7 @@ const UpdateIndividualResult = () => {
                 heatNumber: prevParticipant.heatNumber || foundHeatNumber
               };
             }
-            
+
             // If not found, return original participant
             return prevParticipant;
           });
@@ -736,7 +751,7 @@ const UpdateIndividualResult = () => {
     const saveHeatTimings = async () => {
       // Preserve scroll position to prevent jumping to top
       const scrollY = window.scrollY;
-      
+
       if (showFinalHeat) {
         // Save final heat timings - only update performance_2
         if (!finalHeatParticipants || finalHeatParticipants.length === 0) {
@@ -746,10 +761,10 @@ const UpdateIndividualResult = () => {
           }, 0);
           return;
         }
-        
+
         try {
           setSavingTimings(true);
-          
+
           // Only include participants that have actual final time values (not empty)
           const timingsArray = finalHeatParticipants
             .filter(participant => {
@@ -762,10 +777,10 @@ const UpdateIndividualResult = () => {
               performance_2: String(timings[`${participant.id}_performance_2`] || participant.performance_2 || ''), // Convert to string
               performance_3: '' // Not used for heat events
             }));
-          
+
           console.log(`Updating final heat timings (performance_2 only):`, timingsArray);
           console.log(`Only sending ${timingsArray.length} participants with final times out of ${finalHeatParticipants.length} total participants`);
-          
+
           if (timingsArray.length === 0) {
             showInfoModal('No Final Times', 'Please enter at least one final time before saving.');
             // Restore scroll position
@@ -774,19 +789,20 @@ const UpdateIndividualResult = () => {
             }, 0);
             return;
           }
-          
+
           await eventAPI.saveFinalTimings(eventId, timingsArray);
           console.log('Final heat timings updated successfully');
-          
+
           // Refresh heats to get updated data (force refresh after successful save)
           // Fetch the updated heats data directly to use for updating finalHeatParticipants
-          const updatedHeatsData = await eventAPI.getHeats(eventId);
+          const currentYear = new Date().getFullYear();
+          const updatedHeatsData = await eventAPI.getHeats(eventId, { year: currentYear });
           console.log('Refreshed heats data after saving final timings:', updatedHeatsData);
-          
+
           // Update heats state with refreshed data
           setHeats(updatedHeatsData);
           setHeatsData(eventId, updatedHeatsData); // Update parent state
-          
+
           // Update finalHeatParticipants with refreshed performance_2 values from updated heats
           // Since participants in finalHeatParticipants come from different heats,
           // we need to find each participant in the refreshed heats and update their performance_2
@@ -809,10 +825,10 @@ const UpdateIndividualResult = () => {
               return updatedParticipant;
             });
           });
-          
+
           // Clear the local timings state since data is now saved
           setTimings({});
-          
+
           showSuccessModal(
             'Final Heat Timings Updated',
             `Final heat timings have been updated successfully!`,
@@ -821,7 +837,7 @@ const UpdateIndividualResult = () => {
               total: finalHeatParticipants.length
             }
           );
-          
+
           // Restore scroll position after modal is shown
           setTimeout(() => {
             window.scrollTo(0, scrollY);
@@ -851,10 +867,10 @@ const UpdateIndividualResult = () => {
           }, 0);
           return;
         }
-        
+
         try {
           setSavingTimings(true);
-          
+
           // Only include participants that have actual heat time values (not empty)
           const timingsArray = heats[selectedHeat]
             .filter(participant => {
@@ -867,10 +883,10 @@ const UpdateIndividualResult = () => {
               performance_2: String(participant.performance_2 || ''), // Keep existing final time as string
               performance_3: '' // Not used for heat events
             }));
-          
+
           console.log(`Updating heat timings (performance_1 only):`, timingsArray);
           console.log(`Only sending ${timingsArray.length} participants with heat times out of ${heats[selectedHeat].length} total participants`);
-          
+
           if (timingsArray.length === 0) {
             showInfoModal('No Heat Times', 'Please enter at least one heat time before saving.');
             // Restore scroll position
@@ -879,16 +895,16 @@ const UpdateIndividualResult = () => {
             }, 0);
             return;
           }
-          
+
           await eventAPI.saveTimings(eventId, selectedHeat, timingsArray);
           console.log('Heat timings updated successfully');
-          
+
           // Refresh heats to get updated data (force refresh after successful save)
           await fetchHeats(true);
-          
+
           // Clear the local timings state since data is now saved
           setTimings({});
-          
+
           showSuccessModal(
             'Heat Timings Updated Successfully',
             `Heat timings for Heat ${selectedHeat} have been updated successfully!`,
@@ -898,7 +914,7 @@ const UpdateIndividualResult = () => {
               total: heats[selectedHeat]?.length || 0
             }
           );
-          
+
           // Restore scroll position after DOM updates and modal is shown
           setTimeout(() => {
             window.scrollTo(0, scrollY);
@@ -927,7 +943,7 @@ const UpdateIndividualResult = () => {
     const saveTrials = async () => {
       // Preserve scroll position to prevent jumping to top
       const scrollY = window.scrollY;
-      
+
       if (!isTrialEvent()) {
         // Restore scroll position
         setTimeout(() => {
@@ -935,19 +951,19 @@ const UpdateIndividualResult = () => {
         }, 0);
         return;
       }
-      
+
       try {
         setSavingTrials(true);
-        
+
         // Only include participants that have actual trial values (not empty)
         const trialsArray = eventParticipants
           .filter(participant => {
             const trial1 = trialMeasurements[`${participant.id}_1`];
             const trial2 = trialMeasurements[`${participant.id}_2`];
             const trial3 = trialMeasurements[`${participant.id}_3`];
-            return (trial1 && trial1.trim() !== '') || 
-                   (trial2 && trial2.trim() !== '') || 
-                   (trial3 && trial3.trim() !== '');
+            return (trial1 && trial1.trim() !== '') ||
+              (trial2 && trial2.trim() !== '') ||
+              (trial3 && trial3.trim() !== '');
           })
           .map(participant => ({
             registration_id: participant.id,
@@ -955,10 +971,10 @@ const UpdateIndividualResult = () => {
             performance_2: String(trialMeasurements[`${participant.id}_2`] || participant.performance_2 || ''), // Convert to string
             performance_3: String(trialMeasurements[`${participant.id}_3`] || participant.performance_3 || '') // Convert to string
           }));
-        
+
         console.log(`Updating trials for event ${eventId}:`, trialsArray);
         console.log(`Only sending ${trialsArray.length} participants with trials out of ${eventParticipants.length} total participants`);
-        
+
         if (trialsArray.length === 0) {
           showInfoModal('No Trials', 'Please enter at least one trial measurement before saving.');
           // Restore scroll position
@@ -967,17 +983,18 @@ const UpdateIndividualResult = () => {
           }, 0);
           return;
         }
-        
+
         await eventAPI.saveTrials(eventId, trialsArray);
         console.log('Trials updated successfully');
-        
+
         // Refresh the participants data to show updated trial measurements
-        const updatedData = await eventAPI.getEventParticipants(eventId);
+        const currentYear = new Date().getFullYear();
+        const updatedData = await eventAPI.getEventParticipants(eventId, { year: currentYear });
         setEventParticipants(eventId, updatedData);
-        
+
         // Clear the local trial measurements state since data is now saved
         setTrialMeasurements({});
-        
+
         showSuccessModal(
           'Trials Updated',
           `Trial measurements have been updated successfully!`,
@@ -987,7 +1004,7 @@ const UpdateIndividualResult = () => {
             total: eventParticipants.length
           }
         );
-        
+
         // Restore scroll position after modal is shown
         setTimeout(() => {
           window.scrollTo(0, scrollY);
@@ -1014,33 +1031,45 @@ const UpdateIndividualResult = () => {
     // Fetch heats from backend - ADD CHECK FOR EXISTING DATA
     const fetchHeats = async (forceRefresh = false) => {
       console.log('fetchHeats called for event:', title, 'eventId:', eventId, 'forceRefresh:', forceRefresh);
-      
+
       if (!isHeatEvent()) {
         console.log('Not a heat event, skipping heat fetch');
         return;
       }
-      
+
       // Check if heats are already in state
       if (!forceRefresh && Object.keys(heats).length > 0) {
         console.log('Heats already fetched, skipping API call.');
         return;
       }
-      
+
       try {
         console.log(`Fetching heats for eventId: ${eventId}`);
         setLoadingHeats(true);
-        const heatsData = await eventAPI.getHeats(eventId);
+        const currentYear = new Date().getFullYear();
+        const heatsData = await eventAPI.getHeats(eventId, { year: currentYear });
         console.log('Heats data received:', heatsData);
         console.log('Number of heats:', Object.keys(heatsData).length);
-        
+
+        // Ensure only current year participants in heats
+        const filteredHeats = {};
+        Object.entries(heatsData || {}).forEach(([heatNum, participants]) => {
+          filteredHeats[heatNum] = Array.isArray(participants)
+            ? participants.filter(p => {
+              const regYear = p.year ? Number(p.year) : (p.registered_at ? new Date(p.registered_at).getFullYear() : (p.created_at ? new Date(p.created_at).getFullYear() : null));
+              return regYear ? regYear === currentYear : true;
+            })
+            : [];
+        });
+
         // Update both local and parent state
-        setHeats(heatsData);
-        setHeatsData(eventId, heatsData); // Update parent state
-        
+        setHeats(filteredHeats);
+        setHeatsData(eventId, filteredHeats); // Update parent state
+
         // Preserve existing selectedHeat - only set if null or invalid
         const heatNumbers = Object.keys(heatsData).map(Number).sort((a, b) => a - b);
         console.log('Heat numbers found:', heatNumbers);
-        
+
         // Check if the current selected heat is still valid or if one needs to be set
         // But don't reset if Final Heat is currently selected
         const currentSelectedHeat = getSelectedHeat(eventId);
@@ -1074,12 +1103,13 @@ const UpdateIndividualResult = () => {
         console.log('Not a trial event, skipping trial fetch');
         return;
       }
-      
+
       try {
         console.log(`Fetching trials for eventId: ${eventId}`);
-        const trialsData = await eventAPI.getTrials(eventId);
+        const currentYear = new Date().getFullYear();
+        const trialsData = await eventAPI.getTrials(eventId, { year: currentYear });
         console.log('Trials data received:', trialsData);
-        
+
         // Convert the trials data to the format expected by trialMeasurements state
         const trialsMap = {};
         Object.entries(trialsData).forEach(([registrationId, trialData]) => {
@@ -1087,7 +1117,7 @@ const UpdateIndividualResult = () => {
           if (trialData.performance_2) trialsMap[`${registrationId}_2`] = trialData.performance_2.toString();
           if (trialData.performance_3) trialsMap[`${registrationId}_3`] = trialData.performance_3.toString();
         });
-        
+
         setTrialMeasurements(trialsMap);
         console.log('Trial measurements set:', trialsMap);
       } catch (error) {
@@ -1102,13 +1132,13 @@ const UpdateIndividualResult = () => {
         console.log('Invalid timing input:', timing);
         return Infinity;
       }
-      
+
       // Clean the timing string (remove extra spaces, etc.)
       const cleanTiming = timing.toString().trim();
-      
+
       // Handle formats like "12.34", "1:23.45", "00:12.34", "1:23:45.67"
       const parts = cleanTiming.split(':');
-      
+
       if (parts.length === 3) {
         // Format: HH:MM:SS.ss
         const hours = parseInt(parts[0]) || 0;
@@ -1141,18 +1171,18 @@ const UpdateIndividualResult = () => {
       console.log('Getting all participants with timings...');
       console.log('Current heats:', heats);
       console.log('Current timings state:', timings);
-      
+
       const allParticipants = [];
-      
+
       // Iterate through each heat
       Object.entries(heats).forEach(([heatNumber, heatParticipants]) => {
         console.log(`Processing Heat ${heatNumber} with ${heatParticipants.length} participants`);
-        
+
         heatParticipants.forEach(participant => {
           // Priority: saved performance_1 from database > current timings state
           const timing = participant.performance_1 || timings[participant.id];
           const timingSeconds = parseTiming(timing);
-          
+
           console.log(`Heat ${heatNumber} - Participant ${participant.id} (${participant.participant_name}):`, {
             performance_1: participant.performance_1,
             performance_2: participant.performance_2,
@@ -1162,7 +1192,7 @@ const UpdateIndividualResult = () => {
             timing_seconds: timingSeconds,
             temple: participant.temple_name
           });
-          
+
           if (timing && timing !== '' && timingSeconds !== Infinity) {
             allParticipants.push({
               ...participant,
@@ -1173,7 +1203,7 @@ const UpdateIndividualResult = () => {
           }
         });
       });
-      
+
       console.log(`Found ${allParticipants.length} participants with valid timings:`, allParticipants);
       return allParticipants;
     };
@@ -1184,10 +1214,10 @@ const UpdateIndividualResult = () => {
         console.log('=== GENERATING FINAL HEAT ===');
         console.log('Current heats:', heats);
         console.log('Current timings state:', timings);
-        
+
         const participantsWithTimings = getAllParticipantsWithTimings();
         console.log('Participants with timings found:', participantsWithTimings.length);
-        
+
         if (participantsWithTimings.length === 0) {
           console.warn('No participants with timings found');
           console.log('Heats data:', heats);
@@ -1207,25 +1237,25 @@ const UpdateIndividualResult = () => {
           setFinalHeatParticipants([]);
           return;
         }
-        
+
         // Sort by timing (fastest first)
         const sortedParticipants = [...participantsWithTimings].sort((a, b) => a.timingSeconds - b.timingSeconds);
-        
+
         console.log('=== FINAL HEAT GENERATION ===');
         console.log(`Total participants with timings: ${participantsWithTimings.length}`);
         console.log('All participants sorted by time:');
         sortedParticipants.forEach((participant, index) => {
           console.log(`${index + 1}. ${participant.participant_name} (${participant.temple_name}) - Heat ${participant.heatNumber} - ${participant.timing} (${participant.timingSeconds}s)`);
         });
-        
+
         // Take top participants based on lane_count
         const topParticipants = sortedParticipants.slice(0, laneCount);
-        
+
         console.log(`\n=== TOP ${laneCount} FOR FINAL HEAT ===`);
         topParticipants.forEach((participant, index) => {
           console.log(`${index + 1}. ${participant.participant_name} (${participant.temple_name}) - Heat ${participant.heatNumber} - ${participant.timing} (${participant.timingSeconds}s)`);
         });
-        
+
         // Show heat distribution
         const heatDistribution = {};
         topParticipants.forEach(participant => {
@@ -1233,12 +1263,12 @@ const UpdateIndividualResult = () => {
           heatDistribution[heat] = (heatDistribution[heat] || 0) + 1;
         });
         console.log('Heat distribution in final:', heatDistribution);
-        
+
         // Update state - ensure we're setting the correct data
         console.log(`Setting final heat participants: ${topParticipants.length}`);
         console.log(`Top ${laneCount} participants data:`, topParticipants);
         console.log(`Top ${laneCount} participant IDs:`, topParticipants.map(p => p.id));
-        
+
         // Set the final heat participants directly
         // Create a new array to ensure React detects the change
         // Preserve all original properties and ensure ID is consistent
@@ -1246,7 +1276,7 @@ const UpdateIndividualResult = () => {
         const newFinalHeatParticipants = topParticipants.map(p => {
           // Find corresponding participant in eventParticipants to get rank data
           const participantWithRank = eventParticipants.find(ep => String(ep.id) === String(p.id));
-          
+
           const participant = {
             ...p,
             // Ensure ID is preserved as-is (could be string or number)
@@ -1261,26 +1291,26 @@ const UpdateIndividualResult = () => {
           };
           return participant;
         });
-        
+
         console.log('New final heat participants array:', newFinalHeatParticipants);
         console.log('Participant IDs in final heat:', newFinalHeatParticipants.map(p => ({ id: p.id, type: typeof p.id })));
-        
+
         // Force a state update by creating a completely new array reference
         setFinalHeatParticipants([...newFinalHeatParticipants]);
         setShowFinalHeat(true);
         setFinalHeatSelectedForEvent(eventId, true);
-        
+
         // Log for debugging
         console.log('State update called with', newFinalHeatParticipants.length, 'participants');
-        
+
         // Verify the state was set
         console.log('✅ Final heat participants state updated');
         console.log('State should now contain:', newFinalHeatParticipants.length, 'participants');
-        
+
         // Success - final heat generated
         const heatCounts = Object.entries(heatDistribution).map(([heat, count]) => `Heat ${heat}: ${count}`).join(', ');
         console.log(`✅ Final heat generated successfully! Top ${laneCount} participants selected from all heats: ${heatCounts}`);
-        
+
       } catch (error) {
         console.error('❌ Error generating final heat:', error);
         console.error('Error stack:', error.stack);
@@ -1290,11 +1320,11 @@ const UpdateIndividualResult = () => {
     // Handle final heat participant selection
     const handleFinalHeatSelection = (participantId, isSelected) => {
       const participantIdStr = String(participantId);
-      
+
       if (isSelected) {
         // Add to final heat if not already there
         let participant = null;
-        
+
         // Find participant in heats data - compare as strings
         Object.values(heats).forEach(heatParticipants => {
           const found = heatParticipants.find(p => String(p.id) === participantIdStr);
@@ -1302,15 +1332,15 @@ const UpdateIndividualResult = () => {
             participant = found;
           }
         });
-        
+
         // Fallback to eventParticipants if not found in heats
         if (!participant) {
           participant = eventParticipants.find(p => String(p.id) === participantIdStr);
         }
-        
+
         // Check if already in final heat - compare as strings
         const alreadySelected = finalHeatParticipants.find(p => String(p.id) === participantIdStr);
-        
+
         if (participant && !alreadySelected) {
           setFinalHeatParticipants(prev => [...prev, {
             ...participant,
@@ -1329,7 +1359,7 @@ const UpdateIndividualResult = () => {
       const printWindow = window.open('', '_blank');
       let participantsToPrint = eventParticipants;
       let printTitle = title;
-      
+
       if (isHeatEvent()) {
         if (showFinalHeat) {
           participantsToPrint = finalHeatParticipants;
@@ -1339,7 +1369,7 @@ const UpdateIndividualResult = () => {
           printTitle = `${title} - Heat ${selectedHeat}`;
         }
       }
-      
+
       const printContent = `
         <!DOCTYPE html>
         <html>
@@ -1374,8 +1404,8 @@ const UpdateIndividualResult = () => {
         <body>
           <div class="header">
             <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-            <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯೀ ದೇವಸ್ಥಾನ ಮಾನಂಪಾಡಿ - ಮುಲ್ಕಿ ; ನೇತೃತ್ವ- ಪದ್ಮಶಾಲಿ ಯುವ ವೇದಿಕೆ, ಮುಲ್ಕಿ  </div>
+            <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+            <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ </div>
             <div class="event-details">
               <span><strong>Age Category:</strong> ${ageCategory}</span>
               <span><strong>Gender:</strong> ${gender}</span>
@@ -1414,37 +1444,36 @@ const UpdateIndividualResult = () => {
             </thead>
             <tbody>
               ${participantsToPrint.map((participant, index) => {
-                const participantName = participant.participant_name || participant.team_name;
-                const resultDisplay = participant.result?.rank 
-                  ? `<span class="result-badge ${participant.result.rank.toLowerCase()}">${
-                      participant.result.rank === 'FIRST' ? '🥇 1st' :
-                      participant.result.rank === 'SECOND' ? '🥈 2nd' :
-                      participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank
-                    }</span>`
-                  : '';
-                
-                const trial1 = trialMeasurements[`${participant.id}_1`] || '';
-                const trial2 = trialMeasurements[`${participant.id}_2`] || '';
-                const trial3 = trialMeasurements[`${participant.id}_3`] || '';
-                const timing = participant.performance_1 || participant.timing || timings[participant.id] || '';
-                const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
-                
-                // Format date of birth as DD/MM/YYYY
-                const formatDob = (dateString) => {
-                  if (!dateString) return 'N/A';
-                  try {
-                    const date = new Date(dateString);
-                    const day = String(date.getDate()).padStart(2, '0');
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const year = String(date.getFullYear());
-                    return day + '/' + month + '/' + year;
-                  } catch (error) {
-                    return 'N/A';
-                  }
-                };
-                const dob = formatDob(participant.date_of_birth);
-                
-                return `
+        const participantName = participant.participant_name || participant.team_name;
+        const resultDisplay = participant.result?.rank
+          ? `<span class="result-badge ${participant.result.rank.toLowerCase()}">${participant.result.rank === 'FIRST' ? '🥇 1st' :
+            participant.result.rank === 'SECOND' ? '🥈 2nd' :
+              participant.result.rank === 'THIRD' ? '🥉 3rd' : participant.result.rank
+          }</span>`
+          : '';
+
+        const trial1 = trialMeasurements[`${participant.id}_1`] || '';
+        const trial2 = trialMeasurements[`${participant.id}_2`] || '';
+        const trial3 = trialMeasurements[`${participant.id}_3`] || '';
+        const timing = participant.performance_1 || participant.timing || timings[participant.id] || '';
+        const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
+
+        // Format date of birth as DD/MM/YYYY
+        const formatDob = (dateString) => {
+          if (!dateString) return 'N/A';
+          try {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = String(date.getFullYear());
+            return day + '/' + month + '/' + year;
+          } catch (error) {
+            return 'N/A';
+          }
+        };
+        const dob = formatDob(participant.date_of_birth);
+
+        return `
                   <tr>
                     <td>${index + 1}</td>
                     <td>${participantName}</td>
@@ -1460,7 +1489,7 @@ const UpdateIndividualResult = () => {
                     <td>${resultDisplay}</td>
                   </tr>
                 `;
-              }).join('')}
+      }).join('')}
               ${[1, 2, 3, 4, 5].map((_, index) => `
                 <tr>
                   <td>${participantsToPrint.length + index + 1}</td>
@@ -1482,7 +1511,7 @@ const UpdateIndividualResult = () => {
         </body>
         </html>
       `;
-      
+
       printWindow.document.write(printContent);
       printWindow.document.close();
       printWindow.focus();
@@ -1496,16 +1525,17 @@ const UpdateIndividualResult = () => {
         console.log('Participants already loaded, skipping participant fetch');
         return;
       }
-      
+
       try {
         console.log(`Fetching participants for event: ${title} (${eventId})`);
         setLoadingParticipantsState(eventId, true);
         setParticipantError(eventId, null);
-        
-        // Fetch participants
-        const data = await eventAPI.getEventParticipants(eventId);
+
+        // Fetch participants for current year
+        const currentYear = new Date().getFullYear();
+        const data = await eventAPI.getEventParticipants(eventId, { year: currentYear });
         setEventParticipants(eventId, data);
-        
+
       } catch (err) {
         console.error('Error fetching event participants:', err);
         setParticipantError(eventId, err.message);
@@ -1517,21 +1547,21 @@ const UpdateIndividualResult = () => {
     const handleToggle = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
+
       // Preserve scroll position to prevent jumping to top
       const scrollY = window.scrollY;
-      
+
       if (!isOpen) {
         fetchEventParticipants();
         fetchTrials(); // Fetch trial data for trial events
-        
+
         // Call fetchHeats here only when opening
         if (isHeatEvent()) {
           fetchHeats();
         }
       }
       setIsOpen(!isOpen);
-      
+
       // Restore scroll position after React updates the DOM
       // Use setTimeout to ensure DOM has been updated
       setTimeout(() => {
@@ -1549,7 +1579,7 @@ const UpdateIndividualResult = () => {
     };
 
     return (
-      <div 
+      <div
         className="border border-gray-200 rounded-lg mb-3 transition-all duration-200"
       >
         <div className="sticky top-16 z-30 bg-[#F0F0F0]  flex justify-between items-center">
@@ -1559,10 +1589,10 @@ const UpdateIndividualResult = () => {
             onClick={handleToggle}
           >
             <span className="font-medium text-sm md:text-base text-[#2A2A2A]">{title}</span>
-            <svg 
+            <svg
               className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 lg:w-7 lg:h-7 text-[#5A5A5A] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-              fill="none" 
-              stroke="currentColor" 
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -1599,71 +1629,69 @@ const UpdateIndividualResult = () => {
                     {/* Header Row - Label and Refresh Button */}
                     <div className="flex items-center justify-between mb-3">
                       <label className="text-sm md:text-base font-semibold text-[#2A2A2A]">Select Heat:</label>
-                        <button
-                          onClick={() => fetchHeats(true)}
+                      <button
+                        onClick={() => fetchHeats(true)}
                         className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
-                          title="Refresh heats"
-                        >
-                          🔄 Refresh
-                        </button>
+                        title="Refresh heats"
+                      >
+                        🔄 Refresh
+                      </button>
                     </div>
-                    
+
                     {/* Heat Selection Chips - Horizontal Scrollable */}
                     <div className="overflow-x-auto scrollbar-hide">
                       <div className="flex gap-2 pb-2 pl-1 min-w-max">
-                          {Object.keys(heats).map((heatNumber) => (
-                            <button
-                              key={heatNumber}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                
-                                setSelectedHeatForEvent(eventId, parseInt(heatNumber));
-                                setShowFinalHeat(false);
-                                setFinalHeatSelectedForEvent(eventId, false);
-                              }}
-                            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
-                                selectedHeat === parseInt(heatNumber) && !showFinalHeat
-                                ? 'bg-[#D35D38] text-white shadow-md scale-105'
-                                : 'bg-white text-[#2A2A2A] hover:bg-gray-100 hover:shadow-sm border border-gray-200'
+                        {Object.keys(heats).map((heatNumber) => (
+                          <button
+                            key={heatNumber}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+
+                              setSelectedHeatForEvent(eventId, parseInt(heatNumber));
+                              setShowFinalHeat(false);
+                              setFinalHeatSelectedForEvent(eventId, false);
+                            }}
+                            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${selectedHeat === parseInt(heatNumber) && !showFinalHeat
+                              ? 'bg-[#D35D38] text-white shadow-md scale-105'
+                              : 'bg-white text-[#2A2A2A] hover:bg-gray-100 hover:shadow-sm border border-gray-200'
                               }`}
-                            >
+                          >
                             Heat {heatNumber}
                             <span className="ml-1 text-[10px] md:text-xs opacity-75">({heats[heatNumber].length})</span>
-                            </button>
-                          ))}
-                          {Object.keys(heats).length > 0 && (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                
-                                console.log('🏁 Final Heat button clicked');
-                                console.log('Current heats:', heats);
-                                console.log('Current timings:', timings);
-                                
-                                // Set Final Heat as selected first
-                                setShowFinalHeat(true);
-                                setFinalHeatSelectedForEvent(eventId, true);
-                                setSelectedHeatForEvent(eventId, null);
-                                
-                                // Immediately generate final heat - it will check for participants with timings
-                                console.log('Calling generateFinalHeat immediately...');
-                                generateFinalHeat();
-                              }}
-                            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${
-                                showFinalHeat
-                                ? 'bg-green-600 text-white shadow-md scale-105'
-                                : 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-sm border border-green-300'
+                          </button>
+                        ))}
+                        {Object.keys(heats).length > 0 && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+
+                              console.log('🏁 Final Heat button clicked');
+                              console.log('Current heats:', heats);
+                              console.log('Current timings:', timings);
+
+                              // Set Final Heat as selected first
+                              setShowFinalHeat(true);
+                              setFinalHeatSelectedForEvent(eventId, true);
+                              setSelectedHeatForEvent(eventId, null);
+
+                              // Immediately generate final heat - it will check for participants with timings
+                              console.log('Calling generateFinalHeat immediately...');
+                              generateFinalHeat();
+                            }}
+                            className={`px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-medium transition-all whitespace-nowrap ${showFinalHeat
+                              ? 'bg-green-600 text-white shadow-md scale-105'
+                              : 'bg-green-100 text-green-800 hover:bg-green-200 hover:shadow-sm border border-green-300'
                               }`}
-                            >
+                          >
                             🏁 Final Heat
                             <span className="ml-1 text-[10px] md:text-xs opacity-75">({finalHeatParticipants.length}/{laneCount})</span>
-                            </button>
-                          )}
-                        </div>
+                          </button>
+                        )}
                       </div>
-                    
+                    </div>
+
                     {/* Selected Heat Info */}
                     {selectedHeat && (
                       <div className="hidden md:block mt-3 text-xs md:text-sm text-[#5A5A5A] bg-white p-2 rounded">
@@ -1721,7 +1749,7 @@ const UpdateIndividualResult = () => {
                           Auto Select Top {laneCount}
                         </button>
                       </div>
-                      
+
                       <div className="bg-white p-3 rounded border">
                         <h5 className="font-medium text-[#2A2A2A] mb-2">Final Heat Participants ({finalHeatParticipants.length}/{laneCount})</h5>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -1743,7 +1771,7 @@ const UpdateIndividualResult = () => {
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="bg-white p-3 rounded border">
                         <h5 className="font-medium text-[#2A2A2A] mb-2">All Participants with Timings</h5>
                         <div className="max-h-60 overflow-y-auto">
@@ -1761,7 +1789,7 @@ const UpdateIndividualResult = () => {
                               {(() => {
                                 const sortedParticipants = getAllParticipantsWithTimings()
                                   .sort((a, b) => a.timingSeconds - b.timingSeconds);
-                                
+
                                 return sortedParticipants.map((participant, index) => {
                                   // Simple: Top participants (based on lane_count) are automatically selected
                                   // OR if they're already in finalHeatParticipants
@@ -1769,7 +1797,7 @@ const UpdateIndividualResult = () => {
                                   const isInFinalHeat = finalHeatParticipants.some(p => String(p.id) === participantIdStr);
                                   const isTopParticipant = index < laneCount;
                                   const isSelected = isInFinalHeat || isTopParticipant;
-                                  
+
                                   // Find which heat this participant belongs to
                                   let heatNumber = 0;
                                   Object.entries(heats).forEach(([heatNum, heatParticipants]) => {
@@ -1777,7 +1805,7 @@ const UpdateIndividualResult = () => {
                                       heatNumber = parseInt(heatNum);
                                     }
                                   });
-                                  
+
                                   return (
                                     <tr key={participant.id} className="border-b">
                                       <td className="px-2 py-1">
@@ -1804,8 +1832,8 @@ const UpdateIndividualResult = () => {
                     </div>
                   </div>
                 )}
-                 {/*  trial event code start from here */}
-                
+                {/*  trial event code start from here */}
+
                 {/* Action buttons for mobile - shown above cards */}
                 <div className="md:hidden sticky top-[100px] z-20 bg-white pt-2 pb-2 -mx-2 px-2 space-y-2">
                   {/* All Buttons - Horizontal Layout */}
@@ -1820,21 +1848,20 @@ const UpdateIndividualResult = () => {
                         {savingTimings ? 'Updating...' : 'Update Timings'}
                       </button>
                     )}
-                    
+
                     {/* Update Results Button */}
                     {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
                       <button
                         onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
-                        className={`flex-1 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm ${
-                          Object.keys(getRankChanges(eventId)).length > 0
-                            ? 'bg-green-600 text-white hover:bg-green-700'
-                            : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
-                        }`}
+                        className={`flex-1 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm ${Object.keys(getRankChanges(eventId)).length > 0
+                          ? 'bg-green-600 text-white hover:bg-green-700'
+                          : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+                          }`}
                       >
                         Update Results {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
                       </button>
                     )}
-                    
+
                     {/* Save Trials Button */}
                     {isTrialEvent() && (
                       <button
@@ -1850,191 +1877,189 @@ const UpdateIndividualResult = () => {
 
                 {/* Card View for Mobile */}
                 <div className="block md:hidden space-y-2">
-                  {(isHeatEvent() && showFinalHeat ? finalHeatParticipants : 
-                    isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] : 
-                    eventParticipants).map((participant, index) => {
-                      const isExpanded = expandedCard === participant.id;
-                      return (
-                      <div key={participant.id || index} className="bg-white border-2 border-[#F8DFBE] rounded-lg shadow-sm overflow-hidden">
-                        {/* Card Header - Always visible and clickable */}
-                        <div 
-                          className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                          onClick={() => setExpandedCard(isExpanded ? null : participant.id)}
-                        >
-                          <div className="space-y-2">
-                            {/* Participant Name Row */}
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2 flex-1">
-                                <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-black text-xs font-bold">
-                                 {index + 1}.
-                                </span>
-                                <h4 className=" text-[#2A2A2A] text-m">
-                                  {participant.participant_name || participant.team_name}
-                                </h4>
+                  {(isHeatEvent() && showFinalHeat ? finalHeatParticipants :
+                    isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] :
+                      eventParticipants).map((participant, index) => {
+                        const isExpanded = expandedCard === participant.id;
+                        return (
+                          <div key={participant.id || index} className="bg-white border-2 border-[#F8DFBE] rounded-lg shadow-sm overflow-hidden">
+                            {/* Card Header - Always visible and clickable */}
+                            <div
+                              className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                              onClick={() => setExpandedCard(isExpanded ? null : participant.id)}
+                            >
+                              <div className="space-y-2">
+                                {/* Participant Name Row */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-black text-xs font-bold">
+                                      {index + 1}.
+                                    </span>
+                                    <h4 className=" text-[#2A2A2A] text-m">
+                                      {participant.participant_name || participant.team_name}
+                                    </h4>
+                                  </div>
+                                  {/* Expand/Collapse indicator */}
+                                  <svg
+                                    className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-[#5A5A5A] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                  </svg>
+                                </div>
+
+                                {/* Temple, Aadhar & Result Badge Row */}
+                                <div className="flex justify-between items-center gap-2">
+                                  <div className="flex-1 space-y-1">
+                                    <p className="text-xs text-[#5A5A5A]">{participant.temple_name}</p>
+                                  </div>
+                                  <div className="flex-1 space-y-1" >
+                                    <p className="text-xs text-[#5A5A5A]">#{participant.aadhar_number || 'N/A'}</p>
+                                  </div>
+                                  {/* Result Badge - only show for non-heat events or final heat */}
+                                  {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                                    <div className="flex-shrink-0">
+                                      {(() => {
+                                        const currentRank = getRankChanges(eventId)[participant.id] || participant.result?.rank;
+                                        return currentRank ? (
+                                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-lg ${currentRank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                            currentRank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                              currentRank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-green-100 text-green-800'
+                                            }`}>
+                                            {currentRank === 'FIRST' ? '🥇 1st' :
+                                              currentRank === 'SECOND' ? '🥈 2nd' :
+                                                currentRank === 'THIRD' ? '🥉 3rd' : currentRank}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 text-xs">No result</span>
+                                        );
+                                      })()}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              {/* Expand/Collapse indicator */}
-                              <svg 
-                                className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-[#5A5A5A] transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
                             </div>
-                            
-                            {/* Temple, Aadhar & Result Badge Row */}
-                            <div className="flex justify-between items-center gap-2">
-                              <div className="flex-1 space-y-1">
-                                <p className="text-xs text-[#5A5A5A]">{participant.temple_name}</p>
-                              </div>
-                              <div className="flex-1 space-y-1" >
-                                <p className="text-xs text-[#5A5A5A]">#{participant.aadhar_number || 'N/A'}</p>
-                              </div>
-                              {/* Result Badge - only show for non-heat events or final heat */}
-                              {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
-                                <div className="flex-shrink-0">
-                                  {(() => {
-                                    const currentRank = getRankChanges(eventId)[participant.id] || participant.result?.rank;
-                                    return currentRank ? (
-                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-lg ${
-                                        currentRank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                                        currentRank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                                        currentRank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                                        'bg-green-100 text-green-800'
-                                      }`}>
-                                        {currentRank === 'FIRST' ? '🥇 1st' :
-                                         currentRank === 'SECOND' ? '🥈 2nd' :
-                                         currentRank === 'THIRD' ? '🥉 3rd' : currentRank}
-                                      </span>
+
+                            {/* Card Body - Expandable content */}
+                            {isExpanded && (
+                              <div className="px-4 pb-4 pt-2 border-t border-[#F8DFBE] space-y-3">
+                                {/* Trial Measurements */}
+                                {isTrialEvent() && (
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div>
+                                      <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 1</label>
+                                      <input
+                                        type="text"
+                                        placeholder="0.00"
+                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                        value={`${participant.id}_1` in trialMeasurements ? trialMeasurements[`${participant.id}_1`] : (participant.performance_1 || '')}
+                                        onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 2</label>
+                                      <input
+                                        type="text"
+                                        placeholder="0.00"
+                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                        value={`${participant.id}_2` in trialMeasurements ? trialMeasurements[`${participant.id}_2`] : (participant.performance_2 || '')}
+                                        onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 3</label>
+                                      <input
+                                        type="text"
+                                        placeholder="0.00"
+                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                        value={`${participant.id}_3` in trialMeasurements ? trialMeasurements[`${participant.id}_3`] : (participant.performance_3 || '')}
+                                        onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Timing Input */}
+                                {isHeatEvent() && (
+                                  <div>
+                                    <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">
+                                      {showFinalHeat ? 'Final Time' : 'Heat Time'}
+                                    </label>
+                                    {showFinalHeat ? (
+                                      <input
+                                        type="text"
+                                        placeholder="Final Time"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                        value={(() => {
+                                          const localTiming = timings[`${participant.id}_performance_2`];
+                                          const dbTiming = participant.performance_2;
+                                          return localTiming !== undefined ? localTiming : (dbTiming || '');
+                                        })()}
+                                        onChange={(e) => {
+                                          const newTimings = { ...timings };
+                                          newTimings[`${participant.id}_performance_2`] = e.target.value;
+                                          setTimings(newTimings);
+                                        }}
+                                      />
                                     ) : (
-                                      <span className="text-gray-400 text-xs">No result</span>
-                                    );
-                                  })()}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                                      <input
+                                        type="text"
+                                        placeholder="Heat Time"
+                                        className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
+                                        value={(() => {
+                                          const localTiming = timings[participant.id];
+                                          const dbTiming = participant.performance_1;
+                                          return localTiming !== undefined ? localTiming : (dbTiming || '');
+                                        })()}
+                                        onChange={(e) => handleTimingInput(participant.id, e.target.value)}
+                                      />
+                                    )}
+                                  </div>
+                                )}
 
-                        {/* Card Body - Expandable content */}
-                        {isExpanded && (
-                          <div className="px-4 pb-4 pt-2 border-t border-[#F8DFBE] space-y-3">
-                            {/* Trial Measurements */}
-                            {isTrialEvent() && (
-                              <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                  <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 1</label>
-                                  <input
-                                    type="text"
-                                    placeholder="0.00"
-                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
-                                    value={`${participant.id}_1` in trialMeasurements ? trialMeasurements[`${participant.id}_1`] : (participant.performance_1 || '')}
-                                    onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 2</label>
-                                  <input
-                                    type="text"
-                                    placeholder="0.00"
-                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
-                                    value={`${participant.id}_2` in trialMeasurements ? trialMeasurements[`${participant.id}_2`] : (participant.performance_2 || '')}
-                                    onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Trial 3</label>
-                                  <input
-                                    type="text"
-                                    placeholder="0.00"
-                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
-                                    value={`${participant.id}_3` in trialMeasurements ? trialMeasurements[`${participant.id}_3`] : (participant.performance_3 || '')}
-                                    onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Timing Input */}
-                            {isHeatEvent() && (
-                              <div>
-                                <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">
-                                  {showFinalHeat ? 'Final Time' : 'Heat Time'}
-                                </label>
-                                {showFinalHeat ? (
-                                  <input
-                                    type="text"
-                                    placeholder="Final Time"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
-                                    value={(() => {
-                                      const localTiming = timings[`${participant.id}_performance_2`];
-                                      const dbTiming = participant.performance_2;
-                                      return localTiming !== undefined ? localTiming : (dbTiming || '');
-                                    })()}
-                                    onChange={(e) => {
-                                      const newTimings = { ...timings };
-                                      newTimings[`${participant.id}_performance_2`] = e.target.value;
-                                      setTimings(newTimings);
-                                    }}
-                                  />
-                                ) : (
-                                  <input
-                                    type="text"
-                                    placeholder="Heat Time"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#D35D38]"
-                                    value={(() => {
-                                      const localTiming = timings[participant.id];
-                                      const dbTiming = participant.performance_1;
-                                      return localTiming !== undefined ? localTiming : (dbTiming || '');
-                                    })()}
-                                    onChange={(e) => handleTimingInput(participant.id, e.target.value)}
-                                  />
+                                {/* Result Selection */}
+                                {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                                  <div>
+                                    {/* <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Select Result</label> */}
+                                    <select
+                                      className={`w-full px-3 py-2 border rounded-lg text-sm ${getRankChanges(eventId)[participant.id]
+                                        ? 'border-green-500 bg-green-50'
+                                        : 'border-[#F8DFBE]'
+                                        }`}
+                                      value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
+                                      onChange={(e) => {
+                                        const scrollY = window.scrollY;
+                                        const newRank = e.target.value;
+                                        if (newRank) {
+                                          setRankChange(eventId, participant.id, newRank);
+                                        } else {
+                                          const currentChanges = getRankChanges(eventId);
+                                          const { [participant.id]: removed, ...rest } = currentChanges;
+                                          setRankChanges(prev => ({
+                                            ...prev,
+                                            [eventId]: rest
+                                          }));
+                                        }
+                                        setTimeout(() => window.scrollTo(0, scrollY), 0);
+                                      }}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <option value="">Select Rank</option>
+                                      <option value="FIRST">🥇 1st Place</option>
+                                      <option value="SECOND">🥈 2nd Place</option>
+                                      <option value="THIRD">🥉 3rd Place</option>
+                                      <option value="CLEAR">Clear Result</option>
+                                    </select>
+                                  </div>
                                 )}
                               </div>
                             )}
-
-                            {/* Result Selection */}
-                            {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
-                              <div>
-                                {/* <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Select Result</label> */}
-                                <select 
-                                  className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                                    getRankChanges(eventId)[participant.id] 
-                                      ? 'border-green-500 bg-green-50' 
-                                      : 'border-[#F8DFBE]'
-                                  }`}
-                                  value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
-                                  onChange={(e) => {
-                                    const scrollY = window.scrollY;
-                                    const newRank = e.target.value;
-                                    if (newRank) {
-                                      setRankChange(eventId, participant.id, newRank);
-                                    } else {
-                                      const currentChanges = getRankChanges(eventId);
-                                      const { [participant.id]: removed, ...rest } = currentChanges;
-                                      setRankChanges(prev => ({
-                                        ...prev,
-                                        [eventId]: rest
-                                      }));
-                                    }
-                                    setTimeout(() => window.scrollTo(0, scrollY), 0);
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <option value="">Select Rank</option>
-                                  <option value="FIRST">🥇 1st Place</option>
-                                  <option value="SECOND">🥈 2nd Place</option>
-                                  <option value="THIRD">🥉 3rd Place</option>
-                                  <option value="CLEAR">Clear Result</option>
-                                </select>
-                              </div>
-                            )}
                           </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
                 </div>
 
                 {/* Table View for Desktop */}
@@ -2075,11 +2100,10 @@ const UpdateIndividualResult = () => {
                               <span>RESULT</span>
                               <button
                                 onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
-                                className={`px-3 py-1 rounded text-xs transition-colors ${
-                                  Object.keys(getRankChanges(eventId)).length > 0
-                                    ? 'bg-green-600 text-white hover:bg-green-700'
-                                    : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
-                                }`}
+                                className={`px-3 py-1 rounded text-xs transition-colors ${Object.keys(getRankChanges(eventId)).length > 0
+                                  ? 'bg-green-600 text-white hover:bg-green-700'
+                                  : 'bg-[#D35D38] text-white hover:bg-[#B84A2E]'
+                                  }`}
                                 title={`Update all selected results (${Object.keys(getRankChanges(eventId)).length} pending)`}
                               >
                                 Update Results {Object.keys(getRankChanges(eventId)).length > 0 && `(${Object.keys(getRankChanges(eventId)).length})`}
@@ -2089,220 +2113,218 @@ const UpdateIndividualResult = () => {
                         )}
                       </tr>
                     </thead>
-                  <tbody className="bg-white divide-y divide-[#F8DFBE]">
-                    {(isHeatEvent() && showFinalHeat ? finalHeatParticipants : 
-                      isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] : 
-                      eventParticipants).map((participant, index) => (
-                        <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
-                            {index + 1}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
-                            {participant.participant_name || participant.team_name}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
-                            {participant.temple_name}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
-                            {participant.aadhar_number || 'N/A'}
-                          </td>
-                          {isTrialEvent() && (
-                            <>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                                <input
-                                  type="text"
-                                  placeholder="0.00"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={`${participant.id}_1` in trialMeasurements ? trialMeasurements[`${participant.id}_1`] : (participant.performance_1 || '')}
-                                  onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
-                                />
+                    <tbody className="bg-white divide-y divide-[#F8DFBE]">
+                      {(isHeatEvent() && showFinalHeat ? finalHeatParticipants :
+                        isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] :
+                          eventParticipants).map((participant, index) => (
+                            <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
+                                {index + 1}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                                <input
-                                  type="text"
-                                  placeholder="0.00"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={`${participant.id}_2` in trialMeasurements ? trialMeasurements[`${participant.id}_2`] : (participant.performance_2 || '')}
-                                  onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
-                                />
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
+                                {participant.participant_name || participant.team_name}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                                <input
-                                  type="text"
-                                  placeholder="0.00"
-                                  className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={`${participant.id}_3` in trialMeasurements ? trialMeasurements[`${participant.id}_3`] : (participant.performance_3 || '')}
-                                  onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
-                                />
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
+                                {participant.temple_name}
                               </td>
-                            </>
-                          )}
-                          {isHeatEvent() && (
-                            <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
-                              {showFinalHeat ? (
-                                // Final Heat - only show Final Time input (performance_2)
-                                <input
-                                  type="text"
-                                  placeholder="Final Time"
-                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={(() => {
-                                    const localTiming = timings[`${participant.id}_performance_2`];
-                                    const dbTiming = participant.performance_2;
-                                    const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
-                                    console.log(`Final heat input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
-                                    return finalValue;
-                                  })()}
-                                  onChange={(e) => {
-                                    // Handle performance_2 input for final heat
-                                    const newTimings = { ...timings };
-                                    newTimings[`${participant.id}_performance_2`] = e.target.value;
-                                    setTimings(newTimings);
-                                  }}
-                                />
-                              ) : (
-                                // Selected Heat - only show Heat Time input (performance_1)
-                                <input
-                                  type="text"
-                                  placeholder="Heat Time"
-                                  className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
-                                  value={(() => {
-                                    const localTiming = timings[participant.id];
-                                    const dbTiming = participant.performance_1;
-                                    const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
-                                    console.log(`Heat input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
-                                    return finalValue;
-                                  })()}
-                                  onChange={(e) => handleTimingInput(participant.id, e.target.value)}
-                                />
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-[#5A5A5A] border-r border-[#F8DFBE]">
+                                {participant.aadhar_number || 'N/A'}
+                              </td>
+                              {isTrialEvent() && (
+                                <>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                    <input
+                                      type="text"
+                                      placeholder="0.00"
+                                      className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                      value={`${participant.id}_1` in trialMeasurements ? trialMeasurements[`${participant.id}_1`] : (participant.performance_1 || '')}
+                                      onChange={(e) => handleTrialInput(participant.id, 1, e.target.value)}
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                    <input
+                                      type="text"
+                                      placeholder="0.00"
+                                      className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                      value={`${participant.id}_2` in trialMeasurements ? trialMeasurements[`${participant.id}_2`] : (participant.performance_2 || '')}
+                                      onChange={(e) => handleTrialInput(participant.id, 2, e.target.value)}
+                                    />
+                                  </td>
+                                  <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                    <input
+                                      type="text"
+                                      placeholder="0.00"
+                                      className="w-20 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                      value={`${participant.id}_3` in trialMeasurements ? trialMeasurements[`${participant.id}_3`] : (participant.performance_3 || '')}
+                                      onChange={(e) => handleTrialInput(participant.id, 3, e.target.value)}
+                                    />
+                                  </td>
+                                </>
                               )}
-                            </td>
-                          )}
-                          {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
-                            <td className="px-4 py-3 whitespace-nowrap text-sm">
-                              <div className="flex items-center gap-3">
-                                {/* Current Result Display */}
-                                <div className="flex-shrink-0">
-                                  {(() => {
-                                    const currentRank = getRankChanges(eventId)[participant.id] || participant.result?.rank;
-                                    return currentRank ? (
-                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                        currentRank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
-                                        currentRank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
-                                        currentRank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
-                                        'bg-green-100 text-green-800'
-                                      }`}>
-                                        {currentRank === 'FIRST' ? '🥇 1st' :
-                                         currentRank === 'SECOND' ? '🥈 2nd' :
-                                         currentRank === 'THIRD' ? '🥉 3rd' : currentRank}
-                                      </span>
-                                    ) : (
-                                      <span className="text-gray-400 text-xs">No result</span>
-                                    );
-                                  })()}
-                                </div>
-                                
-                                {/* Rank Selection */}
-                                <div className="flex-1">
-                                  <select 
-                                    className={`w-full px-2 py-1 border rounded text-xs ${
-                                      getRankChanges(eventId)[participant.id] 
-                                        ? 'border-green-500 bg-green-50' 
-                                        : 'border-[#F8DFBE]'
-                                    }`}
-                                    value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
-                                    onMouseDown={(e) => {
-                                      // Capture scroll position BEFORE dropdown opens
-                                      const scrollY = window.scrollY;
-                                      e.currentTarget.dataset.scrollY = scrollY.toString();
-                                    }}
-                                    onFocus={(e) => {
-                                      // Prevent browser from scrolling element into view
-                                      const savedScrollY = e.currentTarget.dataset.scrollY;
-                                      const scrollY = savedScrollY ? parseInt(savedScrollY, 10) : window.scrollY;
-                                      
-                                      // Immediately restore scroll position
-                                      window.scrollTo(0, scrollY);
-                                      
-                                      // Restore scroll position multiple times to catch all scenarios
-                                      requestAnimationFrame(() => {
-                                        window.scrollTo(0, scrollY);
-                                        requestAnimationFrame(() => {
+                              {isHeatEvent() && (
+                                <td className="px-4 py-3 whitespace-nowrap text-sm border-r border-[#F8DFBE]">
+                                  {showFinalHeat ? (
+                                    // Final Heat - only show Final Time input (performance_2)
+                                    <input
+                                      type="text"
+                                      placeholder="Final Time"
+                                      className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                      value={(() => {
+                                        const localTiming = timings[`${participant.id}_performance_2`];
+                                        const dbTiming = participant.performance_2;
+                                        const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
+                                        console.log(`Final heat input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
+                                        return finalValue;
+                                      })()}
+                                      onChange={(e) => {
+                                        // Handle performance_2 input for final heat
+                                        const newTimings = { ...timings };
+                                        newTimings[`${participant.id}_performance_2`] = e.target.value;
+                                        setTimings(newTimings);
+                                      }}
+                                    />
+                                  ) : (
+                                    // Selected Heat - only show Heat Time input (performance_1)
+                                    <input
+                                      type="text"
+                                      placeholder="Heat Time"
+                                      className="w-24 px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-[#D35D38]"
+                                      value={(() => {
+                                        const localTiming = timings[participant.id];
+                                        const dbTiming = participant.performance_1;
+                                        const finalValue = localTiming !== undefined ? localTiming : (dbTiming || '');
+                                        console.log(`Heat input value for ${participant.id}:`, { localTiming, dbTiming, finalValue });
+                                        return finalValue;
+                                      })()}
+                                      onChange={(e) => handleTimingInput(participant.id, e.target.value)}
+                                    />
+                                  )}
+                                </td>
+                              )}
+                              {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                  <div className="flex items-center gap-3">
+                                    {/* Current Result Display */}
+                                    <div className="flex-shrink-0">
+                                      {(() => {
+                                        const currentRank = getRankChanges(eventId)[participant.id] || participant.result?.rank;
+                                        return currentRank ? (
+                                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${currentRank === 'FIRST' ? 'bg-yellow-100 text-yellow-800' :
+                                            currentRank === 'SECOND' ? 'bg-gray-100 text-gray-800' :
+                                              currentRank === 'THIRD' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-green-100 text-green-800'
+                                            }`}>
+                                            {currentRank === 'FIRST' ? '🥇 1st' :
+                                              currentRank === 'SECOND' ? '🥈 2nd' :
+                                                currentRank === 'THIRD' ? '🥉 3rd' : currentRank}
+                                          </span>
+                                        ) : (
+                                          <span className="text-gray-400 text-xs">No result</span>
+                                        );
+                                      })()}
+                                    </div>
+
+                                    {/* Rank Selection */}
+                                    <div className="flex-1">
+                                      <select
+                                        className={`w-full px-2 py-1 border rounded text-xs ${getRankChanges(eventId)[participant.id]
+                                          ? 'border-green-500 bg-green-50'
+                                          : 'border-[#F8DFBE]'
+                                          }`}
+                                        value={getRankChanges(eventId)[participant.id] || participant.result?.rank || ""}
+                                        onMouseDown={(e) => {
+                                          // Capture scroll position BEFORE dropdown opens
+                                          const scrollY = window.scrollY;
+                                          e.currentTarget.dataset.scrollY = scrollY.toString();
+                                        }}
+                                        onFocus={(e) => {
+                                          // Prevent browser from scrolling element into view
+                                          const savedScrollY = e.currentTarget.dataset.scrollY;
+                                          const scrollY = savedScrollY ? parseInt(savedScrollY, 10) : window.scrollY;
+
+                                          // Immediately restore scroll position
                                           window.scrollTo(0, scrollY);
-                                          setTimeout(() => {
+
+                                          // Restore scroll position multiple times to catch all scenarios
+                                          requestAnimationFrame(() => {
                                             window.scrollTo(0, scrollY);
-                                          }, 0);
-                                        });
-                                      });
-                                    }}
-                                    onChange={(e) => {
-                                      // Get saved scroll position from before dropdown opened
-                                      const savedScrollY = e.target.dataset.scrollY;
-                                      const scrollY = savedScrollY ? parseInt(savedScrollY, 10) : window.scrollY;
-                                      
-                                      const newRank = e.target.value;
-                                      if (newRank) {
-                                        setRankChange(eventId, participant.id, newRank);
-                                      } else {
-                                        // Remove from changes if cleared
-                                        const currentChanges = getRankChanges(eventId);
-                                        const { [participant.id]: removed, ...rest } = currentChanges;
-                                        setRankChanges(prev => ({
-                                          ...prev,
-                                          [eventId]: rest
-                                        }));
-                                      }
-                                      
-                                      // Immediately restore scroll position
-                                      window.scrollTo(0, scrollY);
-                                      
-                                      // Aggressively restore scroll position using multiple methods
-                                      requestAnimationFrame(() => {
-                                        window.scrollTo(0, scrollY);
-                                        requestAnimationFrame(() => {
+                                            requestAnimationFrame(() => {
+                                              window.scrollTo(0, scrollY);
+                                              setTimeout(() => {
+                                                window.scrollTo(0, scrollY);
+                                              }, 0);
+                                            });
+                                          });
+                                        }}
+                                        onChange={(e) => {
+                                          // Get saved scroll position from before dropdown opened
+                                          const savedScrollY = e.target.dataset.scrollY;
+                                          const scrollY = savedScrollY ? parseInt(savedScrollY, 10) : window.scrollY;
+
+                                          const newRank = e.target.value;
+                                          if (newRank) {
+                                            setRankChange(eventId, participant.id, newRank);
+                                          } else {
+                                            // Remove from changes if cleared
+                                            const currentChanges = getRankChanges(eventId);
+                                            const { [participant.id]: removed, ...rest } = currentChanges;
+                                            setRankChanges(prev => ({
+                                              ...prev,
+                                              [eventId]: rest
+                                            }));
+                                          }
+
+                                          // Immediately restore scroll position
                                           window.scrollTo(0, scrollY);
-                                          setTimeout(() => {
+
+                                          // Aggressively restore scroll position using multiple methods
+                                          requestAnimationFrame(() => {
                                             window.scrollTo(0, scrollY);
-                                          }, 0);
-                                          setTimeout(() => {
+                                            requestAnimationFrame(() => {
+                                              window.scrollTo(0, scrollY);
+                                              setTimeout(() => {
+                                                window.scrollTo(0, scrollY);
+                                              }, 0);
+                                              setTimeout(() => {
+                                                window.scrollTo(0, scrollY);
+                                              }, 10);
+                                              setTimeout(() => {
+                                                window.scrollTo(0, scrollY);
+                                              }, 50);
+                                            });
+                                          });
+                                        }}
+                                        onBlur={(e) => {
+                                          // Restore scroll position when select loses focus
+                                          const savedScrollY = e.currentTarget.dataset.scrollY;
+                                          if (savedScrollY) {
+                                            const scrollY = parseInt(savedScrollY, 10);
                                             window.scrollTo(0, scrollY);
-                                          }, 10);
-                                          setTimeout(() => {
-                                            window.scrollTo(0, scrollY);
-                                          }, 50);
-                                        });
-                                      });
-                                    }}
-                                    onBlur={(e) => {
-                                      // Restore scroll position when select loses focus
-                                      const savedScrollY = e.currentTarget.dataset.scrollY;
-                                      if (savedScrollY) {
-                                        const scrollY = parseInt(savedScrollY, 10);
-                                        window.scrollTo(0, scrollY);
-                                        requestAnimationFrame(() => {
-                                          window.scrollTo(0, scrollY);
-                                          setTimeout(() => {
-                                            window.scrollTo(0, scrollY);
-                                          }, 0);
-                                        });
-                                      }
-                                    }}
-                                  >
-                                    <option value="">Select Rank</option>
-                                    <option value="FIRST">🥇 1st Place</option>
-                                    <option value="SECOND">🥈 2nd Place</option>
-                                    <option value="THIRD">🥉 3rd Place</option>
-                                    <option value="CLEAR">Clear Result</option>
-                                  </select>
-                                </div>
-                              </div>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
+                                            requestAnimationFrame(() => {
+                                              window.scrollTo(0, scrollY);
+                                              setTimeout(() => {
+                                                window.scrollTo(0, scrollY);
+                                              }, 0);
+                                            });
+                                          }
+                                        }}
+                                      >
+                                        <option value="">Select Rank</option>
+                                        <option value="FIRST">🥇 1st Place</option>
+                                        <option value="SECOND">🥈 2nd Place</option>
+                                        <option value="THIRD">🥉 3rd Place</option>
+                                        <option value="CLEAR">Clear Result</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </td>
+                              )}
+                            </tr>
+                          ))}
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* Save Trials Button for Trial Events - Desktop Only */}
                 {isTrialEvent() && (
                   <div className="mt-4 hidden md:flex justify-end">
@@ -2398,23 +2420,21 @@ const UpdateIndividualResult = () => {
         <div className="bg-white p-6 rounded shadow-lg min-w-[300px] max-w-md">
           <div className="flex items-center mb-4">
             {getModalIcon()}
-            <h3 className={`text-lg font-semibold ml-3 ${
-              modalType === 'success' ? 'text-green-900' : 
-              modalType === 'error' ? 'text-red-900' : 
-              'text-blue-900'
-            }`}>
+            <h3 className={`text-lg font-semibold ml-3 ${modalType === 'success' ? 'text-green-900' :
+              modalType === 'error' ? 'text-red-900' :
+                'text-blue-900'
+              }`}>
               {modalTitle}
             </h3>
           </div>
-          
-          <p className={`text-sm mb-4 ${
-            modalType === 'success' ? 'text-green-700' : 
-            modalType === 'error' ? 'text-red-700' : 
-            'text-blue-700'
-          }`}>
+
+          <p className={`text-sm mb-4 ${modalType === 'success' ? 'text-green-700' :
+            modalType === 'error' ? 'text-red-700' :
+              'text-blue-700'
+            }`}>
             {modalMessage}
           </p>
-          
+
           {modalDetails && (
             <div className="mb-4 text-sm">
               {modalDetails.changes && (
@@ -2438,7 +2458,7 @@ const UpdateIndividualResult = () => {
               ))}
             </div>
           )}
-          
+
           {modalType === 'confirm' && (
             <div className="flex justify-end space-x-3">
               <button
@@ -2463,7 +2483,7 @@ const UpdateIndividualResult = () => {
               </button>
             </div>
           )}
-          
+
           {/* Close button for info and error modals */}
           {(modalType === 'info' || modalType === 'error') && (
             <div className="flex justify-end">
@@ -2475,7 +2495,7 @@ const UpdateIndividualResult = () => {
               </button>
             </div>
           )}
-          
+
           {/* Show auto-close message for success modals */}
           {modalType === 'success' && (
             <div className="text-center text-xs text-gray-500 mt-2">
@@ -2637,7 +2657,7 @@ const UpdateIndividualResult = () => {
               <div className="space-y-4">
                 <h3 className="font-medium text-[#2A2A2A]">Step 1: Select Temple</h3>
                 <p className="text-sm text-gray-500">Select the temple to add participant from</p>
-                
+
                 {loadingTemples ? (
                   <div className="flex justify-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#D35D38]"></div>
@@ -2649,11 +2669,10 @@ const UpdateIndividualResult = () => {
                         key={temple.id}
                         onClick={() => handleTempleSelect(temple)}
                         disabled={loadingTempleCount}
-                        className={`px-3 py-2 text-sm border rounded-lg transition-colors text-left ${
-                          selectedTemple?.id === temple.id
-                            ? 'border-[#D35D38] bg-[#F8DFBE] text-[#2A2A2A]'
-                            : 'border-gray-200 hover:border-[#D35D38] text-gray-700'
-                        }`}
+                        className={`px-3 py-2 text-sm border rounded-lg transition-colors text-left ${selectedTemple?.id === temple.id
+                          ? 'border-[#D35D38] bg-[#F8DFBE] text-[#2A2A2A]'
+                          : 'border-gray-200 hover:border-[#D35D38] text-gray-700'
+                          }`}
                       >
                         {temple.name}
                       </button>
@@ -2691,12 +2710,12 @@ const UpdateIndividualResult = () => {
                     ← Change Temple
                   </button>
                 </div>
-                
+
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-blue-700 text-sm">
                     <strong>Temple:</strong> {selectedTemple?.name} (
-                    {templeParticipantsCount?.isUnlimited 
-                      ? `${templeParticipantsCount?.count || 0} participants - Unlimited allowed` 
+                    {templeParticipantsCount?.isUnlimited
+                      ? `${templeParticipantsCount?.count || 0} participants - Unlimited allowed`
                       : `${templeParticipantsCount?.count || 0}/${templeParticipantsCount?.maxAllowed || 3} participants`
                     })
                   </p>
@@ -2800,19 +2819,17 @@ const UpdateIndividualResult = () => {
                 </div>
 
                 {/* Registration Status */}
-                <div className={`border rounded-lg p-4 ${
-                  userRegistrationInfo.count >= userRegistrationInfo.maxAllowed 
-                    ? 'bg-red-50 border-red-200' 
-                    : 'bg-green-50 border-green-200'
-                }`}>
-                  <h4 className={`font-medium ${
-                    userRegistrationInfo.count >= userRegistrationInfo.maxAllowed 
-                      ? 'text-red-700' 
-                      : 'text-green-700'
+                <div className={`border rounded-lg p-4 ${userRegistrationInfo.count >= userRegistrationInfo.maxAllowed
+                  ? 'bg-red-50 border-red-200'
+                  : 'bg-green-50 border-green-200'
                   }`}>
+                  <h4 className={`font-medium ${userRegistrationInfo.count >= userRegistrationInfo.maxAllowed
+                    ? 'text-red-700'
+                    : 'text-green-700'
+                    }`}>
                     Individual Event Registrations: {userRegistrationInfo.count}/{userRegistrationInfo.maxAllowed}
                   </h4>
-                  
+
                   {userRegistrationInfo.registrations.length > 0 && (
                     <div className="mt-2 space-y-1">
                       <p className="text-xs font-medium text-gray-600">Registered Events:</p>
@@ -2870,10 +2887,10 @@ const UpdateIndividualResult = () => {
     <div className="space-y-6">
       {/* Modal */}
       <Modal />
-      
+
       {/* Add Participant Modal */}
       <AddParticipantModal />
-      
+
       {/* Filters */}
       <div className="space-y-4 mb-6 sm:mb-8">
         {/* Age Category Filter Chips */}
@@ -2887,8 +2904,8 @@ const UpdateIndividualResult = () => {
                     key={group.id}
                     onClick={() => setSelectedAge(group.name)}
                     className={`px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-medium whitespace-nowrap transition-all duration-200
-                      ${selectedAge === group.name 
-                        ? 'bg-[#D35D38] text-white shadow-md' 
+                      ${selectedAge === group.name
+                        ? 'bg-[#D35D38] text-white shadow-md'
                         : 'bg-white text-[#2A2A2A] border border-[#F8DFBE] hover:border-[#D35D38] hover:text-[#D35D38]'
                       }`}
                   >
@@ -2912,8 +2929,8 @@ const UpdateIndividualResult = () => {
                   key={gender.id}
                   onClick={() => setSelectedGender(gender.value)}
                   className={`px-4 py-1.5 sm:px-5 sm:py-2 rounded-full text-sm sm:text-base font-medium transition-all duration-200
-                    ${selectedGender === gender.value 
-                      ? 'bg-[#D35D38] text-white shadow-md' 
+                    ${selectedGender === gender.value
+                      ? 'bg-[#D35D38] text-white shadow-md'
                       : 'bg-white text-[#2A2A2A] border border-[#F8DFBE] hover:border-[#D35D38] hover:text-[#D35D38]'
                     }`}
                 >
@@ -2954,8 +2971,8 @@ const UpdateIndividualResult = () => {
                 </h3>
                 <div className="space-y-4 sm:pl-4">
                   {groupEvents.map((event) => (
-                    <CollapsibleEvent 
-                      key={event.id} 
+                    <CollapsibleEvent
+                      key={event.id}
                       title={event.name}
                       eventId={event.id}
                       ageCategory={ageCategory}

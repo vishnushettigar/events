@@ -948,12 +948,12 @@ async function getTempleTeams(temple_id, filters = {}) {
   }
 }
 
-async function generateTempleReport(temple_id) {
+async function generateTempleReport(temple_id, filters = {}) {
   // Get all participants and their results
-  const participants = await getTempleParticipants(temple_id);
+  const participants = await getTempleParticipants(temple_id, filters);
   
   // Get all teams and their results
-  const teams = await getTempleTeams(temple_id);
+  const teams = await getTempleTeams(temple_id, filters);
 
   // Calculate statistics
   const stats = {
@@ -1128,9 +1128,10 @@ async function getEventsByAgeCategory(ageCategory, gender) {
   }
 }
 
-async function getTeamEvents() {
+async function getTeamEvents(year = null) {
   try {
-    console.log('Fetching team events...');
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    console.log('Fetching team events for year:', currentYear);
 
     // Get team events with proper joins
     const events = await prisma.mst_event.findMany({
@@ -1150,12 +1151,13 @@ async function getTeamEvents() {
 
     // Transform the data to include event type details and registered temples
     const transformedEvents = await Promise.all(events.map(async (event) => {
-      // Get registered temples for this event
+      // Get registered temples for this event for current year
       const teamRegistrations = await prisma.team_event_registration.findMany({
         where: {
           event_id: event.id,
           is_deleted: false,
-          status: 'ACCEPTED'
+          status: 'ACCEPTED',
+          year: currentYear
         },
         include: {
           temple: true, 
@@ -1221,9 +1223,10 @@ async function getTeamEvents() {
 }
 
 // Get participants for a specific event
-async function getEventParticipants(eventId) {
+async function getEventParticipants(eventId, year = null) {
   try {
-    console.log('Fetching participants for event:', eventId);
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    console.log('Fetching participants for event:', eventId, 'year:', currentYear);
 
     // First, get the event details to determine if it's individual or team
     const event = await prisma.mst_event.findFirst({
@@ -1255,7 +1258,7 @@ async function getEventParticipants(eventId) {
           event_id: eventId,
           is_deleted: false,
           status: 'ACCEPTED',
-          year: new Date().getFullYear()  // Only count current year data
+          year: currentYear  // Only count current year data
         }
       });
       console.log('Total approved individual registrations found:', registrationCount);
@@ -1266,7 +1269,7 @@ async function getEventParticipants(eventId) {
           event_id: eventId,
           is_deleted: false,
           status: 'ACCEPTED',
-          year: new Date().getFullYear()  // Only show current year data
+          year: currentYear  // Only show current year data
         },
         include: {
           user: {
@@ -1301,7 +1304,6 @@ async function getEventParticipants(eventId) {
       if (registrationIds.length > 0) {
         try {
           // Use raw query to handle schema differences - try new schema first
-          const currentYear = new Date().getFullYear();
           let performances = [];
           
           try {
@@ -1379,6 +1381,7 @@ async function getEventParticipants(eventId) {
           aadhar_number: reg.user.aadhar_number,
           date_of_birth: reg.user.dob,
           registration_status: reg.status,
+          year: reg.year,
           result: reg.event_result ? {
             rank: reg.event_result.rank,
             points: reg.event_result.points
@@ -1401,7 +1404,7 @@ async function getEventParticipants(eventId) {
           event_id: eventId,
           is_deleted: false,
           status: 'ACCEPTED',
-          year: new Date().getFullYear()  // Only count current year data
+          year: currentYear  // Only count current year data
         }
       });
       console.log('Total approved team registrations found:', teamRegistrationCount);
@@ -1412,7 +1415,7 @@ async function getEventParticipants(eventId) {
           event_id: eventId,
           is_deleted: false,
           status: 'ACCEPTED',
-          year: new Date().getFullYear()  // Only show current year data
+          year: currentYear  // Only show current year data
         },
         include: {
           temple: true,
@@ -1432,6 +1435,7 @@ async function getEventParticipants(eventId) {
         gender: event.gender,
         member_count: reg.member_user_ids ? reg.member_user_ids.split(',').length : 0,
         registration_status: reg.status,
+        year: reg.year,
         result: reg.event_result ? {
           rank: reg.event_result.rank,
           points: reg.event_result.points

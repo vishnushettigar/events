@@ -176,7 +176,7 @@ export const userAPI = {
   getTempleUsers: (templeId) => apiService.get('/users/templeusers', templeId ? { temple_id: templeId } : {}),
   searchByAadhar: (aadharNumber) => apiService.get('/users/search-by-aadhar', { aadharNumber }),
   getTempleDetailedReport: (templeId) => apiService.get(`/users/temple-detailed-report/${templeId}`),
-  getAllTemples: () => apiService.get('/users/temples'),
+  getAllTemples: (params = {}) => apiService.get('/users/temples', params),
   getTempleById: (templeId) => apiService.get(`/users/temple/${templeId}`),
   getTeamRegistrations: () => apiService.get('/users/participant-teams'),
 };
@@ -185,21 +185,21 @@ export const eventAPI = {
   getAllEvents: (params = {}) => apiService.get('/admin/events', params),
   getAllEventsComplete: (params = {}) => apiService.get('/events/all-events', params),
   getAvailableEvents: () => apiService.get('/users/available-events'),
-  getEventPerformance: () => apiService.get('/reports/event-performance'),
+  getEventPerformance: (params = {}) => apiService.get('/reports/event-performance', params),
   getParticipantData: (params) => apiService.get('/events/participant-data', params),
   registerParticipant: (data) => apiService.post('/events/register-participant', data),
   unregisterParticipant: (eventId) => apiService.delete(`/events/unregister-participant/${eventId}`),
   getTempleParticipants: (params) => apiService.get('/events/temple-participants', params),
   updateIndividualResult: (id, rank) => apiService.put(`/events/update-individual-result/${id}`, { rank }),
   updateTeamResult: (id, rank) => apiService.put(`/events/update-team-result/${id}`, { rank }),
-  getTeamEvents: () => apiService.get('/events/team-events'),
+  getTeamEvents: (params = {}) => apiService.get('/events/team-events', params),
   getTempleTeams: (params) => apiService.get('/events/temple-teams', params),
   registerTeam: (data) => apiService.post('/events/register-team', data),
   updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
   deleteTeam: (registrationId) => apiService.delete(`/events/delete-team/${registrationId}`),
   acceptTeam: (registrationId) => apiService.put(`/events/accept-team/${registrationId}`),
   getAcceptedTeamsCount: (eventId, params) => apiService.get(`/events/accepted-teams-count/${eventId}`, params),
-  getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
+  getEventParticipants: (eventId, params = {}) => apiService.get(`/events/event-participants/${eventId}`, params),
   getTeamParticipants: (registrationId) => apiService.get(`/events/team-participants/${registrationId}`),
   getTeamRegistration: (registrationId) => apiService.get(`/events/team-registration/${registrationId}`),
   getBatchTeamData: (registrationIds) => apiService.post('/events/batch-team-data', { registration_ids: registrationIds }),
@@ -207,13 +207,13 @@ export const eventAPI = {
   // Heat management
   generateHeats: (eventId) => apiService.post('/events/generate-heats', { event_id: eventId }),
   regenerateHeats: (eventId) => apiService.delete(`/events/regenerate-heats/${eventId}`),
-  getHeats: (eventId) => apiService.get(`/events/heats/${eventId}`),
+  getHeats: (eventId, params = {}) => apiService.get(`/events/heats/${eventId}`, params),
   saveTimings: (eventId, heatNumber, timings) => apiService.put('/events/update-timings', { event_id: eventId, heat_number: heatNumber, timings }),
   saveFinalTimings: (eventId, timings) => apiService.put('/events/update-final-timings', { event_id: eventId, timings }),
   
   // Trial management
   initTrials: (eventId) => apiService.post('/events/init-trials', { event_id: eventId }),
-  getTrials: (eventId) => apiService.get(`/events/trials/${eventId}`),
+  getTrials: (eventId, params = {}) => apiService.get(`/events/trials/${eventId}`, params),
   saveTrials: (eventId, trials) => apiService.put('/events/update-trials', { event_id: eventId, trials }),
   
   // Staff participant management
@@ -235,13 +235,13 @@ export const teamAPI = {
 };
 
 export const templeAPI = {
-  getTempleManagement: () => apiService.get('/admin/temple-management'),
+  getTempleManagement: (params = {}) => apiService.get('/admin/temple-management', params),
 };
 
 export const reportAPI = {
-  getChampions: () => apiService.get('/users/champions'),
-  getAllResults: () => apiService.get('/users/all-results'),
-  getChampionshipReport: () => apiService.get('/reports/championship'),
+  getChampions: (params = {}) => apiService.get('/users/champions', params),
+  getAllResults: (params = {}) => apiService.get('/users/all-results', params),
+  getChampionshipReport: (params = {}) => apiService.get('/reports/championship', params),
 };
 
 // Viewer-specific API methods (read-only access)
@@ -251,10 +251,10 @@ export const viewerAPI = {
   getParticipantData: (params) => apiService.get('/viewer/participant-data', params),
   getTeams: (params) => apiService.get('/viewer/teams', params),
   getTemples: () => apiService.get('/viewer/temple-list'),
-  getTempleManagement: () => apiService.get('/viewer/temple-management'),
+  getTempleManagement: (params = {}) => apiService.get('/viewer/temple-management', params),
   getResults: () => apiService.get('/viewer/results'),
-  getEventPerformance: () => apiService.get('/viewer/event-performance'),
-  getChampions: () => apiService.get('/viewer/champions'),
+  getEventPerformance: (params = {}) => apiService.get('/viewer/event-performance', params),
+  getChampions: (params = {}) => apiService.get('/viewer/champions', params),
   getUsers: () => apiService.get('/viewer/users'),
   getUserDetails: (ids) => apiService.get('/viewer/users/details', { ids }),
   getProfileDetails: (ids) => apiService.get('/viewer/profiles/details', { ids }),

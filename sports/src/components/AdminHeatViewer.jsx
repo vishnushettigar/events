@@ -21,7 +21,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
       // console.log('Not a heat event, skipping heat fetch');
       return;
     }
-    
+
     try {
       // console.log(`Fetching heats for eventId: ${eventId}`);
       setLoadingHeats(true);
@@ -29,7 +29,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
       const heatsData = await eventAPI.getHeats(eventId);
       // console.log('Heats data received:', heatsData);
       setHeats(heatsData);
-      
+
       // Set first heat as selected if available
       const heatNumbers = Object.keys(heatsData).map(Number).sort((a, b) => a - b);
       // console.log('Heat numbers found:', heatNumbers);
@@ -52,10 +52,10 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
     if (!timing || timing === '' || timing === null || timing === undefined) {
       return Infinity;
     }
-    
+
     const cleanTiming = timing.toString().trim();
     const parts = cleanTiming.split(':');
-    
+
     if (parts.length === 3) {
       const hours = parseInt(parts[0]) || 0;
       const minutes = parseInt(parts[1]) || 0;
@@ -74,12 +74,12 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
   // Get all participants with timings from all heats
   const getAllParticipantsWithTimings = () => {
     const allParticipants = [];
-    
+
     Object.entries(heats).forEach(([heatNumber, heatParticipants]) => {
       heatParticipants.forEach(participant => {
         const timing = participant.performance_1;
         const timingSeconds = parseTiming(timing);
-        
+
         if (timing && timing !== '' && timingSeconds !== Infinity) {
           allParticipants.push({
             ...participant,
@@ -90,19 +90,19 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
         }
       });
     });
-    
+
     return allParticipants.sort((a, b) => a.timingSeconds - b.timingSeconds);
   };
 
   // Generate final heat with top 8 participants
   const generateFinalHeat = () => {
     const participantsWithTimings = getAllParticipantsWithTimings();
-    
+
     if (participantsWithTimings.length === 0) {
       // console.log('No participants with timings found');
       return;
     }
-    
+
     const top8 = participantsWithTimings.slice(0, 8);
     setFinalHeatParticipants(top8);
     setShowFinalHeat(true);
@@ -113,7 +113,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
     const printWindow = window.open('', '_blank');
     let participantsToPrint = [];
     let printTitle = eventName;
-    
+
     if (showFinalHeat) {
       participantsToPrint = finalHeatParticipants;
       printTitle = `${eventName} - Final Heat`;
@@ -121,7 +121,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
       participantsToPrint = heats[selectedHeat] || [];
       printTitle = `${eventName} - Heat ${selectedHeat}`;
     }
-    
+
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -149,8 +149,8 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
       </head>
       <body>
         <div class="header">
-          <div class="main-title">33ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2025</div>
-          <div class="place">ಸ್ಥಳ - ಮುಲ್ಕಿ</div>
+          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+          <div class="place">ಸ್ಥಳ - ಕಲ್ಯಾಣಪುರ </div>
           <div class="event-details">
             <span><strong>Age Category:</strong> ${ageCategory}</span>
             <span><strong>Gender:</strong> ${gender}</span>
@@ -182,11 +182,11 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
           </thead>
           <tbody>
             ${participantsToPrint.map((participant, index) => {
-              const participantName = participant.participant_name || participant.team_name;
-              const timing = participant.performance_1 || participant.timing || '';
-              const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
-              
-              return `
+      const participantName = participant.participant_name || participant.team_name;
+      const timing = participant.performance_1 || participant.timing || '';
+      const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
+
+      return `
                 <tr>
                   <td>${index + 1}</td>
                   <td>${participantName}</td>
@@ -195,13 +195,13 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
                   <td class="${timingClass}">${timing || '-'}</td>
                 </tr>
               `;
-            }).join('')}
+    }).join('')}
           </tbody>
         </table>
       </body>
       </html>
     `;
-    
+
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.focus();
@@ -266,11 +266,10 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
                   setSelectedHeat(parseInt(heatNumber));
                   setShowFinalHeat(false);
                 }}
-                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                  selectedHeat === parseInt(heatNumber) && !showFinalHeat
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${selectedHeat === parseInt(heatNumber) && !showFinalHeat
                     ? 'bg-blue-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                }`}
+                  }`}
               >
                 Heat {heatNumber} ({heats[heatNumber].length} participants)
               </button>
@@ -283,11 +282,10 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
                   generateFinalHeat();
                 }
               }}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                showFinalHeat
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${showFinalHeat
                   ? 'bg-green-600 text-white'
                   : 'bg-green-100 text-green-800 hover:bg-green-200'
-              }`}
+                }`}
             >
               🏁 Final Heat ({finalHeatParticipants.length}/8)
             </button>
@@ -329,42 +327,41 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {(showFinalHeat ? finalHeatParticipants : 
+                {(showFinalHeat ? finalHeatParticipants :
                   selectedHeat ? heats[selectedHeat] || [] : []).map((participant, index) => (
-                  <tr key={participant.id || index} className="hover:bg-gray-50">
-                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {index + 1}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
-                      {participant.participant_name || participant.team_name}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {participant.temple_name}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
-                      {participant.aadhar_number || 'N/A'}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap text-sm">
-                      <div className="space-y-1">
-                        <div className={`font-bold ${
-                          showFinalHeat && finalHeatParticipants.length > 0 ? 'text-green-600' : 'text-blue-600'
-                        }`}>
-                          {participant.performance_1 || participant.timing || '-'}
+                    <tr key={participant.id || index} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
+                        {participant.participant_name || participant.team_name}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                        {participant.temple_name}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                        {participant.aadhar_number || 'N/A'}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm">
+                        <div className="space-y-1">
+                          <div className={`font-bold ${showFinalHeat && finalHeatParticipants.length > 0 ? 'text-green-600' : 'text-blue-600'
+                            }`}>
+                            {participant.performance_1 || participant.timing || '-'}
+                          </div>
+                          {participant.performance_2 && (
+                            <div className="text-xs text-gray-500">
+                              {participant.performance_2}
+                            </div>
+                          )}
+                          {participant.performance_3 && (
+                            <div className="text-xs text-gray-500">
+                              {participant.performance_3}
+                            </div>
+                          )}
                         </div>
-                        {participant.performance_2 && (
-                          <div className="text-xs text-gray-500">
-                            {participant.performance_2}
-                          </div>
-                        )}
-                        {participant.performance_3 && (
-                          <div className="text-xs text-gray-500">
-                            {participant.performance_3}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>

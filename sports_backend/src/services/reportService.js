@@ -16,8 +16,9 @@ async function getOverallChampionshipReport() {
 }
 
 // Event-wise Performance Report
-async function getEventWisePerformanceReport() {
-  // Get all events with their registrations and results
+async function getEventWisePerformanceReport(year = null) {
+  const currentYear = year ? parseInt(year) : new Date().getFullYear();
+  // Get all events with their registrations and results for current year
   const events = await prisma.mst_event.findMany({
     where: {
       is_deleted: false
@@ -29,6 +30,7 @@ async function getEventWisePerformanceReport() {
         where: {
           is_deleted: false,
           status: 'ACCEPTED',
+          year: currentYear,
           event_result: {
             isNot: null
           }
@@ -46,6 +48,7 @@ async function getEventWisePerformanceReport() {
         where: {
           is_deleted: false,
           status: 'ACCEPTED',
+          year: currentYear,
           event_result: {
             isNot: null
           }

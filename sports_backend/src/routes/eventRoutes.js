@@ -503,7 +503,9 @@ router.get('/participant-data', authenticate, async (req, res) => {
 // Get team events
 router.get('/team-events', authenticate, async (req, res) => {
   try {
-    const events = await eventService.getTeamEvents();
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    const events = await eventService.getTeamEvents(currentYear);
     res.json(events);
   } catch (error) {
     console.error(error);
@@ -638,12 +640,14 @@ router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (re
 router.get('/event-participants/:eventId', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { year } = req.query;
 
     if (!eventId || isNaN(parseInt(eventId))) {
       return res.status(400).json({ error: 'Valid event ID is required' });
     }
 
-    const participants = await eventService.getEventParticipants(parseInt(eventId));
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    const participants = await eventService.getEventParticipants(parseInt(eventId), currentYear);
     res.json(participants);
   } catch (error) {
     console.error('Error fetching event participants:', error);
@@ -1270,7 +1274,8 @@ router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), 
 router.get('/heats/:eventId', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
-    const currentYear = new Date().getFullYear();
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
     // Use raw query to handle schema differences
     let heats = [];
@@ -1279,7 +1284,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
       heats = await prisma.$queryRawUnsafe(`
         SELECT ep.id, ep.registration_id, ep.event_id, ep.heat_number,
                ep.performance_1, ep.performance_2, ep.performance_3,
-               ir.id as reg_id,
+               ir.id as reg_id, ir.year as reg_year,
                u.first_name, u.last_name, u.aadhar_number, u.dob,
                t.name as temple_name,
                er.rank, er.points
@@ -1288,9 +1293,9 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         INNER JOIN Profile u ON ir.user_id = u.id
         INNER JOIN Mst_temple t ON u.temple_id = t.id
         LEFT JOIN Mst_event_result er ON ir.event_result_id = er.id
-        WHERE ep.event_id = ? AND ep.year = ?
+        WHERE ep.event_id = ? AND ep.year = ? AND ir.year = ? AND ir.is_deleted = 0 AND ir.status = 'ACCEPTED'
         ORDER BY ep.heat_number ASC, ep.id ASC
-      `, parseInt(eventId), currentYear);
+      `, parseInt(eventId), currentYear, currentYear);
     } catch (error1) {
       // If that fails, try with old schema
       try {
@@ -1299,7 +1304,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
                  ep.heat_time as performance_1,
                  NULL as performance_2,
                  NULL as performance_3,
-                 ir.id as reg_id,
+                 ir.id as reg_id, ir.year as reg_year,
                  u.first_name, u.last_name, u.aadhar_number, u.dob,
                  t.name as temple_name,
                  er.rank, er.points
@@ -1308,9 +1313,9 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
           INNER JOIN Profile u ON ir.user_id = u.id
           INNER JOIN Mst_temple t ON u.temple_id = t.id
           LEFT JOIN Mst_event_result er ON ir.event_result_id = er.id
-          WHERE ep.event_id = ? AND ep.year = ?
+          WHERE ep.event_id = ? AND ep.year = ? AND ir.year = ? AND ir.is_deleted = 0 AND ir.status = 'ACCEPTED'
           ORDER BY ep.heat_number ASC, ep.id ASC
-        `, parseInt(eventId), currentYear);
+        `, parseInt(eventId), currentYear, currentYear);
       } catch (error2) {
         console.error('Error fetching heats with both schemas:', error2.message);
         return res.status(500).json({ error: 'Failed to fetch heats: ' + error2.message });
@@ -1648,14 +1653,15 @@ async function detectPerformanceSchema() {
 }
 
 // Helper function to ensure trial performance records exist for all accepted participants
-async function ensureTrialPerformanceRecords(eventId) {
+async function ensureTrialPerformanceRecords(eventId, targetYear = null) {
+  const currentYear = targetYear ? parseInt(targetYear) : new Date().getFullYear();
   // Get all accepted participants for this event
   const acceptedParticipants = await prisma.ind_event_registration.findMany({
     where: {
       event_id: parseInt(eventId),
       is_deleted: false,
       status: 'ACCEPTED',
-      year: new Date().getFullYear()
+      year: currentYear
     },
     select: {
       id: true
@@ -1671,6 +1677,7 @@ async function ensureTrialPerformanceRecords(eventId) {
   const existingRecords = await prisma.event_performance.findMany({
     where: {
       event_id: parseInt(eventId),
+      year: currentYear,
       registration_id: {
         in: acceptedParticipants.map(p => p.id)
       }
@@ -1690,7 +1697,6 @@ async function ensureTrialPerformanceRecords(eventId) {
 
     // Detect schema to use appropriate method
     const schema = await detectPerformanceSchema();
-    const currentYear = new Date().getFullYear();
 
     if (schema === 'new' || schema === 'new_raw') {
       // Use raw SQL for new schema (always use raw SQL to avoid Prisma client mismatch)
@@ -1717,10 +1723,12 @@ async function ensureTrialPerformanceRecords(eventId) {
 // Get trial measurements for trial events
 router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, res) => {
   const { eventId } = req.params;
+  const { year } = req.query;
+  const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
   try {
     // First ensure all accepted participants have performance records
-    await ensureTrialPerformanceRecords(eventId);
+    await ensureTrialPerformanceRecords(eventId, currentYear);
 
     // Fetch trial performance data using raw query to handle schema differences
     let trialData = [];
@@ -1729,8 +1737,8 @@ router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, r
       trialData = await prisma.$queryRawUnsafe(`
         SELECT registration_id, performance_1, performance_2, performance_3
         FROM event_performance
-        WHERE event_id = ?
-      `, parseInt(eventId));
+        WHERE event_id = ? AND year = ?
+      `, parseInt(eventId), currentYear);
     } catch (error1) {
       // If that fails, try with old schema
       try {
@@ -1740,8 +1748,8 @@ router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, r
                  NULL as performance_2,
                  NULL as performance_3
           FROM event_performance
-          WHERE event_id = ?
-        `, parseInt(eventId));
+          WHERE event_id = ? AND year = ?
+        `, parseInt(eventId), currentYear);
       } catch (error2) {
         console.error('Error fetching trials with both schemas:', error2.message);
         return res.status(500).json({ error: 'Failed to fetch trials: ' + error2.message });

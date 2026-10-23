@@ -96,7 +96,9 @@ router.get('/championship', authenticate, requireRole('ADMIN'), async (req, res)
  */
 router.get('/event-performance', authenticate, async (req, res) => {
   try {
-    const report = await reportService.getEventWisePerformanceReport();
+    const { year } = req.query;
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
+    const report = await reportService.getEventWisePerformanceReport(currentYear);
     res.json(report);
   } catch (error) {
     console.error('Error fetching event performance report:', error);

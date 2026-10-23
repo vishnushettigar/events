@@ -20,7 +20,7 @@ export const rules = [
   "An athlete from one temple cannot represent another temple. If found, the athlete will be disqualified from the individual event or the team will be disqualified. The opponent team will get a direct entry to the next round.",
   "A mother and her children who are raising the children under the care of their parental home (Thavaru Mane) due to circumstances after marriage will be accepted as members of the parental home's temple if the temple provides a letter of consent.",
   "A Padmashali/Shettigar woman who marries outside the community (intercaste marriage)is not eligible to participate.",
-  "If a Padmashali/Shettigar man marries outside the community, his non-caste wife will be allowed to participate, provided the husband's name is updated on her Aadhaar Card.", 
+  "If a Padmashali/Shettigar man marries outside the community, his non-caste wife will be allowed to participate, provided the husband's name is updated on her Aadhaar Card.",
   "All athletes must carry a copy of their Aadhaar card during the competitions.",
   "The Aadhaar copy of the team members for Volleyball, Throwball, and Tug of War, along with the temple's consent letter, must be submitted to the organizers before Saturday, 13-12-2025.",
   "COSCO company balls will be used for Volleyball matches and Nivia company balls for Throwball matches.",
@@ -99,7 +99,7 @@ export const rulesKannada = [
   "ಮದುವೆಯ ನಂತರ ಕಾರಣಾಂತರದಿಂದ ತವರುಮನೆಯ ಆಶ್ರಯದಲ್ಲಿ ಮಕ್ಕಳನ್ನು ಬೆಳೆಸುತ್ತಿರುವ ತಾಯಿ ಮತ್ತು ಮಕ್ಕಳನ್ನು ತವರು ಮನೆಯ ದೇವಸ್ಥಾನವೆಂದು ಆ ದೇವಸ್ಥಾನದವರು ಒಪ್ಪಿಗೆ ಪತ್ರ ನೀಡಿದ್ದಲ್ಲಿ ಪುರಸ್ಕರಿಸಲಾಗುವುದು.",
   "ಪದ್ಮಶಾಲಿ ಸಮಾಜದ ಅಂತರ್‌ಜಾತಿ ವಿವಾಹವಾದ ಮಹಿಳೆಯು ಈ ಕ್ರೀಡಾಕೂಟದಲ್ಲಿ ಭಾಗವಹಿಸಲು ಅವಕಾಶವಿಲ್ಲ. ಮತ್ತು ಪುರುಷರು ಅಂತರ್‌ಜಾತಿ ವಿವಾಹವಾಗಿದ್ದಲ್ಲಿ ಪತ್ನಿಯ ಆಧಾ‌ರ್ ಕಾರ್ಡ್‌ನಲ್ಲಿ ಗಂಡನ ಹೆಸರು ಸೇರ್ಪಡೆಯಾಗಿದ್ದರೆ ಪತ್ನಿ ಹಾಗು ಮಕ್ಕಳಿಗೆ ಸ್ಪರ್ಧೆಯಲ್ಲಿ ಭಾಗವಹಿಸುವ ಅವಕಾಶ ನೀಡಲಾಗುವುದು.",
   "ಪ್ರತೀ ಕ್ರೀಡಾಪಟುಗಳು ಸ್ಪರ್ಧೆಯಲ್ಲಿ ಭಾಗವಹಿಸುವಾಗ ಆಧಾ‌ರ್ ಕಾರ್ಡ್ ಪ್ರತಿಯನ್ನು ಕಡ್ಡಾಯವಾಗಿ ಇಟ್ಟುಕೊಳ್ಳಬೇಕು.",
-  
+
   "ವಾಲಿಬಾಲ್, ತ್ರೋಬಾಲ್ ಮತ್ತು ಹಗ್ಗಜಗ್ಗಾಟ ತಂಡ ಸದಸ್ಯರ ಆಧಾರ್‌ಪ್ರತಿ ಮತ್ತು ದೇವಸ್ಥಾನದ ಒಪ್ಪಿಗೆ ಪತ್ರವನ್ನು ದಿನಾಂಕ 13/12/2025 ಶನಿವಾರದ ಒಳಗೆ ಸಂಘಟಕರಿಗೆ ಕಡ್ಡಾಯವಾಗಿ ಸಲ್ಲಿಸಬೇಕು.",
   "ವಾಲಿಬಾಲ್ ಪಂದ್ಯಗಳಿಗೆ COSCO ಕಂಪೆನಿಯ ಚೆಂಡು ಮತ್ತು ತ್ರೋಬಾಲ್ ಪಂದ್ಯಗಳಿಗೆ NIVIA ಕಂಪೆನಿಯ ಚೆಂಡು ಉಪಯೋಗಿಸಲಾಗುವುದು.",
   "ವಾಲಿಬಾಲ್ ಮತ್ತು ತ್ರೋಬಾಲ್ ಪಂದ್ಯಗಳ ಉಪಾಂತ್ಯದ(ಸೆಮಿಪೈನಲ್)ವರೆಗಿನ ಪ್ರತಿ ಪಂದ್ಯಗಳು 25 ಅಂಕಗಳ (ಟೆನ್ನಿಸ್ ಪಾಯಿಂಟ್) ಮಾದರಿಯ ಒಂದು ಸೆಟ್‌ನ ಮೂಲಕ ವಿಜಯೀ ತಂಡವನ್ನು ನಿರ್ಣಯಿಸಲಾಗುವುದು. ಹಾಗೂ ಪೈನಲ್ ಪಂದ್ಯವು 15 ಅಂಕಗಳ ಮೂರು ಸೆಟ್‌ನ (Best of three) ಮಾದರಿಯಲ್ಲಿ ನಡೆದು ವಿಜಯೀ ತಂಡವನ್ನು ನಿರ್ಣಯಿಸಲಾಗುವುದು.",
@@ -165,16 +165,16 @@ export const rulesKannada = [
 
 export const sponsors = [
   {
-    name: "Shri Veerabhadra Mahamayi Temple Mulki",
-    location: " Mulki",
+    name: "Shri Aadishakthi Veerabhadra Brahmalinga Devsthana Kalyanpura",
+    location: "Kalyanpura",
   },
   {
     name: "D.K. Jilla Padmashali Mahasabha® Mangaluru",
     location: "",
   },
   {
-    name: "Shri Veerabhadra Mahamayi Temple Mulki",
-    location: " Mulki",
+    name: "Shri Aadishakthi Veerabhadra Brahmalinga Devsthana Kalyanpura",
+    location: "Kalyanpura",
   },
   {
     name: "D.K. Jilla Padmashali Mahasabha® Mangaluru",
@@ -190,16 +190,16 @@ export const sponsorsKannada = [
     location: "",
   },
   {
-    name: "ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯಿ ದೇವಸ್ಥಾನ. ಮಾನಂಪಾಡಿ, ಮುಲ್ಕಿ",
-    location: "ಮುಲ್ಕಿ",
+    name: "ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ ",
+    location: "ಕಲ್ಯಾಣಪುರ  ",
   },
   {
     name: "ದ.ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ® ಮಂಗಳೂರು",
     location: "",
   },
   {
-    name: "ಶ್ರೀ ವೀರಭದ್ರ ಮಹಮ್ಮಾಯಿ ದೇವಸ್ಥಾನ. ಮಾನಂಪಾಡಿ, ಮುಲ್ಕಿ",
-    location: "ಮುಲ್ಕಿ",
+    name: "ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ ",
+    location: "ಕಲ್ಯಾಣಪುರ  ",
   },
 ];
 
@@ -215,23 +215,23 @@ export const mahasabhaContacts = [
 
 //mahasabha contacts in Kannada
 export const mahasabhaContactskannada = [
-    { name: "ರವಿ ಶೆಟ್ಟಿಗಾರ್ ಕಾರ್ಕಳ ", phone: "9845249531" },
-    { name: "ಸದಾಶಿವ ಗೋಳಿಜಾರ", phone: "9449269272" },
-    { name: "ವೆಂಕಟರಾಯ ಶೆಟ್ಟಿಗಾರ್", phone: "9880878991" },
+  { name: "ರವಿ ಶೆಟ್ಟಿಗಾರ್ ಕಾರ್ಕಳ ", phone: "9845249531" },
+  { name: "ಸದಾಶಿವ ಗೋಳಿಜಾರ", phone: "9449269272" },
+  { name: "ವೆಂಕಟರಾಯ ಶೆಟ್ಟಿಗಾರ್", phone: "9880878991" },
 ];
 
 //temple contacts in English
 export const templeContacts = [
-    { name: "Purandar Shettigar", phone: " 9845525125" },
-    { name: "Rajesh Sanoor", phone: "7301167711" }, 
-    { name: "Harish b padmashali", phone: "9880091234" },
+  { name: "Purandar Shettigar", phone: " 9845525125" },
+  { name: "Rajesh Sanoor", phone: "7301167711" },
+  { name: "Harish b padmashali", phone: "9880091234" },
 ];
 
 //temple contacts in Kannada
 export const templeContactsKannada = [
-    { name: "ಪುರಂದರ ಶೆಟ್ಟಿಗಾರ್", phone: " 9845525125" },
-    { name: "ರಾಜೇಶ್ ಸಾಣೂರು", phone: "7301167711" },
-    { name: "ಹರಿಶ್ ಬಿ ಪದ್ಮಶಾಲಿ", phone: "9880091234" },
+  { name: "ಪುರಂದರ ಶೆಟ್ಟಿಗಾರ್", phone: " 9845525125" },
+  { name: "ರಾಜೇಶ್ ಸಾಣೂರು", phone: "7301167711" },
+  { name: "ಹರಿಶ್ ಬಿ ಪದ್ಮಶಾಲಿ", phone: "9880091234" },
 ];
 
 //event highlights in English
@@ -264,31 +264,31 @@ export const eventHighlights = [
 
 //event highlights in Kannada
 export const eventHighlightsKannada = [
-    {
-      count: "16",
-      title: "ದೇವಸ್ಥಾನಗಳು",
-      image: temple,
-      ifPlus: "",
-    },
-    {
-      count: "70",
-      title: "ಸ್ಪರ್ಧೆಗಳು",
-      image: torch,
-      ifPlus: "+",
-    },
-    {
-      count: "1000",
-      title: "ಸ್ಪರ್ಧಿಗಳು",
-      image: participants,
-      ifPlus: "+",
-    },
-    {
-      count: "200",
-      title: "ವಿಜೇತರು",
-      image: winner,
-      ifPlus: "+",
-    },
-  ];
+  {
+    count: "16",
+    title: "ದೇವಸ್ಥಾನಗಳು",
+    image: temple,
+    ifPlus: "",
+  },
+  {
+    count: "70",
+    title: "ಸ್ಪರ್ಧೆಗಳು",
+    image: torch,
+    ifPlus: "+",
+  },
+  {
+    count: "1000",
+    title: "ಸ್ಪರ್ಧಿಗಳು",
+    image: participants,
+    ifPlus: "+",
+  },
+  {
+    count: "200",
+    title: "ವಿಜೇತರು",
+    image: winner,
+    ifPlus: "+",
+  },
+];
 
 // Sports history data for the last 32 years (1992-2024)
 export const sportsHistory = [
