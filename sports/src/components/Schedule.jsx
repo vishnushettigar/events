@@ -3,15 +3,17 @@ import { eventAPI, viewerAPI } from '../utils/api.js';
 
 const Schedule = ({ 
   apiSource = 'staff', // 'staff', 'admin', or 'viewer'
-  className = ""
+  className = "",
+  year = new Date().getFullYear()
 }) => {
+  const currentYear = year || new Date().getFullYear();
   const [scheduleData, setScheduleData] = useState({ individual: [], team: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchScheduleData();
-  }, [apiSource]);
+  }, [apiSource, currentYear]);
 
   const fetchScheduleData = async () => {
     setLoading(true);
@@ -19,12 +21,13 @@ const Schedule = ({
     
     try {
       let data;
+      const params = { year: currentYear };
       
       // Fetch data based on API source
       switch (apiSource) {
         case 'staff':
           // For staff, getAllEventsComplete already returns separated individual and team arrays
-          const eventsData = await eventAPI.getAllEventsComplete();
+          const eventsData = await eventAPI.getAllEventsComplete(params);
           data = {
             individual: eventsData.individual || [],
             team: eventsData.team || []
@@ -32,7 +35,7 @@ const Schedule = ({
           break;
           
         case 'admin':
-          const adminEventsData = await eventAPI.getAllEvents();
+          const adminEventsData = await eventAPI.getAllEvents(params);
           data = {
             individual: adminEventsData.events.filter(event => event.event_type.type === 'INDIVIDUAL'),
             team: adminEventsData.events.filter(event => event.event_type.type === 'TEAM')
@@ -40,7 +43,7 @@ const Schedule = ({
           break;
           
         case 'viewer':
-          const viewerEventsData = await viewerAPI.getEvents();
+          const viewerEventsData = await viewerAPI.getEvents(params);
           data = {
             individual: viewerEventsData.events.filter(event => event.event_type.type === 'INDIVIDUAL'),
             team: viewerEventsData.events.filter(event => event.event_type.type === 'TEAM')
@@ -201,9 +204,24 @@ const Schedule = ({
   return (
     <div className={`space-y-8 ${className}`}>
       {/* Header */}
-      <div className="text-center mb-6">
-        <h1 className="text-2xl font-bold text-[#2A2A2A]">📅 Complete Event Schedule</h1>
-        {/* <p className="text-[#5A5A5A] mt-1">All individual and team events organized by age category and gender</p> */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <div className="text-center sm:text-left">
+          <h1 className="text-2xl font-bold text-[#2A2A2A]">📅 Complete Event Schedule</h1>
+          <p className="text-sm text-[#5A5A5A] mt-1">
+            Status based on <span className="font-semibold text-[#D35D38]">{currentYear}</span> results
+          </p>
+        </div>
+        <button
+          onClick={fetchScheduleData}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-[#D35D38] hover:bg-[#b84d2d] text-white rounded-lg text-sm font-medium transition-colors shadow-sm disabled:opacity-50"
+          title="Refresh schedule status"
+        >
+          <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh Status
+        </button>
       </div>
 
       {/* Individual Events Section */}
@@ -348,35 +366,50 @@ const Schedule = ({
       </div>
 
       {/* Summary Statistics */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-[#D35D38] mb-4 text-center">📊 Event Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-          <div className="bg-[#F8DFBE] rounded-lg p-4">
-            <p className="text-2xl font-bold text-[#D35D38]">
-              {scheduleData.individual.length}
-            </p>
-            <p className="text-sm text-[#5A5A5A]">Individual Events</p>
+      {(() => {
+        const totalEventsCount = scheduleData.individual.length + scheduleData.team.length;
+        const completedEventsCount = scheduleData.individual.filter(e => e.has_results).length + 
+          scheduleData.team.filter(e => e.has_results).length;
+        const pendingEventsCount = totalEventsCount - completedEventsCount;
+
+        return (
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-[#D35D38] mb-4 text-center">📊 Event Summary ({currentYear})</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 text-center">
+              <div className="bg-[#F8DFBE] rounded-lg p-4">
+                <p className="text-2xl font-bold text-[#D35D38]">
+                  {scheduleData.individual.length}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Individual Events</p>
+              </div>
+              <div className="bg-[#F8DFBE] rounded-lg p-4">
+                <p className="text-2xl font-bold text-[#D35D38]">
+                  {scheduleData.team.length}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Team Events</p>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-2xl font-bold text-green-700">
+                  {completedEventsCount}
+                </p>
+                <p className="text-sm text-green-800 font-medium">Completed</p>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-2xl font-bold text-yellow-700">
+                  {pendingEventsCount}
+                </p>
+                <p className="text-sm text-yellow-800 font-medium">Pending</p>
+              </div>
+              <div className="bg-[#F8DFBE] rounded-lg p-4 col-span-2 sm:col-span-1">
+                <p className="text-2xl font-bold text-[#D35D38]">
+                  {totalEventsCount}
+                </p>
+                <p className="text-sm text-[#5A5A5A]">Total Events</p>
+              </div>
+            </div>
           </div>
-          <div className="bg-[#F8DFBE] rounded-lg p-4">
-            <p className="text-2xl font-bold text-[#D35D38]">
-              {scheduleData.team.length}
-            </p>
-            <p className="text-sm text-[#5A5A5A]">Team Events</p>
-          </div>
-          <div className="bg-[#F8DFBE] rounded-lg p-4">
-            <p className="text-2xl font-bold text-[#D35D38]">
-              {scheduleData.individual.length + scheduleData.team.length}
-            </p>
-            <p className="text-sm text-[#5A5A5A]">Total Events</p>
-          </div>
-          <div className="bg-[#F8DFBE] rounded-lg p-4">
-            <p className="text-2xl font-bold text-[#D35D38]">
-              {Object.keys(groupedIndividualEvents).length + Object.keys(groupedTeamEvents).length}
-            </p>
-            <p className="text-sm text-[#5A5A5A]">Categories</p>
-          </div>
-        </div>
-      </div>
+        );
+      })()}
     </div>
   );
 };

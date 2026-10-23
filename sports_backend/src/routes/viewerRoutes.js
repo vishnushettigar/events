@@ -132,6 +132,8 @@ router.get('/dashboard-stats', authenticate, requireRole('VIEWER'), async (req, 
  */
 router.get('/events', authenticate, requireRole('VIEWER'), async (req, res) => {
    try {
+    const currentYear = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },
       include: {
@@ -143,14 +145,20 @@ router.get('/events', authenticate, requireRole('VIEWER'), async (req, res) => {
           take: 1
         },
         registrations: {
-          where: { is_deleted: false },
+          where: {
+            is_deleted: false,
+            year: currentYear
+          },
           select: {
             id: true,
             event_result_id: true
           }
         },
         team_registrations: {
-          where: { is_deleted: false },
+          where: {
+            is_deleted: false,
+            year: currentYear
+          },
           select: {
             id: true,
             event_result_id: true
@@ -323,13 +331,14 @@ router.get('/participant-data', authenticate, requireRole('VIEWER'), async (req,
  */
 router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res) => {
     try {
-        const { event_ids, temple_id } = req.query;
+        const { event_ids, temple_id, year } = req.query;
+        const selectedYear = year ? parseInt(year) : new Date().getFullYear();
 
         // Always filter for status = 'ACCEPTED'
         const where = {
           is_deleted: false,
           status: 'ACCEPTED',
-          year: new Date().getFullYear()  // Only show current year data
+          year: selectedYear
         };
 
         // Add event filter
@@ -449,10 +458,12 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
  */
 router.get('/teams', authenticate, requireRole('VIEWER'), async (req, res) => {
   try {
-    const { temple_id, event_id, status } = req.query;
+    const { temple_id, event_id, status, year } = req.query;
+    const selectedYear = year ? parseInt(year) : new Date().getFullYear();
 
     let whereClause = {
-      year: new Date().getFullYear()  // Only show current year data
+      is_deleted: false,
+      year: selectedYear
     };
     
     if (temple_id) whereClause.temple_id = parseInt(temple_id);

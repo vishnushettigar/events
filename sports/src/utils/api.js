@@ -182,8 +182,8 @@ export const userAPI = {
 };
 
 export const eventAPI = {
-  getAllEvents: () => apiService.get('/admin/events'),
-  getAllEventsComplete: () => apiService.get('/events/all-events'),
+  getAllEvents: (params = {}) => apiService.get('/admin/events', params),
+  getAllEventsComplete: (params = {}) => apiService.get('/events/all-events', params),
   getAvailableEvents: () => apiService.get('/users/available-events'),
   getEventPerformance: () => apiService.get('/reports/event-performance'),
   getParticipantData: (params) => apiService.get('/events/participant-data', params),
@@ -193,12 +193,12 @@ export const eventAPI = {
   updateIndividualResult: (id, rank) => apiService.put(`/events/update-individual-result/${id}`, { rank }),
   updateTeamResult: (id, rank) => apiService.put(`/events/update-team-result/${id}`, { rank }),
   getTeamEvents: () => apiService.get('/events/team-events'),
-  getTempleTeams: () => apiService.get('/events/temple-teams'),
+  getTempleTeams: (params) => apiService.get('/events/temple-teams', params),
   registerTeam: (data) => apiService.post('/events/register-team', data),
   updateTeam: (registrationId, data) => apiService.put(`/events/update-team/${registrationId}`, data),
   deleteTeam: (registrationId) => apiService.delete(`/events/delete-team/${registrationId}`),
   acceptTeam: (registrationId) => apiService.put(`/events/accept-team/${registrationId}`),
-  getAcceptedTeamsCount: (eventId) => apiService.get(`/events/accepted-teams-count/${eventId}`),
+  getAcceptedTeamsCount: (eventId, params) => apiService.get(`/events/accepted-teams-count/${eventId}`, params),
   getEventParticipants: (eventId) => apiService.get(`/events/event-participants/${eventId}`),
   getTeamParticipants: (registrationId) => apiService.get(`/events/team-participants/${registrationId}`),
   getTeamRegistration: (registrationId) => apiService.get(`/events/team-registration/${registrationId}`),
@@ -246,7 +246,7 @@ export const reportAPI = {
 
 // Viewer-specific API methods (read-only access)
 export const viewerAPI = {
-  getEvents: () => apiService.get('/viewer/events'),
+  getEvents: (params = {}) => apiService.get('/viewer/events', params),
   getParticipants: (params) => apiService.get('/viewer/participants', params),
   getParticipantData: (params) => apiService.get('/viewer/participant-data', params),
   getTeams: (params) => apiService.get('/viewer/teams', params),

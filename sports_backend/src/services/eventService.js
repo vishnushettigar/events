@@ -307,7 +307,7 @@ async function unregisterParticipant(user_id, event_id) {
   }
 }
 
-async function registerTeamEvent(temple_id, event_id, member_user_ids) {
+async function registerTeamEvent(temple_id, event_id, member_user_ids, year = null) {
   // Check if team event registration deadline has passed
   const lastDateSetting = await prisma.settings.findUnique({
     where: { name: 'REG_LAST_DATE_TEAM' }
@@ -410,7 +410,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
       throw new Error(`Event with ID ${event_id} not found`);
   }
 
-    const currentYear = new Date().getFullYear();
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
     // Check if team is already registered for this event
     // For mixed gender events (MIXED), allow multiple teams per temple
@@ -456,7 +456,7 @@ async function registerTeamEvent(temple_id, event_id, member_user_ids) {
 
   const registration = await prisma.team_event_registration.create({
     data: {
-      year: new Date().getFullYear(),
+      year: currentYear,
       temple_id,
       event_id,
         member_user_ids: member_user_ids.join(','),
@@ -850,9 +850,12 @@ async function getTempleTeams(temple_id, filters = {}) {
   try {
     console.log('getTempleTeams called with:', { temple_id, filters });
 
+  const currentYear = filters.year ? parseInt(filters.year) : new Date().getFullYear();
+
   const where = {
     temple_id: temple_id,
-      is_deleted: false
+    is_deleted: false,
+    year: currentYear
   };
 
   if (filters.event_id) {
@@ -2147,11 +2150,13 @@ async function acceptTeamRegistration(registrationId, templeId) {
       throw new Error('Accept functionality is only for mixed gender events');
     }
 
-    // Check the count of ACCEPTED teams for this event
+    // Check the count of ACCEPTED teams for this event for the same year
+    const teamYear = registration.year || new Date().getFullYear();
     const acceptedTeamsCount = await prisma.team_event_registration.count({
       where: {
         temple_id: templeId,
         event_id: registration.event_id,
+        year: teamYear,
         is_deleted: false,
         status: 'ACCEPTED'
       }
@@ -2192,12 +2197,14 @@ async function acceptTeamRegistration(registrationId, templeId) {
 }
 
 // Get count of ACCEPTED teams for an event in a temple
-async function getAcceptedTeamsCount(templeId, eventId) {
+async function getAcceptedTeamsCount(templeId, eventId, year = null) {
   try {
+    const currentYear = year ? parseInt(year) : new Date().getFullYear();
     const count = await prisma.team_event_registration.count({
       where: {
         temple_id: templeId,
         event_id: eventId,
+        year: currentYear,
         is_deleted: false,
         status: 'ACCEPTED'
       }

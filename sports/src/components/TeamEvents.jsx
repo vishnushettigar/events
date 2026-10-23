@@ -47,6 +47,25 @@ const TeamEvents = () => {
     const [modalTitle, setModalTitle] = useState('');
     const [modalMessage, setModalMessage] = useState('');
 
+    // Fetch registered teams for current year
+    const fetchRegisteredTeams = async () => {
+        try {
+            const currentYear = new Date().getFullYear();
+            const teamsResponse = await eventAPI.getTempleTeams({ year: currentYear });
+            const currentYearTeams = Array.isArray(teamsResponse)
+                ? teamsResponse.filter(team => {
+                    const teamYear = team.year ? Number(team.year) : (team.created_at ? new Date(team.created_at).getFullYear() : null);
+                    return teamYear === currentYear;
+                })
+                : [];
+            setRegisteredTeams(currentYearTeams);
+            return currentYearTeams;
+        } catch (err) {
+            console.error('Error fetching registered teams:', err);
+            return [];
+        }
+    };
+
     // Fetch user profile, events, and registered teams on component mount
     useEffect(() => {
         const fetchData = async () => {
@@ -59,9 +78,8 @@ const TeamEvents = () => {
                 const eventsResponse = await eventAPI.getTeamEvents();
                 setEvents(eventsResponse);
 
-                // Fetch registered teams
-                const teamsResponse = await eventAPI.getTempleTeams();
-                setRegisteredTeams(teamsResponse);
+                // Fetch registered teams for current year
+                await fetchRegisteredTeams();
             } catch (error) {
                 console.error('Error fetching data:', error);
                 setError('Failed to fetch data');
@@ -142,18 +160,19 @@ const TeamEvents = () => {
                 });
                 showSuccessModal('Success', 'Team updated successfully!');
             } else {
-                // Register new team
-            const response = await eventAPI.registerTeam({
+                // Register new team for the current year
+                const currentYear = new Date().getFullYear();
+                const response = await eventAPI.registerTeam({
                     temple_id: userProfile.temple_id,
-                event_id: eventId,
+                    event_id: eventId,
+                    year: currentYear,
                     member_user_ids: validPlayers.map(player => player.profileId)
-            });
-            showSuccessModal('Success', 'Team registered successfully!');
+                });
+                showSuccessModal('Success', 'Team registered successfully!');
             }
             
-            // Refresh registered teams
-            const teamsResponse = await eventAPI.getTempleTeams();
-            setRegisteredTeams(teamsResponse);
+            // Refresh registered teams for current year
+            await fetchRegisteredTeams();
         } catch (err) {
             showErrorModal('Error', err.message || 'Error processing team');
         } finally {
@@ -190,10 +209,15 @@ const TeamEvents = () => {
         return event?.event_type?.name || 'Unknown Event';
     };
 
-    // Helper function to get registered teams for an event
+    // Helper function to get registered teams for an event (strictly current year)
     const getRegisteredTeams = (eventName, gender) => {
         const eventId = getEventId(eventName, gender);
-        return registeredTeams.filter(team => team.event_id === eventId);
+        const currentYear = new Date().getFullYear();
+        return registeredTeams.filter(team => {
+            if (team.event_id !== eventId) return false;
+            const teamYear = team.year ? Number(team.year) : (team.created_at ? new Date(team.created_at).getFullYear() : null);
+            return teamYear === currentYear;
+        });
     };
 
     // Helper function to get registered team for an event (for backward compatibility)
@@ -202,10 +226,15 @@ const TeamEvents = () => {
         return teams.length > 0 ? teams[0] : null;
     };
 
-    // Get count of ACCEPTED teams for an event
+    // Get count of ACCEPTED teams for an event in current year
     const getAcceptedTeamsCount = (eventName, gender) => {
         const eventId = getEventId(eventName, gender);
-        return registeredTeams.filter(team => team.event_id === eventId && team.status === 'ACCEPTED').length;
+        const currentYear = new Date().getFullYear();
+        return registeredTeams.filter(team => {
+            if (team.event_id !== eventId || team.status !== 'ACCEPTED') return false;
+            const teamYear = team.year ? Number(team.year) : (team.created_at ? new Date(team.created_at).getFullYear() : null);
+            return teamYear === currentYear;
+        }).length;
     };
 
     // Handler for deleting a team
@@ -219,9 +248,8 @@ const TeamEvents = () => {
             await eventAPI.deleteTeam(teamId);
             showSuccessModal('Success', 'Team deleted successfully!');
             
-            // Refresh registered teams
-            const teamsResponse = await eventAPI.getTempleTeams();
-            setRegisteredTeams(teamsResponse);
+            // Refresh registered teams for current year
+            await fetchRegisteredTeams();
         } catch (err) {
             showErrorModal('Error', err.message || 'Failed to delete team');
         } finally {
@@ -236,9 +264,8 @@ const TeamEvents = () => {
             await eventAPI.acceptTeam(teamId);
             showSuccessModal('Success', 'Team accepted successfully!');
             
-            // Refresh registered teams
-            const teamsResponse = await eventAPI.getTempleTeams();
-            setRegisteredTeams(teamsResponse);
+            // Refresh registered teams for current year
+            await fetchRegisteredTeams();
         } catch (err) {
             showErrorModal('Error', err.message || 'Failed to accept team');
         } finally {

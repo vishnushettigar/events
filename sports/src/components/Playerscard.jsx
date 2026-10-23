@@ -4,7 +4,7 @@ const Playerscard = ({ participant, onStatusUpdate, acceptedCount, pendingCount,
     if (!participant) return null;
 
     // Check if this participant's age category should be excluded from action buttons
-    const excludedAgeCategories = ['0-5', '6-10', '61-90'];
+    const excludedAgeCategories = ['0-5', '6-10', '61-90', '61+'];
     const participantAgeCategory = participant.event?.age_category?.name || '';
     const isExcludedAgeCategory = excludedAgeCategories.includes(participantAgeCategory);
 

@@ -365,8 +365,8 @@ const AvailableEvents = () => {
       <h2 className="text-2xl font-bold mb-6 text-[#2A2A2A]">Available Events</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {events.map((event) => {
-          // Exclude age categories 0-5, 6-10, 61-90 from registration limit
-          const excludedAgeCategories = ['0-5', '6-10', '61-90'];
+          // Exclude age categories 0-5, 6-10, 61-90, 61+ from registration limit
+          const excludedAgeCategories = ['0-5', '6-10', '61-90', '61+'];
           const eventAgeCategory = event.age_category?.name || '';
           const isExcluded = excludedAgeCategories.includes(eventAgeCategory);
 

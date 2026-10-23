@@ -22,11 +22,11 @@ router.post('/register-participant', authenticate, [
     console.error('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
-  
+
   const user_id = req.user.id; // Get user ID from authenticated user (token)
   const { event_id } = req.body;
   console.log("user id from req", req.user)
-  console.log('Registration attempt:', { user_id: req.user.id, event_id});
+  console.log('Registration attempt:', { user_id: req.user.id, event_id });
 
   try {
     const registration = await eventService.registerParticipant(req.user.id, event_id, req.user.temple_id);
@@ -92,7 +92,7 @@ router.delete('/unregister-participant/:eventId', authenticate, async (req, res)
   try {
     const { eventId } = req.params;
     const userId = req.user.id; // Get user ID from authenticated user
-    
+
     if (!eventId || isNaN(parseInt(eventId))) {
       return res.status(400).json({ error: 'Valid event ID is required' });
     }
@@ -126,9 +126,10 @@ router.post('/register-team', authenticate, requireRole('TEMPLE_ADMIN'), [
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  const { temple_id, event_id, member_user_ids } = req.body;
+  const { temple_id, event_id, member_user_ids, year } = req.body;
   try {
-    const registration = await eventService.registerTeamEvent(temple_id, event_id, member_user_ids);
+    const registrationYear = year ? parseInt(year) : new Date().getFullYear();
+    const registration = await eventService.registerTeamEvent(temple_id, event_id, member_user_ids, registrationYear);
     res.status(201).json(registration);
   } catch (error) {
     console.error('Team registration error:', error);
@@ -173,7 +174,7 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
 ], async (req, res) => {
   console.log('update-registration-status route called by user:', req.user);
   console.log('Request body:', req.body);
-  
+
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log('Validation errors:', errors.array());
@@ -233,18 +234,23 @@ router.get('/temple-participants', authenticate, requireRole(2), async (req, res
 router.get('/temple-teams', authenticate, requireRole(2), async (req, res) => {
   try {
     console.log('temple-teams route called by user:', req.user);
-    
+
     if (!req.user.temple_id) {
       console.error('No temple_id found in user object');
       return res.status(400).json({ error: 'User is not associated with any temple' });
     }
 
+    const { event_id, year } = req.query;
+    const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year) : currentYear;
+
     const filters = {
-      event_id: req.query.event_id ? parseInt(req.query.event_id) : undefined
+      event_id: event_id ? parseInt(event_id) : undefined,
+      year: targetYear
     };
-    
+
     console.log('Fetching teams for temple:', req.user.temple_id, 'with filters:', filters);
-    
+
     const teams = await eventService.getTempleTeams(req.user.temple_id, filters);
     console.log('Successfully fetched teams:', teams.length);
     res.json(teams);
@@ -285,7 +291,7 @@ router.get('/temple-teams', authenticate, requireRole(2), async (req, res) => {
 router.delete('/delete-team/:registrationId', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
   try {
     const { registrationId } = req.params;
-    
+
     if (!registrationId || isNaN(parseInt(registrationId))) {
       return res.status(400).json({ error: 'Valid registration ID is required' });
     }
@@ -294,7 +300,7 @@ router.delete('/delete-team/:registrationId', authenticate, requireRole('TEMPLE_
     res.json(result);
   } catch (error) {
     console.error('Error deleting team registration:', error);
-    
+
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
@@ -339,7 +345,7 @@ router.delete('/delete-team/:registrationId', authenticate, requireRole('TEMPLE_
 router.put('/accept-team/:registrationId', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
   try {
     const { registrationId } = req.params;
-    
+
     if (!registrationId || isNaN(parseInt(registrationId))) {
       return res.status(400).json({ error: 'Valid registration ID is required' });
     }
@@ -348,7 +354,7 @@ router.put('/accept-team/:registrationId', authenticate, requireRole('TEMPLE_ADM
     res.json(result);
   } catch (error) {
     console.error('Error accepting team registration:', error);
-    
+
     if (error.message.includes('not found')) {
       return res.status(404).json({ error: error.message });
     }
@@ -389,12 +395,16 @@ router.put('/accept-team/:registrationId', authenticate, requireRole('TEMPLE_ADM
 router.get('/accepted-teams-count/:eventId', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
   try {
     const { eventId } = req.params;
-    
+    const { year } = req.query;
+
     if (!eventId || isNaN(parseInt(eventId))) {
       return res.status(400).json({ error: 'Valid event ID is required' });
     }
 
-    const count = await eventService.getAcceptedTeamsCount(req.user.temple_id, parseInt(eventId));
+    const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year) : currentYear;
+
+    const count = await eventService.getAcceptedTeamsCount(req.user.temple_id, parseInt(eventId), targetYear);
     res.json({ count });
   } catch (error) {
     console.error('Error getting accepted teams count:', error);
@@ -457,7 +467,7 @@ router.get('/temple-report', authenticate, requireRole('TEMPLE_ADMIN'), async (r
 router.get('/participant-data', authenticate, async (req, res) => {
   try {
     const { ageCategory = 'All', gender = 'ALL' } = req.query;
-    
+
     console.log('Participant data request:', { ageCategory, gender });
 
     // Get age categories
@@ -509,10 +519,10 @@ router.put('/update-team/:registrationId', authenticate, requireRole('TEMPLE_ADM
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  
+
   const { registrationId } = req.params;
   const { member_user_ids } = req.body;
-  
+
   try {
     const updatedRegistration = await eventService.updateTeamRegistration(parseInt(registrationId), member_user_ids, req.user.id);
     res.json(updatedRegistration);
@@ -534,7 +544,13 @@ router.put('/update-team/:registrationId', authenticate, requireRole('TEMPLE_ADM
 // Get temple's registered teams
 router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (req, res) => {
   try {
-    const teams = await eventService.getTempleTeams(req.user.temple_id);
+    const { event_id, year } = req.query;
+    const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year) : currentYear;
+    const teams = await eventService.getTempleTeams(req.user.temple_id, {
+      event_id: event_id ? parseInt(event_id) : undefined,
+      year: targetYear
+    });
     res.json(teams);
   } catch (error) {
     console.error(error);
@@ -622,7 +638,7 @@ router.get('/temple-teams', authenticate, requireRole('TEMPLE_ADMIN'), async (re
 router.get('/event-participants/:eventId', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
-    
+
     if (!eventId || isNaN(parseInt(eventId))) {
       return res.status(400).json({ error: 'Valid event ID is required' });
     }
@@ -684,7 +700,7 @@ router.get('/event-participants/:eventId', authenticate, async (req, res) => {
 router.get('/team-participants/:registrationId', authenticate, async (req, res) => {
   try {
     const { registrationId } = req.params;
-    
+
     if (!registrationId || isNaN(parseInt(registrationId))) {
       return res.status(400).json({ error: 'Valid registration ID is required' });
     }
@@ -701,7 +717,7 @@ router.get('/team-participants/:registrationId', authenticate, async (req, res) 
 router.get('/team-registration/:registrationId', authenticate, async (req, res) => {
   try {
     const { registrationId } = req.params;
-    
+
     if (!registrationId || isNaN(parseInt(registrationId))) {
       return res.status(400).json({ error: 'Valid registration ID is required' });
     }
@@ -744,7 +760,7 @@ router.get('/team-registration/:registrationId', authenticate, async (req, res) 
 router.post('/batch-team-data', authenticate, async (req, res) => {
   try {
     const { registration_ids } = req.body;
-    
+
     if (!registration_ids || !Array.isArray(registration_ids) || registration_ids.length === 0) {
       return res.status(400).json({ error: 'Valid registration IDs array is required' });
     }
@@ -782,6 +798,8 @@ router.post('/batch-team-data', authenticate, async (req, res) => {
  */
 router.get('/all-events', authenticate, async (req, res) => {
   try {
+    const currentYear = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },
       include: {
@@ -793,14 +811,20 @@ router.get('/all-events', authenticate, async (req, res) => {
           take: 1
         },
         registrations: {
-          where: { is_deleted: false },
+          where: {
+            is_deleted: false,
+            year: currentYear
+          },
           select: {
             id: true,
             event_result_id: true
           }
         },
         team_registrations: {
-          where: { is_deleted: false },
+          where: {
+            is_deleted: false,
+            year: currentYear
+          },
           select: {
             id: true,
             event_result_id: true
@@ -846,7 +870,7 @@ router.get('/all-events', authenticate, async (req, res) => {
     const individualEvents = transformedEvents.filter(event => event.event_type.type === 'INDIVIDUAL');
     const teamEvents = transformedEvents.filter(event => event.event_type.type === 'TEAM');
 
-    res.json({ 
+    res.json({
       individual: individualEvents,
       team: teamEvents,
       total: transformedEvents.length
@@ -861,7 +885,7 @@ router.get('/all-events', authenticate, async (req, res) => {
 router.get('/debug-event/:eventId', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
-    
+
     if (!eventId || isNaN(parseInt(eventId))) {
       return res.status(400).json({ error: 'Valid event ID is required' });
     }
@@ -916,14 +940,14 @@ router.put('/update-individual-result/:registrationId', authenticate, requireRol
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  
+
   const { registrationId } = req.params;
   const { rank } = req.body;
-  
+
   try {
     const updatedRegistration = await eventService.updateIndividualEventResult(
-      parseInt(registrationId), 
-      rank, 
+      parseInt(registrationId),
+      rank,
       req.user.id
     );
     res.json(updatedRegistration);
@@ -944,14 +968,14 @@ router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
   }
-  
+
   const { registrationId } = req.params;
   const { rank } = req.body;
-  
+
   try {
     const updatedRegistration = await eventService.updateTeamEventResult(
-      parseInt(registrationId), 
-      rank, 
+      parseInt(registrationId),
+      rank,
       req.user.id
     );
     res.json(updatedRegistration);
@@ -1045,7 +1069,7 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
     // =========================================================================
     // 1. HEAT SIZE CALCULATION (Using lane_count from settings)
     // =========================================================================
-    
+
     if (totalParticipants <= lane_count) {
       // Single heat
       heatSizes.push(totalParticipants);
@@ -1094,44 +1118,44 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
       // Apply temple separation logic to ALL participants
       // Track how many participants from each temple are in each heat (globally)
       const templeCountsPerHeat = {};
-      
+
       // Initialize temple counts for all temples
       Object.keys(templeGroups).forEach(temple => {
         templeCountsPerHeat[temple] = new Array(heats.length).fill(0);
       });
-      
+
       // Sort participants by temple size (largest temples first for better distribution)
       const sortedParticipants = [...participants].sort((a, b) => {
         return templeGroups[b.temple_name].length - templeGroups[a.temple_name].length;
       });
-      
+
       // Distribute each participant with temple separation
       sortedParticipants.forEach(participant => {
         const temple = participant.temple_name;
         const templeCounts = templeCountsPerHeat[temple];
-        
+
         // Find the best heat for this participant
         let targetHeatIndex = -1;
         let minTempleCount = Infinity;
         let minTotalCount = Infinity;
-        
+
         for (let i = 0; i < heats.length; i++) {
           // Check if heat has capacity
           if (heats[i].participants.length < heatSizes[i]) {
             const templeCount = templeCounts[i];
             const totalCount = heats[i].participants.length;
-            
+
             // Priority 1: Prefer heats with fewer participants from same temple (separation)
             // Priority 2: If same temple count, prefer heats with fewer total participants (balance)
-            if (templeCount < minTempleCount || 
-                (templeCount === minTempleCount && totalCount < minTotalCount)) {
+            if (templeCount < minTempleCount ||
+              (templeCount === minTempleCount && totalCount < minTotalCount)) {
               minTempleCount = templeCount;
               minTotalCount = totalCount;
               targetHeatIndex = i;
             }
           }
         }
-        
+
         // Place participant in the best available heat
         if (targetHeatIndex >= 0) {
           heats[targetHeatIndex].participants.push(participant);
@@ -1142,7 +1166,7 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
 
     // Set final laneCount based on actual participants
     heats.forEach(heat => {
-        heat.laneCount = heat.participants.length;
+      heat.laneCount = heat.participants.length;
     });
 
     // Save heats to database
@@ -1210,7 +1234,7 @@ router.post('/init-trials', authenticate, requireRole('ADMIN'), [
 router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { eventId } = req.params;
-    
+
     // Check if event exists and is a running event
     const event = await prisma.mst_event.findUnique({
       where: { id: parseInt(eventId) },
@@ -1228,7 +1252,7 @@ router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), 
 
     // Delete existing heats for this event
     await prisma.event_performance.deleteMany({
-      where: { 
+      where: {
         event_id: parseInt(eventId),
         year: new Date().getFullYear()
       }
@@ -1247,7 +1271,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
   try {
     const { eventId } = req.params;
     const currentYear = new Date().getFullYear();
-    
+
     // Use raw query to handle schema differences
     let heats = [];
     try {
@@ -1300,7 +1324,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
       if (!groupedHeats[heatNumber]) {
         groupedHeats[heatNumber] = [];
       }
-      
+
       groupedHeats[heatNumber].push({
         id: heat.reg_id,
         participant_name: (heat.first_name || '') + ' ' + (heat.last_name || ''),
@@ -1346,13 +1370,13 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
     console.log('Schema detection result for update-timings:', schema);
-    
+
     if (schema === 'none') {
-      return res.status(500).json({ 
-        error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
+      return res.status(500).json({
+        error: 'Database schema error: Performance columns are missing. Please run database migrations.'
       });
     }
-    
+
     // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
     const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
@@ -1362,19 +1386,19 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
       if (timingValue === null || timingValue === undefined || timingValue === '') {
         return null;
       }
-      
+
       // Convert to string and trim
       const stringValue = String(timingValue).trim();
       if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
         return null;
       }
-      
+
       // Parse as float
       const parsedTime = parseFloat(stringValue);
       if (!isNaN(parsedTime) && parsedTime > 0) {
         return parsedTime;
       }
-      
+
       // Return null for invalid values
       return null;
     };
@@ -1405,7 +1429,7 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
             updates.push('performance_3 = ?');
             params.push(performance3);
           }
-          
+
           if (updates.length > 0) {
             params.push(event_id, heat_number, timing.registration_id);
             return await prisma.$executeRawUnsafe(`
@@ -1469,13 +1493,13 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
     console.log('Schema detection result for update-final-timings:', schema);
-    
+
     if (schema === 'none') {
-      return res.status(500).json({ 
-        error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
+      return res.status(500).json({
+        error: 'Database schema error: Performance columns are missing. Please run database migrations.'
       });
     }
-    
+
     // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
     const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
@@ -1485,19 +1509,19 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
       if (timingValue === null || timingValue === undefined || timingValue === '') {
         return null;
       }
-      
+
       // Convert to string and trim
       const stringValue = String(timingValue).trim();
       if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
         return null;
       }
-      
+
       // Parse as float
       const parsedTime = parseFloat(stringValue);
       if (!isNaN(parsedTime) && parsedTime > 0) {
         return parsedTime;
       }
-      
+
       // Return null for invalid values
       return null;
     };
@@ -1528,7 +1552,7 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
             updates.push('performance_3 = ?');
             params.push(performance3);
           }
-          
+
           if (updates.length > 0) {
             params.push(event_id, timing.registration_id);
             return await prisma.$executeRawUnsafe(`
@@ -1571,13 +1595,13 @@ async function detectPerformanceSchema() {
     const tableInfo = await prisma.$queryRawUnsafe(`
       PRAGMA table_info(event_performance)
     `);
-    
+
     const columnNames = tableInfo.map(col => col.name.toLowerCase());
-    const dbHasNewSchema = columnNames.includes('performance_1') && 
-                           columnNames.includes('performance_2') && 
-                           columnNames.includes('performance_3');
+    const dbHasNewSchema = columnNames.includes('performance_1') &&
+      columnNames.includes('performance_2') &&
+      columnNames.includes('performance_3');
     const dbHasOldSchema = columnNames.includes('heat_time');
-    
+
     // Decision logic:
     // Since Prisma client might not be regenerated even if database has new columns,
     // we'll always use raw SQL when database has new schema columns to be safe.
@@ -1585,7 +1609,7 @@ async function detectPerformanceSchema() {
     // 1. If database has new schema -> always use raw SQL (new_raw) to be safe
     // 2. If database has old schema -> use old (with raw SQL)
     // 3. If neither exists -> return 'none'
-    
+
     if (dbHasNewSchema) {
       // Always use raw SQL for new schema to avoid Prisma client mismatch issues
       console.log('Detected new schema (performance_1/2/3) - using raw SQL');
@@ -1605,14 +1629,14 @@ async function detectPerformanceSchema() {
       await prisma.$queryRawUnsafe(`SELECT performance_1 FROM event_performance LIMIT 1`);
       return 'new_raw'; // Database has it, but use raw SQL
     } catch (newError) {
-      if (newError.message && newError.message.includes('performance') || 
-          newError.message && newError.message.includes('no such column')) {
+      if (newError.message && newError.message.includes('performance') ||
+        newError.message && newError.message.includes('no such column')) {
         try {
           await prisma.$queryRawUnsafe(`SELECT heat_time FROM event_performance LIMIT 1`);
           return 'old';
         } catch (oldError) {
-          if (oldError.message && (oldError.message.includes('heat_time') || 
-              oldError.message.includes('no such column'))) {
+          if (oldError.message && (oldError.message.includes('heat_time') ||
+            oldError.message.includes('no such column'))) {
             return 'none';
           }
           throw oldError;
@@ -1657,17 +1681,17 @@ async function ensureTrialPerformanceRecords(eventId) {
   });
 
   const existingRegistrationIds = new Set(existingRecords.map(r => r.registration_id));
-  
+
   // Create performance records for participants that don't have them
   const participantsToCreate = acceptedParticipants.filter(p => !existingRegistrationIds.has(p.id));
 
   if (participantsToCreate.length > 0) {
     console.log(`Creating ${participantsToCreate.length} trial performance records for event ${eventId}`);
-    
+
     // Detect schema to use appropriate method
     const schema = await detectPerformanceSchema();
     const currentYear = new Date().getFullYear();
-    
+
     if (schema === 'new' || schema === 'new_raw') {
       // Use raw SQL for new schema (always use raw SQL to avoid Prisma client mismatch)
       for (const participant of participantsToCreate) {
@@ -1771,13 +1795,13 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
     console.log('Schema detection result for update-trials:', schema);
-    
+
     if (schema === 'none') {
-      return res.status(500).json({ 
-        error: 'Database schema error: Performance columns are missing. Please run database migrations.' 
+      return res.status(500).json({
+        error: 'Database schema error: Performance columns are missing. Please run database migrations.'
       });
     }
-    
+
     // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
     const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
@@ -1790,19 +1814,19 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
       if (trialValue === null || trialValue === undefined || trialValue === '') {
         return null;
       }
-      
+
       // Convert to string and trim
       const stringValue = String(trialValue).trim();
       if (stringValue === '' || stringValue === 'null' || stringValue === 'undefined') {
         return null;
       }
-      
+
       // Parse as float
       const parsedTrial = parseFloat(stringValue);
       if (!isNaN(parsedTrial) && parsedTrial >= 0) {
         return parsedTrial;
       }
-      
+
       // Return null for invalid values
       return null;
     };
@@ -1833,7 +1857,7 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
             updates.push('performance_3 = ?');
             params.push(performance3);
           }
-          
+
           if (updates.length > 0) {
             params.push(event_id, trial.registration_id);
             return await prisma.$executeRawUnsafe(`
@@ -1895,9 +1919,9 @@ router.get('/search-users-for-event/:eventId', authenticate, requireRole('STAFF'
     const ageCutoffSetting = await prisma.settings.findUnique({
       where: { name: 'AGE_CUTOFF_DATE' }
     });
-    
-    const cutoffDate = ageCutoffSetting?.value 
-      ? new Date(ageCutoffSetting.value) 
+
+    const cutoffDate = ageCutoffSetting?.value
+      ? new Date(ageCutoffSetting.value)
       : new Date();
 
     // Search for users by Aadhar number (partial match)
@@ -1922,7 +1946,7 @@ router.get('/search-users-for-event/:eventId', authenticate, requireRole('STAFF'
 
     // Filter users by age category
     const { calculateAge, getAgeCategory } = await import('../utils/ageUtils.js');
-    
+
     const filteredUsers = users.filter(user => {
       if (!user.dob) return false;
       const age = calculateAge(user.dob, cutoffDate);
@@ -2120,8 +2144,8 @@ router.post('/staff-register-participant', authenticate, requireRole('STAFF'), [
     });
 
     if (userRegistrations >= 3) {
-      return res.status(403).json({ 
-        error: 'User has already registered for 3 individual events (maximum allowed)' 
+      return res.status(403).json({
+        error: 'User has already registered for 3 individual events (maximum allowed)'
       });
     }
 
@@ -2139,8 +2163,8 @@ router.post('/staff-register-participant', authenticate, requireRole('STAFF'), [
       });
 
       if (templeParticipantCount >= 3) {
-        return res.status(403).json({ 
-          error: 'This temple already has 3 participants registered for this event (maximum allowed)' 
+        return res.status(403).json({
+          error: 'This temple already has 3 participants registered for this event (maximum allowed)'
         });
       }
     }

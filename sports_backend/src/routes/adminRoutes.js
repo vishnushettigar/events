@@ -988,14 +988,16 @@ router.get('/temple-management', authenticate, requireRole('ADMIN'), async (req,
  */
 router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
-    const { event_ids, status, temple_id } = req.query;
+    const { event_ids, status, temple_id, year } = req.query;
     
-    console.log('Admin participants request:', { event_ids, status, temple_id });
+    console.log('Admin participants request:', { event_ids, status, temple_id, year });
+
+    const selectedYear = year ? parseInt(year) : new Date().getFullYear();
 
     // Build where clause
     const where = {
       is_deleted: false,
-      year: new Date().getFullYear()  // Only show current year data
+      year: selectedYear
     };
 
     // Add event filter
@@ -1180,10 +1182,13 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
 router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     console.log('Teams API called');
-    const { temple_id, event_id, status } = req.query;
+    const { temple_id, event_id, status, year } = req.query;
+
+    const selectedYear = year ? parseInt(year) : new Date().getFullYear();
 
     let whereClause = {
-      year: new Date().getFullYear()  // Only show current year data
+      is_deleted: false,
+      year: selectedYear
     };
     
     if (temple_id) whereClause.temple_id = parseInt(temple_id);
@@ -1312,6 +1317,8 @@ router.get('/teams', authenticate, requireRole('ADMIN'), async (req, res) => {
  */
 router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
+    const currentYear = req.query.year ? parseInt(req.query.year) : new Date().getFullYear();
+
     const events = await prisma.mst_event.findMany({
       where: { is_deleted: false },
       include: {
@@ -1323,14 +1330,20 @@ router.get('/events', authenticate, requireRole('ADMIN'), async (req, res) => {
           take: 1
         },
         registrations: {
-          where: { is_deleted: false },
+          where: {
+            is_deleted: false,
+            year: currentYear
+          },
           select: {
             id: true,
             event_result_id: true
           }
         },
         team_registrations: {
-          where: { is_deleted: false },
+          where: {
+            is_deleted: false,
+            year: currentYear
+          },
           select: {
             id: true,
             event_result_id: true

@@ -802,6 +802,8 @@ const UserManagement = () => {
 
 
 const ParticipantsManagement = () => {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedAge, setSelectedAge] = useState('0-5');
   const [selectedGender, setSelectedGender] = useState('MALE');
   const [selectedTemple, setSelectedTemple] = useState('ALL');
@@ -812,6 +814,12 @@ const ParticipantsManagement = () => {
   const [temples, setTemples] = useState([]);
   const [events, setEvents] = useState([]);
   const [allParticipants, setAllParticipants] = useState([]);
+
+  // Generate available years list (current year downwards)
+  const availableYears = [];
+  for (let y = Math.max(currentYear, 2026); y >= 2024; y--) {
+    availableYears.push(y);
+  }
 
   // Fetch all data when filters change
   useEffect(() => {
@@ -884,22 +892,27 @@ const ParticipantsManagement = () => {
 
       const eventIds = getAllEventIds();
       
-      if (eventIds.length === 0) return;
-
-      // Build query parameters - only show APPROVED participants
-      const params = new URLSearchParams();
-      params.append('event_ids', eventIds.join(','));
-      params.append('status', 'ACCEPTED'); // Only show approved participants
-      if (selectedTemple !== 'ALL') {
-        params.append('temple_id', selectedTemple);
+      if (eventIds.length === 0) {
+        setAllParticipants([]);
+        return;
       }
 
       const data = await participantAPI.getAllParticipants({
         event_ids: eventIds.join(','),
         status: 'ACCEPTED', // Only show approved participants
+        year: selectedYear,
         ...(selectedTemple !== 'ALL' && { temple_id: selectedTemple })
       });
-      setAllParticipants(data);
+
+      // Ensure only participants registered in selectedYear are stored
+      const filteredData = Array.isArray(data)
+        ? data.filter(p => {
+            const regYear = p.year ? Number(p.year) : (p.created_at ? new Date(p.created_at).getFullYear() : null);
+            return regYear === Number(selectedYear);
+          })
+        : [];
+
+      setAllParticipants(filteredData);
     } catch (err) {
       console.error('Error fetching participants:', err);
       setError(err.message);
@@ -908,11 +921,15 @@ const ParticipantsManagement = () => {
 
   useEffect(() => {
     fetchParticipants();
-  }, [events, selectedTemple]);
+  }, [events, selectedTemple, selectedYear]);
 
   // Get participants for a specific event
   const getParticipantsForEvent = (eventId) => {
-    return allParticipants.filter(p => p.event_id === eventId);
+    return allParticipants.filter(p => {
+      if (p.event_id !== eventId) return false;
+      const regYear = p.year ? Number(p.year) : (p.created_at ? new Date(p.created_at).getFullYear() : null);
+      return regYear === Number(selectedYear);
+    });
   };
 
   // Handle participant updates
@@ -926,7 +943,7 @@ const ParticipantsManagement = () => {
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-[#2A2A2A]">Participants Management</h3>
         <div className="text-sm text-[#5A5A5A]">
-          Total Approved Participants: {allParticipants.length}
+          Total Approved Participants ({selectedYear}): <span className="font-semibold text-[#D35D38]">{allParticipants.length}</span>
         </div>
       </div>
 
@@ -937,7 +954,23 @@ const ParticipantsManagement = () => {
             <span className="font-semibold">Note:</span> Only approved participants are displayed in this view.
           </p>
         </div> */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Year Filter */}
+          <div className="flex flex-col">
+            <label className="mb-2 text-[#2A2A2A] font-medium">Year</label>
+            <select 
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white font-medium text-[#2A2A2A]"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            >
+              {availableYears.map((yearOption) => (
+                <option key={yearOption} value={yearOption}>
+                  {yearOption} {yearOption === currentYear ? '(Current Year)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* Age Category Filter */}
           <div className="flex flex-col">
             <label className="mb-2 text-[#2A2A2A] font-medium">Age Category</label>
@@ -1001,8 +1034,11 @@ const ParticipantsManagement = () => {
           <div className="flex items-end">
             <button
               onClick={fetchParticipants}
-              className="w-full bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
+              className="w-full bg-[#D35D38] text-white px-4 py-3 rounded-lg hover:bg-[#B84A2E] transition-colors font-medium flex items-center justify-center gap-2"
             >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
               Refresh
             </button>
           </div>
@@ -1062,6 +1098,8 @@ const ParticipantsManagement = () => {
 };
 
 const TeamsManagement = () => {
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1069,6 +1107,12 @@ const TeamsManagement = () => {
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [selectedTemple, setSelectedTemple] = useState(null);
   const [teamMembers, setTeamMembers] = useState([]);
+  
+  // Available years list (current year downwards)
+  const availableYears = [];
+  for (let y = Math.max(currentYear, 2026); y >= 2024; y--) {
+    availableYears.push(y);
+  }
   
   // Batch data for mixed team members (keyed by team registration ID)
   const [mixedTeamBatchData, setMixedTeamBatchData] = useState({});
@@ -1083,7 +1127,7 @@ const TeamsManagement = () => {
 
   useEffect(() => {
     fetchTeamsData();
-  }, []);
+  }, [selectedYear]);
 
   // Fetch user details for team members
   const fetchUserDetails = async (userIds) => {
@@ -1144,15 +1188,23 @@ const TeamsManagement = () => {
         throw new Error('No authentication token found. Please log in again.');
       }
 
-      const data = await teamAPI.getAllTeams();
+      const data = await teamAPI.getAllTeams({ year: selectedYear });
       if (!data.teams) {
         throw new Error('Invalid response format: teams data not found');
       }
       
-      setTeams(data.teams);
+      // Ensure only teams registered in selectedYear are stored
+      const filteredTeams = Array.isArray(data.teams)
+        ? data.teams.filter(t => {
+            const teamYear = t.year ? Number(t.year) : (t.created_at ? new Date(t.created_at).getFullYear() : null);
+            return teamYear === Number(selectedYear);
+          })
+        : [];
+
+      setTeams(filteredTeams);
       
       // Batch fetch mixed team member data
-      await fetchMixedTeamBatchData(data.teams);
+      await fetchMixedTeamBatchData(filteredTeams);
     } catch (err) {
       console.error('Error fetching teams data:', err);
       setError(err.message);
@@ -1537,17 +1589,48 @@ const TeamsManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h3 className="text-2xl font-bold text-[#2A2A2A] mb-2">Teams Management</h3>
+          <h3 className="text-2xl font-bold text-[#2A2A2A] mb-1">Teams Management</h3>
           <p className="text-[#5A5A5A]">View team registrations grouped by events and temples</p>
         </div>
-        <button
-          onClick={fetchTeamsData}
-          className="bg-[#D35D38] text-white px-4 py-2 rounded-lg hover:bg-[#B84A2E] transition-colors"
-        >
-          Refresh
-        </button>
+        <div className="text-sm text-[#5A5A5A]">
+          Total Registered Teams ({selectedYear}): <span className="font-semibold text-[#D35D38] text-base">{teams.length}</span>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+          {/* Year Filter */}
+          <div className="flex flex-col flex-1 sm:max-w-xs">
+            <label className="mb-2 text-[#2A2A2A] font-medium">Registration Year</label>
+            <select 
+              className="p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent bg-white font-medium text-[#2A2A2A]"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            >
+              {availableYears.map((yearOption) => (
+                <option key={yearOption} value={yearOption}>
+                  {yearOption} {yearOption === currentYear ? '(Current Year)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Refresh Button */}
+          <div className="flex items-end">
+            <button
+              onClick={fetchTeamsData}
+              className="bg-[#D35D38] text-white px-5 py-3 rounded-lg hover:bg-[#B84A2E] transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Loading State */}
@@ -1923,7 +2006,7 @@ const TeamsManagement = () => {
             })()
           ) : (
             <div className="text-center py-8 text-gray-500">
-              No team events found
+              No team events found for {selectedYear}
             </div>
           )}
         </div>
