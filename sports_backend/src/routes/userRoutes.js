@@ -1109,21 +1109,26 @@ router.get('/search-by-aadhar', authenticate, async (req, res) => {
 router.get('/templeusers', authenticate, async (req, res) => {
   try {
     let templeId;
+    let isAllTemples = false;
 
     // Check if temple_id is provided in query parameters
     if (req.query.temple_id) {
-      templeId = parseInt(req.query.temple_id);
+      if (req.query.temple_id.toString().toUpperCase() === 'ALL') {
+        isAllTemples = true;
+      } else {
+        templeId = parseInt(req.query.temple_id);
 
-      // Verify the temple exists
-      const temple = await prisma.mst_temple.findFirst({
-        where: {
-          id: templeId,
-          is_deleted: false
+        // Verify the temple exists
+        const temple = await prisma.mst_temple.findFirst({
+          where: {
+            id: templeId,
+            is_deleted: false
+          }
+        });
+
+        if (!temple) {
+          return res.status(404).json({ error: 'Temple not found' });
         }
-      });
-
-      if (!temple) {
-        return res.status(404).json({ error: 'Temple not found' });
       }
     } else {
       // Get the authenticated user's profile to determine their temple
@@ -1139,12 +1144,23 @@ router.get('/templeusers', authenticate, async (req, res) => {
       templeId = userProfile.temple_id;
     }
 
-    // Fetch all participants from the specified temple
+    const excludedRoles = ['ADMIN', 'STAFF', 'VIEWER'];
+
+    const whereClause = {
+      is_deleted: false,
+      role: {
+        name: {
+          notIn: excludedRoles
+        }
+      }
+    };
+    if (!isAllTemples && templeId) {
+      whereClause.temple_id = templeId;
+    }
+
+    // Fetch all participants from the specified temple (or all temples)
     const participants = await prisma.profile.findMany({
-      where: {
-        temple_id: templeId,
-        is_deleted: false
-      },
+      where: whereClause,
       select: {
         id: true,
         first_name: true,
@@ -1152,27 +1168,73 @@ router.get('/templeusers', authenticate, async (req, res) => {
         aadhar_number: true,
         dob: true,
         gender: true,
-        phone: true
+        phone: true,
+        temple_id: true,
+        role: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        user: {
+          select: {
+            user_roles: {
+              select: {
+                role: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        temple: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       },
-      orderBy: {
-        first_name: 'asc'
+      orderBy: [
+        { temple_id: 'asc' },
+        { first_name: 'asc' }
+      ]
+    });
+
+    // Also filter out any users with user_roles matching ADMIN, STAFF, or VIEWER
+    const validParticipants = participants.filter(participant => {
+      const profileRole = participant.role?.name?.toUpperCase();
+      if (profileRole && excludedRoles.includes(profileRole)) {
+        return false;
       }
+
+      const assignedRoles = participant.user?.user_roles?.map(ur => ur.role?.name?.toUpperCase()) || [];
+      if (assignedRoles.some(r => excludedRoles.includes(r))) {
+        return false;
+      }
+
+      return true;
     });
 
     // Calculate age category for each participant using cutoff date from settings
-    const participantsWithAgeCategory = await Promise.all(participants.map(async (participant) => {
+    const participantsWithAgeCategory = await Promise.all(validParticipants.map(async (participant) => {
       const age = await calculateAgeWithSettings(participant.dob);
       const ageCategory = getAgeCategory(age);
+      const participantTempleId = participant.temple_id || participant.temple?.id || templeId;
 
       return {
         id: participant.id,
         name: `${participant.first_name} ${participant.last_name || ''}`.trim(),
-        bib_number: getBibNumber(templeId, participant.id),
+        bib_number: getBibNumber(participantTempleId, participant.id),
         age_category: ageCategory,
         aadhar_number: participant.aadhar_number,
-        date_of_birth: participant.dob.toISOString().split('T')[0], // Format as YYYY-MM-DD
+        date_of_birth: participant.dob ? participant.dob.toISOString().split('T')[0] : '', // Format as YYYY-MM-DD
         gender: participant.gender,
-        phone_number: participant.phone
+        phone_number: participant.phone,
+        temple_id: participantTempleId,
+        temple_name: participant.temple?.name || '',
+        role: participant.role?.name || ''
       };
     }));
 

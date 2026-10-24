@@ -119,7 +119,10 @@ const Templedetailedreports = () => {
           throw new Error('Temple ID is required');
         }
 
-        const data = await userAPI.getTempleDetailedReport(templeId);
+        const yearParam = searchParams.get('year');
+        const selectedYear = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
+
+        const data = await userAPI.getTempleDetailedReport(templeId, { year: selectedYear });
 
         // Group and aggregate individual events
         const groupedIndividualEvents = groupIndividualEvents(data.individualEvents || []);
@@ -217,7 +220,7 @@ const Templedetailedreports = () => {
       <body>
         <div class="header">
           <div class="title">ದ. ಕ. ಜಿಲ್ಲಾ ಪದ್ಮಶಾಲಿ ಮಹಾಸಭಾ (ರಿ.), ಮಂಗಳೂರು </div>
-          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - ${searchParams.get('year') || new Date().getFullYear()}</div>
           <div class="place">ಸಹಯೋಗ - ಶ್ರೀ ಆದಿಶಕ್ತಿ ವೀರಭದ್ರ ಬ್ರಹ್ಮಲಿಂಗ ದೇವಸ್ಥಾನ ಕಲ್ಯಾಣಪುರ  </div>
           <div class="section-title">${templeInfo.name}</div>
           <div class="section-title">Detailed Report</div>

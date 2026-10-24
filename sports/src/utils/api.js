@@ -175,7 +175,7 @@ export const userAPI = {
   getTemples: () => apiService.get('/admin/temples'),
   getTempleUsers: (templeId) => apiService.get('/users/templeusers', templeId ? { temple_id: templeId } : {}),
   searchByAadhar: (aadharNumber) => apiService.get('/users/search-by-aadhar', { aadharNumber }),
-  getTempleDetailedReport: (templeId) => apiService.get(`/users/temple-detailed-report/${templeId}`),
+  getTempleDetailedReport: (templeId, params = {}) => apiService.get(`/users/temple-detailed-report/${templeId}`, params),
   getAllTemples: (params = {}) => apiService.get('/users/temples', params),
   getTempleById: (templeId) => apiService.get(`/users/temple/${templeId}`),
   getTeamRegistrations: () => apiService.get('/users/participant-teams'),
