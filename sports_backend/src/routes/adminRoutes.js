@@ -3,7 +3,7 @@ import { body, validationResult } from 'express-validator';
 import * as userService from '../services/userService.js';
 import * as eventService from '../services/eventService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { TEMPLES } from '../constants.js';
+import { TEMPLES, getBibNumber } from '../constants.js';
 import prisma from '../utils/prismaClient.js';
 
 const router = express.Router();
@@ -1074,9 +1074,10 @@ router.get('/participants', authenticate, requireRole('ADMIN'), async (req, res)
 
     console.log('Found participants:', participants.length);
 
-    // Transform the data to include event name from event_type
+    // Transform the data to include event name from event_type and bib_number
     const transformedParticipants = participants.map(participant => ({
       ...participant,
+      bib_number: getBibNumber(participant.user?.temple?.id || participant.user?.temple_id, participant.user?.id),
       event: {
         ...participant.event,
         name: participant.event.event_type.name

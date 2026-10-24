@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import prisma from '../utils/prismaClient.js';
+import { getBibNumber } from '../constants.js';
 const router = express.Router();
 
 /**
@@ -403,9 +404,10 @@ router.get('/participants', authenticate, requireRole('VIEWER'), async (req, res
           ]
         });
 
-        // Transform the data to include event name from event_type
+        // Transform the data to include event name from event_type and bib_number
         const transformedParticipants = participants.map(participant => ({
           ...participant,
+          bib_number: getBibNumber(participant.user?.temple?.id || participant.user?.temple_id, participant.user?.id),
           event: {
             ...participant.event,
             name: participant.event.event_type.name

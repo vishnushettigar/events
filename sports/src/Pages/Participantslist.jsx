@@ -264,6 +264,9 @@ const Participantslist = () => {
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '80px' }}>
                       SL.NO
                     </th>
+                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '100px' }}>
+                      BIB No
+                    </th>
                     <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider" style={{ width: '200px' }}>
                       Name
                     </th>
@@ -287,7 +290,7 @@ const Participantslist = () => {
                 <tbody className="bg-white divide-y divide-gray-100">
                   {participantsLoading ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-8 text-center">
+                      <td colSpan="8" className="px-6 py-8 text-center">
                         <div className="flex justify-center items-center">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#D35D38]"></div>
                           <span className="ml-3 text-[#5A5A5A]">Loading participants...</span>
@@ -296,7 +299,7 @@ const Participantslist = () => {
                     </tr>
                   ) : filteredParticipants.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="px-6 py-8 text-center">
+                      <td colSpan="8" className="px-6 py-8 text-center">
                         <div className="text-center">
                           <p className="text-[#5A5A5A] text-lg">No participants found</p>
                           <p className="text-[#5A5A5A] text-sm mt-1">Try adjusting your filters</p>
@@ -309,6 +312,11 @@ const Participantslist = () => {
                         <td className="px-6 py-4 whitespace-nowrap" style={{ width: '80px' }}>
                           <span className="inline-flex items-center justify-center w-8 h-8  text-black text-sm font-bold rounded-full">
                             {idx + 1}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap" style={{ width: '100px' }}>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-900 font-mono">
+                            {participant.bib_number || '-'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap" style={{ width: '200px' }}>
@@ -362,9 +370,16 @@ const Participantslist = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-start justify-between mb-2 sm:mb-0">
 
-                        <h3 className="font-medium text-[#2A2A2A] " title={participant.name}>
-                          {participant.name}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-[#2A2A2A] " title={participant.name}>
+                            {participant.name}
+                          </h3>
+                          {participant.bib_number && (
+                            <span className="inline-block px-1.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-900 rounded font-mono">
+                              {participant.bib_number}
+                            </span>
+                          )}
+                        </div>
                         <span className={`inline-flex items-start px-2.5 py-0.5 rounded-full whitespace-nowrap text-xs font-medium ${participant.gender === 'MALE'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-pink-100 text-pink-800'

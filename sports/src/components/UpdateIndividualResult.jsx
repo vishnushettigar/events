@@ -1429,6 +1429,7 @@ const UpdateIndividualResult = () => {
             <thead>
               <tr>
                 <th>SL.NO</th>
+                <th>BIB NO</th>
                 <th>NAME</th>
                 <th>TEMPLE</th>
                 <th>AADHAR NO</th>
@@ -1476,6 +1477,7 @@ const UpdateIndividualResult = () => {
         return `
                   <tr>
                     <td>${index + 1}</td>
+                    <td><strong>${participant.bib_number || '-'}</strong></td>
                     <td>${participantName}</td>
                     <td>${participant.temple_name}</td>
                     <td>${participant.aadhar_number || 'N/A'}</td>
@@ -1493,6 +1495,7 @@ const UpdateIndividualResult = () => {
               ${[1, 2, 3, 4, 5].map((_, index) => `
                 <tr>
                   <td>${participantsToPrint.length + index + 1}</td>
+                  <td>&nbsp;</td>
                   <td>&nbsp;</td>
                   <td>&nbsp;</td>
                   <td>&nbsp;</td>
@@ -1915,7 +1918,12 @@ const UpdateIndividualResult = () => {
                                   <div className="flex-1 space-y-1">
                                     <p className="text-xs text-[#5A5A5A]">{participant.temple_name}</p>
                                   </div>
-                                  <div className="flex-1 space-y-1" >
+                                  <div className="flex-1 space-y-1 flex items-center gap-1 flex-wrap">
+                                    {participant.bib_number && (
+                                      <span className="inline-block px-1.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-900 rounded font-mono">
+                                        {participant.bib_number}
+                                      </span>
+                                    )}
                                     <p className="text-xs text-[#5A5A5A]">#{participant.aadhar_number || 'N/A'}</p>
                                   </div>
                                   {/* Result Badge - only show for non-heat events or final heat */}
@@ -2068,6 +2076,7 @@ const UpdateIndividualResult = () => {
                     <thead className="bg-white border-b border-[#F8DFBE]">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">SL.NO</th>
+                        <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">BIB NO</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">NAME</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">TEMPLE</th>
                         <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider border-r border-[#F8DFBE]">AADHAR NO</th>
@@ -2120,6 +2129,9 @@ const UpdateIndividualResult = () => {
                             <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
                               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
                                 {index + 1}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-[#D35D38] font-mono border-r border-[#F8DFBE]">
+                                {participant.bib_number || '-'}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
                                 {participant.participant_name || participant.team_name}

@@ -1,5 +1,6 @@
 import { calculateAge, getAgeCategory, isExcludedAgeCategory } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
+import { getBibNumber } from '../constants.js';
 
 // Register participant using SQLite's built-in serialization
 //indiviual event registration
@@ -785,6 +786,7 @@ async function getTempleParticipants(temple_id, filters = {}) {
           phone: true,
           gender: true,
             dob: true,
+            temple_id: true,
             user: {
               select: {
                 email: true
@@ -819,6 +821,7 @@ async function getTempleParticipants(temple_id, filters = {}) {
     // Transform the data to include event name from event_type and ensure email is available
     const transformedParticipants = participants.map(participant => ({
       ...participant,
+      bib_number: getBibNumber(participant.user.temple_id || temple_id, participant.user.id),
       user: {
         ...participant.user,
         email: participant.user.email || participant.user.user?.email || null
@@ -1284,6 +1287,7 @@ async function getEventParticipants(eventId, year = null) {
               dob: true,
               temple: {
                 select: {
+                  id: true,
                   name: true
                 }
               }
@@ -1372,9 +1376,11 @@ async function getEventParticipants(eventId, year = null) {
         
         return {
           id: reg.id,
+          user_id: reg.user.id,
           registration_type: 'INDIVIDUAL',
           participant_name: `${reg.user.first_name} ${reg.user.last_name || ''}`.trim(),
           temple_name: reg.user.temple.name,
+          bib_number: getBibNumber(reg.user.temple?.id, reg.user.id),
           age_category: event.age_category.name,
           gender: reg.user.gender,
           phone: reg.user.phone,

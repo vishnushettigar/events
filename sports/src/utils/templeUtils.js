@@ -80,4 +80,58 @@ export const getTempleNames = async () => {
             'SALIKERI', 'SIDDAKATTE', 'SURATHKAL', 'ULLALA', 'YERMAL'
         ];
     }
+};
+
+export const TEMPLE_CODES = {
+  SALIKERI: 'SLK',
+  BARKUR: 'BRK',
+  HOSADURGA: 'HSD',
+  MANJESHWARA: 'MJS',
+  ULLALA: 'ULL',
+  SURATHKAL: 'SRK',
+  HALEYANGADI: 'HLY',
+  MULKI: 'MLK',
+  PADUBIDRI: 'PDB',
+  YERMAL: 'YRM',
+  KAPU: 'KAP',
+  KINNIMULKI: 'KNM',
+  KALYANPURA: 'KLY',
+  KARKALA: 'KRK',
+  SIDDAKATTE: 'SDK',
+  MANGALORE: 'MNG'
+};
+
+export const TEMPLE_CODE_BY_ID = {
+  1: 'SLK',
+  2: 'BRK',
+  3: 'HSD',
+  4: 'MJS',
+  5: 'ULL',
+  6: 'SRK',
+  7: 'HLY',
+  8: 'MLK',
+  9: 'PDB',
+  10: 'YRM',
+  11: 'KAP',
+  12: 'KNM',
+  13: 'KLY',
+  14: 'KRK',
+  15: 'SDK',
+  16: 'MNG'
+};
+
+export const getBibNumber = (templeIdentifier, userId) => {
+  if (!userId) return null;
+  let code = 'ATH';
+  if (typeof templeIdentifier === 'number') {
+    code = TEMPLE_CODE_BY_ID[templeIdentifier] || code;
+  } else if (typeof templeIdentifier === 'string') {
+    const trimmed = templeIdentifier.trim().toUpperCase();
+    if (TEMPLE_CODES[trimmed]) {
+      code = TEMPLE_CODES[trimmed];
+    } else if (trimmed.length === 3) {
+      code = trimmed;
+    }
+  }
+  return `${code}${String(userId).padStart(4, '0')}`;
 }; 

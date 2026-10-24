@@ -5,7 +5,7 @@ import * as eventService from '../services/eventService.js';
 import * as otpService from '../services/otpService.js';
 import * as emailService from '../services/emailService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
-import { TEMPLES } from '../constants.js';
+import { TEMPLES, getBibNumber } from '../constants.js';
 import { Gender } from '@prisma/client';
 import { calculateAgeWithSettings, getAgeCategory } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
@@ -802,6 +802,7 @@ router.get('/profile', authenticate, async (req, res) => {
     // Format response
     const profileData = {
       ...user.profile,
+      bib_number: getBibNumber(user.profile.temple_id, user.profile.id),
       age,
       age_category: matchingAgeCategory ? matchingAgeCategory.name : null,
       temple: user.profile.temple.name,
@@ -1166,6 +1167,7 @@ router.get('/templeusers', authenticate, async (req, res) => {
       return {
         id: participant.id,
         name: `${participant.first_name} ${participant.last_name || ''}`.trim(),
+        bib_number: getBibNumber(templeId, participant.id),
         age_category: ageCategory,
         aadhar_number: participant.aadhar_number,
         date_of_birth: participant.dob.toISOString().split('T')[0], // Format as YYYY-MM-DD
