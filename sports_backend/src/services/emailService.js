@@ -10,25 +10,35 @@ let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
 
-  const {
-    SMTP_HOST,
-    SMTP_PORT,
-    SMTP_USER,
-    SMTP_PASS,
-    SMTP_SECURE
-  } = process.env;
+  const emailUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const rawPass = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  const emailPass = rawPass ? rawPass.replace(/[\s"']/g, '') : null;
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '465', 10);
+  const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
 
-  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-    transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: parseInt(SMTP_PORT || '587', 10),
-      secure: SMTP_SECURE === 'true' || SMTP_PORT === '465',
-      auth: {
-        user: SMTP_USER,
-        pass: SMTP_PASS
-      }
-    });
-    console.log('✅ Email service initialized with SMTP transport:', SMTP_HOST);
+  if (emailUser && emailPass) {
+    if (smtpHost === 'smtp.gmail.com' || (emailUser && emailUser.endsWith('@gmail.com'))) {
+      transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        }
+      });
+      console.log('✅ Email service initialized with Gmail service for:', emailUser);
+    } else if (smtpHost) {
+      transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        }
+      });
+      console.log('✅ Email service initialized with SMTP transport:', smtpHost);
+    }
   } else {
     // Development fallback
     transporter = null;
@@ -47,7 +57,7 @@ function getTransporter() {
  */
 export async function sendPasswordResetOtp({ email, otp, userName = 'Participant' }) {
   const mailTransporter = getTransporter();
-  const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'no-reply@shettigarevents.com';
+  const fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.SMTP_USER || 'no-reply@shettigarevents.com';
   const appName = 'Sports Event Management';
 
   const htmlContent = `
@@ -122,14 +132,7 @@ export async function sendPasswordResetOtp({ email, otp, userName = 'Participant
       return { success: true, mode: 'smtp', messageId: info.messageId };
     } catch (err) {
       console.error('❌ [EMAIL FAILED] Error sending email via SMTP:', err);
-      // Fallback to logging in console so flow doesn't completely block in dev
-      console.log(`\n======================================================`);
-      console.log(`🔐 [SIMULATED OTP DELIVERY - SMTP ERROR FALLBACK]`);
-      console.log(`To: ${email}`);
-      console.log(`OTP Code: >>> ${otp} <<<`);
-      console.log(`Expires: 10 minutes`);
-      console.log(`======================================================\n`);
-      return { success: true, mode: 'simulated_fallback', error: err.message };
+      throw new Error(`Failed to send email to ${email}: ${err.message}`);
     }
   } else {
     // Development simulation mode

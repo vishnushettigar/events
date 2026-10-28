@@ -482,7 +482,10 @@ router.post('/forgot-password/send-otp', async (req, res) => {
         userName: userDetails.name
       });
     } catch (emailErr) {
-      console.warn('Email dispatch warning (handled):', emailErr.message);
+      console.error('Email dispatch error:', emailErr.message);
+      return res.status(500).json({
+        error: `Could not send verification email: ${emailErr.message}. Please check the email address or try again.`
+      });
     }
 
     // Mask destination email for privacy
@@ -502,8 +505,7 @@ router.post('/forgot-password/send-otp', async (req, res) => {
       name: userDetails.name,
       templeName: userDetails.templeName,
       isAddingEmail,
-      expiresIn: '10 minutes',
-      devOtp: isDevelopment ? otpResult.otp : undefined
+      expiresIn: '10 minutes'
     });
   } catch (error) {
     console.error('Error sending password reset OTP:', error);

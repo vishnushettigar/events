@@ -28,7 +28,6 @@ const ForgotPassword = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
-    const [devOtpHint, setDevOtpHint] = useState('');
 
     // Countdown timers
     const [countdown, setCountdown] = useState(0);
@@ -151,10 +150,7 @@ const ForgotPassword = () => {
                 isAddingEmail: isAddingEmailMode
             });
             
-            if (response.devOtp) {
-                setDevOtpHint(response.devOtp);
-            }
-
+            setOtpDigits(['', '', '', '', '', '']);
             setSuccessMessage(response.message || 'Verification code sent to your email.');
             setStep(2);
             setCountdown(60); // 60s cooldown
@@ -207,15 +203,6 @@ const ForgotPassword = () => {
             if (otpInputRefs.current[index - 1]) {
                 otpInputRefs.current[index - 1].focus();
             }
-        }
-    };
-
-    const handleAutoFillDevOtp = () => {
-        if (!devOtpHint) return;
-        const digits = devOtpHint.split('').slice(0, 6);
-        setOtpDigits(digits);
-        if (otpInputRefs.current[5]) {
-            otpInputRefs.current[5].focus();
         }
     };
 
@@ -409,22 +396,6 @@ const ForgotPassword = () => {
                         </div>
                     )}
 
-                    {/* Development Mode OTP Helper */}
-                    {devOtpHint && step === 2 && (
-                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 mb-6 flex items-center justify-between text-xs">
-                            <div className="flex items-center text-amber-900">
-                                <span className="font-bold mr-1.5 uppercase tracking-wide bg-amber-200 px-1.5 py-0.5 rounded text-[10px]">Dev Hint</span>
-                                Code: <span className="font-mono font-bold text-sm ml-1 text-amber-900">{devOtpHint}</span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={handleAutoFillDevOtp}
-                                className="text-[#D35D38] hover:text-[#B84A2E] font-semibold underline text-xs cursor-pointer"
-                            >
-                                Auto-fill
-                            </button>
-                        </div>
-                    )}
 
                     {/* ================= STEP 1: AADHAAR LOOKUP + EMAIL VERIFICATION / ADD EMAIL ================= */}
                     {step === 1 && (
@@ -653,7 +624,7 @@ const ForgotPassword = () => {
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center justify-between mb-1.5">
                                     <label className="block text-sm font-semibold text-[#2A2A2A]">
                                         Enter 6-Digit OTP <span className="text-red-500">*</span>
                                     </label>
@@ -669,6 +640,9 @@ const ForgotPassword = () => {
                                         Change Details
                                     </button>
                                 </div>
+                                <p className="text-xs text-gray-500 mb-3">
+                                    Please enter the 6-digit verification code sent to your email inbox.
+                                </p>
 
                                 {/* 6 Box OTP Inputs */}
                                 <div className="grid grid-cols-6 gap-2 sm:gap-3 my-4">
