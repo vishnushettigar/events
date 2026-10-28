@@ -322,8 +322,10 @@ const Register = () => {
         if (formData.aadhaar !== formData.confirmAadhaar) {
             newErrors.confirmAadhaar = 'Aadhaar numbers do not match';
         }
-        // Email is optional, but if provided, it must be valid
-        if (formData.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        // Email is mandatory and must be valid
+        if (!formData.email.trim()) {
+            newErrors.email = 'Email address is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Please enter a valid email address';
         }
         if (!formData.password) {
@@ -402,7 +404,7 @@ const Register = () => {
             const requestData = {
                 username: formData.aadhaar,
                 password: formData.password,
-                email: formData.email.trim() || null, // Send null if email is empty
+                email: formData.email.trim(),
                 first_name: formData.firstName,
                 last_name: formData.lastName,
                 phone: formData.mobile,
@@ -678,7 +680,7 @@ const Register = () => {
                     {/* Email */}
                         <div>
                             <label htmlFor="email" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Email Address
+                                Email Address *
                             </label>
                         <input
                                 type="email"

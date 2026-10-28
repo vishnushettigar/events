@@ -27,6 +27,7 @@ const router = express.Router();
  *             required:
  *               - username
  *               - password
+ *               - email
  *               - first_name
  *               - dob
  *               - gender
@@ -77,7 +78,10 @@ const router = express.Router();
 router.post('/register', [
   body('username').notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
-  body('email').optional({ checkFalsy: true }).isEmail().withMessage('Valid email is required if provided'),
+  body('email')
+    .trim()
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Valid email is required'),
   body('first_name').notEmpty().withMessage('First name is required'),
   body('dob').isDate().withMessage('Valid date of birth is required'),
   body('gender').isIn(['MALE', 'FEMALE']).withMessage('Valid gender is required'),
@@ -100,7 +104,7 @@ router.post('/register', [
     const { username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_name } = req.body;
     const templeName = temple_name.toUpperCase();
     const temple_id = TEMPLES[templeName].id;
-    const user = await userService.register(username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id);
+    const user = await userService.register(username, password, email.trim(), first_name, last_name, phone, aadhar_number, dob, gender, temple_id);
 
     // Generate JWT token after successful registration
     const result = await userService.login(username, password);

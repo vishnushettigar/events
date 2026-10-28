@@ -4,7 +4,11 @@ import prisma from '../utils/prismaClient.js';
 
 async function register(username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id) {
   try {
-    console.log('Received registration data:', { username, password, email, first_name, last_name, phone, aadhar_number, dob, gender, temple_id });
+    if (!email || typeof email !== 'string' || !email.trim()) {
+      throw new Error('Email is required');
+    }
+    const cleanEmail = email.trim();
+    console.log('Received registration data:', { username, password, email: cleanEmail, first_name, last_name, phone, aadhar_number, dob, gender, temple_id });
     
     // Hash the password before storing
     const saltRounds = 10;
@@ -14,13 +18,14 @@ async function register(username, password, email, first_name, last_name, phone,
       data: {
         username,
         password: hashedPassword, // Store the hashed password
-        email,
+        email: cleanEmail,
         profile: {
           create: {
             first_name,
             last_name,
             phone,
             aadhar_number,
+            email: cleanEmail,
             dob: new Date(dob),
             gender,
             temple_id: temple_id ? parseInt(temple_id) : null,
