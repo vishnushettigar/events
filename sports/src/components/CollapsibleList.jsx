@@ -4,7 +4,7 @@ import MobileParticipantCard from './MobileParticipantCard';
 import AdminHeatViewer from './AdminHeatViewer';
 import { participantAPI, eventAPI, systemAPI } from '../utils/api.js';
 
-const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false, isViewer = false, ageCategory = "Admin View", gender = "All" }) => {
+const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpdate, isAdmin = false, isViewer = false, ageCategory = "Admin View", gender = "All", year = new Date().getFullYear() }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localParticipants, setLocalParticipants] = useState(participants);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -75,7 +75,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
     const checkHeatsGenerated = async () => {
       if (isRunningEvent() && isAdmin) {
         try {
-          const heats = await eventAPI.getHeats(eventId);
+          const heats = await eventAPI.getHeats(eventId, { year });
           setHeatsGenerated(Object.keys(heats).length > 0);
         } catch (error) {
           console.error('Error checking heats:', error);
@@ -83,7 +83,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
       }
     };
     checkHeatsGenerated();
-  }, [eventId, isAdmin, title]);
+  }, [eventId, isAdmin, title, year]);
 
   // Handle heat generation
   const handleGenerateHeats = async () => {
@@ -91,7 +91,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
       setGeneratingHeats(true);
       setHeatError(null);
       
-      const result = await eventAPI.generateHeats(eventId);
+      const result = await eventAPI.generateHeats(eventId, { year });
       
       setHeatsGenerated(true);
       setShowHeatGeneration(false);
@@ -114,7 +114,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
       setRegeneratingHeats(true);
       setHeatError(null);
       
-      await eventAPI.regenerateHeats(eventId);
+      await eventAPI.regenerateHeats(eventId, { year });
       
       setHeatsGenerated(false);
       setShowHeatGeneration(true);
@@ -136,7 +136,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
     try {
       setInitializingTrials(true);
       setTrialInitError(null);
-      await eventAPI.initTrials(eventId);
+      await eventAPI.initTrials(eventId, { year });
       if (onParticipantsUpdate) {
         onParticipantsUpdate();
       }
@@ -397,6 +397,7 @@ const CollapsibleList = ({ title, eventId, participants = [], onParticipantsUpda
               eventName={title}
               ageCategory={ageCategory}
               gender={gender}
+              year={year}
             />
           )}
           

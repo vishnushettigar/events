@@ -4,8 +4,36 @@ import * as eventService from '../services/eventService.js';
 import * as systemService from '../services/systemService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import prisma from '../utils/prismaClient.js';
+import { getBibNumber } from '../constants.js';
 
 const router = express.Router();
+
+// Ground staff role (role_id: 6) allowed events helper
+function isEventAllowedForGroundStaff(eventName) {
+  if (!eventName) return false;
+  const n = eventName.toLowerCase().trim();
+  return (
+    n.includes('running - 100') ||
+    n.includes('running - 200') ||
+    n.includes('long jump') ||
+    n.includes('long-jump') ||
+    n.includes('shot put')
+  );
+}
+
+async function validateGroundStaffEventAccess(req, eventId) {
+  if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+    if (!eventId) return false;
+    const event = await prisma.mst_event.findUnique({
+      where: { id: parseInt(eventId) },
+      include: { event_type: true }
+    });
+    if (!event || !isEventAllowedForGroundStaff(event.event_type?.name)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 // Test route to verify middleware is working
 router.get('/test-auth', authenticate, requireRole('TEMPLE_ADMIN'), (req, res) => {
@@ -481,7 +509,12 @@ router.get('/participant-data', authenticate, async (req, res) => {
     ];
 
     // Get events based on filters
-    const events = await eventService.getEventsByAgeCategory(ageCategory, gender);
+    let events = await eventService.getEventsByAgeCategory(ageCategory, gender);
+
+    // Filter events for GROUND_STAFF (only Running 100m, 200m, Long jump, Shot put)
+    if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+      events = events.filter(e => isEventAllowedForGroundStaff(e.name));
+    }
 
     console.log('Participant data response:', {
       ageCategoriesCount: ageCategories.length,
@@ -505,6 +538,10 @@ router.get('/team-events', authenticate, async (req, res) => {
   try {
     const { year } = req.query;
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+      return res.status(403).json({ error: 'Ground staff does not have access to team events' });
+    }
     const events = await eventService.getTeamEvents(currentYear);
     res.json(events);
   } catch (error) {
@@ -647,6 +684,14 @@ router.get('/event-participants/:eventId', authenticate, async (req, res) => {
     }
 
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+    if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+      const isAllowed = await validateGroundStaffEventAccess(req, eventId);
+      if (!isAllowed) {
+        return res.status(403).json({ error: 'Access denied: Ground staff can only view participants for Running 100m, 200m, Long jump, and Shot put events' });
+      }
+    }
+
     const participants = await eventService.getEventParticipants(parseInt(eventId), currentYear);
     res.json(participants);
   } catch (error) {
@@ -994,7 +1039,8 @@ router.put('/update-team-result/:registrationId', authenticate, requireRole([2, 
 
 // Generate heats for running events
 router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
-  body('event_id').isInt().withMessage('Invalid event ID')
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('year').optional().isInt().withMessage('Year must be an integer')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -1002,6 +1048,7 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
   }
 
   const { event_id } = req.body;
+  const targetYear = req.body.year ? parseInt(req.body.year) : (req.query.year ? parseInt(req.query.year) : new Date().getFullYear());
 
   // Fetch lane count from settings (create with default if not exists)
   let lane_count;
@@ -1016,11 +1063,15 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
   try {
     // Check if event is a running event (100m or 200m)
     const event = await prisma.mst_event.findUnique({
-      where: { id: event_id },
+      where: { id: parseInt(event_id) },
       include: {
         event_type: true,
         registrations: {
-          where: { status: 'ACCEPTED' },
+          where: {
+            status: 'ACCEPTED',
+            year: targetYear,
+            is_deleted: false
+          },
           include: {
             user: {
               include: { temple: true }
@@ -1041,12 +1092,15 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
 
     // Check if heats already exist
     const existingHeats = await prisma.event_performance.findMany({
-      where: { event_id },
+      where: {
+        event_id: parseInt(event_id),
+        year: targetYear
+      },
       select: { heat_number: true }
     });
 
     if (existingHeats.length > 0) {
-      return res.status(400).json({ error: 'Heats already generated for this event' });
+      return res.status(400).json({ error: `Heats already generated for this event for year ${targetYear}` });
     }
 
     const participants = event.registrations.map(reg => ({
@@ -1056,6 +1110,10 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
       temple_id: reg.user.temple_id,
       aadhar_number: reg.user.aadhar_number
     }));
+
+    if (participants.length === 0) {
+      return res.status(400).json({ error: `No accepted participants found for this event in year ${targetYear}` });
+    }
 
     // Group participants by temple (required for separation logic)
     const templeGroups = {};
@@ -1178,9 +1236,9 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
     heats.forEach(heat => {
       heat.participants.forEach(participant => {
         heatRecords.push({
-          year: new Date().getFullYear(),
+          year: targetYear,
           registration_id: participant.id,
-          event_id: event_id,
+          event_id: parseInt(event_id),
           heat_number: heat.id,
           performance_1: null,
           performance_2: null,
@@ -1189,9 +1247,29 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
       });
     });
 
-    await prisma.event_performance.createMany({
-      data: heatRecords
-    });
+    try {
+      await prisma.event_performance.createMany({
+        data: heatRecords
+      });
+    } catch (createError) {
+      console.warn('createMany failed, falling back to raw SQL schema check:', createError.message);
+      const schema = await detectPerformanceSchema();
+      if (schema === 'old') {
+        for (const record of heatRecords) {
+          await prisma.$executeRawUnsafe(`
+            INSERT INTO event_performance (year, registration_id, event_id, heat_number, heat_time, created_at, updated_at)
+            VALUES (?, ?, ?, ?, NULL, datetime('now'), datetime('now'))
+          `, record.year, record.registration_id, record.event_id, record.heat_number);
+        }
+      } else {
+        for (const record of heatRecords) {
+          await prisma.$executeRawUnsafe(`
+            INSERT INTO event_performance (year, registration_id, event_id, heat_number, performance_1, performance_2, performance_3, created_at, updated_at)
+            VALUES (?, ?, ?, ?, NULL, NULL, NULL, datetime('now'), datetime('now'))
+          `, record.year, record.registration_id, record.event_id, record.heat_number);
+        }
+      }
+    }
 
     res.json({
       message: 'Heats generated successfully with temple separation',
@@ -1211,7 +1289,8 @@ router.post('/generate-heats', authenticate, requireRole('ADMIN'), [
 
 // Initialize trial performances for trial events (no heats)
 router.post('/init-trials', authenticate, requireRole('ADMIN'), [
-  body('event_id').isInt().withMessage('Invalid event ID')
+  body('event_id').isInt().withMessage('Invalid event ID'),
+  body('year').optional().isInt().withMessage('Year must be an integer')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -1219,15 +1298,21 @@ router.post('/init-trials', authenticate, requireRole('ADMIN'), [
   }
 
   const { event_id } = req.body;
+  const targetYear = req.body.year ? parseInt(req.body.year) : (req.query.year ? parseInt(req.query.year) : new Date().getFullYear());
 
   try {
     // Ensure records exist for all accepted participants
-    await ensureTrialPerformanceRecords(event_id);
+    await ensureTrialPerformanceRecords(parseInt(event_id), targetYear);
 
     // Count how many performance rows now exist for this event
-    const count = await prisma.event_performance.count({ where: { event_id: event_id } });
+    const count = await prisma.event_performance.count({
+      where: {
+        event_id: parseInt(event_id),
+        year: targetYear
+      }
+    });
 
-    return res.json({ message: 'Trial performances initialized', event_id, count });
+    return res.json({ message: 'Trial performances initialized', event_id: parseInt(event_id), year: targetYear, count });
   } catch (error) {
     console.error('Error initializing trials:', error);
     return res.status(500).json({ error: error.message || 'Failed to initialize trial performances' });
@@ -1238,6 +1323,7 @@ router.post('/init-trials', authenticate, requireRole('ADMIN'), [
 router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), async (req, res) => {
   try {
     const { eventId } = req.params;
+    const targetYear = req.query.year ? parseInt(req.query.year) : (req.body?.year ? parseInt(req.body.year) : new Date().getFullYear());
 
     // Check if event exists and is a running event
     const event = await prisma.mst_event.findUnique({
@@ -1254,15 +1340,15 @@ router.delete('/regenerate-heats/:eventId', authenticate, requireRole('ADMIN'), 
       return res.status(400).json({ error: 'Heat regeneration is only available for Running 100m and 200m events' });
     }
 
-    // Delete existing heats for this event
+    // Delete existing heats for this event and year
     await prisma.event_performance.deleteMany({
       where: {
         event_id: parseInt(eventId),
-        year: new Date().getFullYear()
+        year: targetYear
       }
     });
 
-    res.json({ message: 'Heats deleted successfully. You can now generate new heats.' });
+    res.json({ message: `Heats deleted successfully for year ${targetYear}. You can now generate new heats.` });
 
   } catch (error) {
     console.error('Error regenerating heats:', error);
@@ -1277,6 +1363,13 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
     const { year } = req.query;
     const currentYear = year ? parseInt(year) : new Date().getFullYear();
 
+    if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+      const isAllowed = await validateGroundStaffEventAccess(req, eventId);
+      if (!isAllowed) {
+        return res.status(403).json({ error: 'Access denied: Ground staff can only access heats for Running 100m and 200m events' });
+      }
+    }
+
     // Use raw query to handle schema differences
     let heats = [];
     try {
@@ -1285,8 +1378,8 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         SELECT ep.id, ep.registration_id, ep.event_id, ep.heat_number,
                ep.performance_1, ep.performance_2, ep.performance_3,
                ir.id as reg_id, ir.year as reg_year,
-               u.first_name, u.last_name, u.aadhar_number, u.dob,
-               t.name as temple_name,
+               u.id as user_id, u.first_name, u.last_name, u.aadhar_number, u.dob,
+               t.id as temple_id, t.name as temple_name,
                er.rank, er.points
         FROM event_performance ep
         INNER JOIN Ind_event_registration ir ON ep.registration_id = ir.id
@@ -1305,8 +1398,8 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
                  NULL as performance_2,
                  NULL as performance_3,
                  ir.id as reg_id, ir.year as reg_year,
-                 u.first_name, u.last_name, u.aadhar_number, u.dob,
-                 t.name as temple_name,
+                 u.id as user_id, u.first_name, u.last_name, u.aadhar_number, u.dob,
+                 t.id as temple_id, t.name as temple_name,
                  er.rank, er.points
           FROM event_performance ep
           INNER JOIN Ind_event_registration ir ON ep.registration_id = ir.id
@@ -1330,8 +1423,13 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
         groupedHeats[heatNumber] = [];
       }
 
+      const bibNumber = getBibNumber(heat.temple_id || heat.temple_name, heat.user_id);
+
       groupedHeats[heatNumber].push({
         id: heat.reg_id,
+        user_id: heat.user_id,
+        temple_id: heat.temple_id,
+        bib_number: bibNumber,
         participant_name: (heat.first_name || '') + ' ' + (heat.last_name || ''),
         temple_name: heat.temple_name,
         aadhar_number: heat.aadhar_number,
@@ -1355,7 +1453,7 @@ router.get('/heats/:eventId', authenticate, async (req, res) => {
 });
 
 // Update heat timings
-router.put('/update-timings', authenticate, requireRole('STAFF'), [
+router.put('/update-timings', authenticate, requireRole(['STAFF', 'GROUND_STAFF']), [
   body('event_id').isInt().withMessage('Invalid event ID'),
   body('heat_number').isInt().withMessage('Invalid heat number'),
   body('timings').isArray().withMessage('Timings must be an array'),
@@ -1370,6 +1468,13 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
   }
 
   const { event_id, heat_number, timings } = req.body;
+
+  if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+    const isAllowed = await validateGroundStaffEventAccess(req, event_id);
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Access denied: Ground staff can only update timings for Running 100m and 200m events' });
+    }
+  }
 
   try {
     // Detect which schema is available
@@ -1470,7 +1575,7 @@ router.put('/update-timings', authenticate, requireRole('STAFF'), [
 });
 
 // Update final heat timings (no heat_number required)
-router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
+router.put('/update-final-timings', authenticate, requireRole(['STAFF', 'GROUND_STAFF']), [
   body('event_id').isInt().withMessage('Invalid event ID'),
   body('timings').isArray().withMessage('Timings must be an array'),
   body('timings.*.registration_id').isInt().withMessage('Invalid registration ID'),
@@ -1493,6 +1598,13 @@ router.put('/update-final-timings', authenticate, requireRole('STAFF'), [
   }
 
   const { event_id, timings } = req.body;
+
+  if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+    const isAllowed = await validateGroundStaffEventAccess(req, event_id);
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Access denied: Ground staff can only update final timings for Running 100m and 200m events' });
+    }
+  }
 
   try {
     // Detect which schema is available
@@ -1721,10 +1833,17 @@ async function ensureTrialPerformanceRecords(eventId, targetYear = null) {
 }
 
 // Get trial measurements for trial events
-router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, res) => {
+router.get('/trials/:eventId', authenticate, requireRole(['STAFF', 'GROUND_STAFF']), async (req, res) => {
   const { eventId } = req.params;
   const { year } = req.query;
   const currentYear = year ? parseInt(year) : new Date().getFullYear();
+
+  if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+    const isAllowed = await validateGroundStaffEventAccess(req, eventId);
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Access denied: Ground staff can only access trials for Long jump and Shot put events' });
+    }
+  }
 
   try {
     // First ensure all accepted participants have performance records
@@ -1775,7 +1894,7 @@ router.get('/trials/:eventId', authenticate, requireRole('STAFF'), async (req, r
 });
 
 // Update trial measurements for trial events
-router.put('/update-trials', authenticate, requireRole('STAFF'), [
+router.put('/update-trials', authenticate, requireRole(['STAFF', 'GROUND_STAFF']), [
   body('event_id').isInt().withMessage('Invalid event ID'),
   body('trials').isArray().withMessage('Trials must be an array'),
   body('trials.*.registration_id').isInt().withMessage('Invalid registration ID'),
@@ -1799,6 +1918,13 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
 
   const { event_id, trials } = req.body;
 
+  if (req.user && (req.user.role === 6 || req.user.role === 'GROUND_STAFF')) {
+    const isAllowed = await validateGroundStaffEventAccess(req, event_id);
+    if (!isAllowed) {
+      return res.status(403).json({ error: 'Access denied: Ground staff can only update trials for Long jump and Shot put events' });
+    }
+  }
+
   try {
     // Detect which schema is available
     const schema = await detectPerformanceSchema();
@@ -1813,8 +1939,10 @@ router.put('/update-trials', authenticate, requireRole('STAFF'), [
     // Safety check: if schema is 'new', treat it as 'new_raw' to always use raw SQL
     const effectiveSchema = schema === 'new' ? 'new_raw' : schema;
 
+    const targetYear = req.body.year ? parseInt(req.body.year) : (req.query.year ? parseInt(req.query.year) : new Date().getFullYear());
+
     // First ensure all accepted participants have performance records
-    await ensureTrialPerformanceRecords(event_id);
+    await ensureTrialPerformanceRecords(event_id, targetYear);
 
     // Helper function to parse trial values
     const parseTrial = (trialValue) => {

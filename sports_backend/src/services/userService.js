@@ -54,10 +54,80 @@ async function register(username, password, email, first_name, last_name, phone,
   }
 }
 
+async function ensureGroundStaffRoleAndUser() {
+  try {
+    let groundStaffRole = await prisma.mst_role.findFirst({
+      where: { name: 'GROUND_STAFF' }
+    });
+
+    if (!groundStaffRole) {
+      groundStaffRole = await prisma.mst_role.create({
+        data: { name: 'GROUND_STAFF' }
+      });
+      console.log('✅ Created GROUND_STAFF role in database:', groundStaffRole);
+    }
+
+    let groundStaffUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: 'GROUND_STAFF' },
+          { username: 'ground_staff' },
+          { username: '999999999999' },
+          { profile: { aadhar_number: '999999999999' } }
+        ]
+      },
+      include: { profile: { include: { role: true, temple: true } } }
+    });
+
+    if (!groundStaffUser) {
+      const defaultPassword = await bcrypt.hash('GroundStaff@123', 10);
+      groundStaffUser = await prisma.user.create({
+        data: {
+          username: 'GROUND_STAFF',
+          password: defaultPassword,
+          email: 'groundstaff@events.com',
+          profile: {
+            create: {
+              first_name: 'Ground',
+              last_name: 'Staff',
+              phone: '9999999999',
+              aadhar_number: '999999999999',
+              dob: new Date('1990-01-01'),
+              gender: 'MALE',
+              temple_id: 1,
+              role_id: groundStaffRole.id
+            }
+          }
+        },
+        include: { profile: { include: { role: true, temple: true } } }
+      });
+      console.log('✅ Created default GROUND_STAFF user (username: GROUND_STAFF, aadhar: 999999999999, password: GroundStaff@123)');
+    } else if (groundStaffUser.profile && groundStaffRole && groundStaffUser.profile.role_id !== groundStaffRole.id) {
+      await prisma.profile.update({
+        where: { id: groundStaffUser.profile.id },
+        data: { role_id: groundStaffRole.id }
+      });
+    }
+
+    return groundStaffUser;
+  } catch (err) {
+    console.error('Error ensuring GROUND_STAFF role/user:', err.message);
+  }
+}
+
 async function login(username, password) {
   try {
-  const user = await prisma.user.findUnique({
-    where: { username },
+    const cleanUsername = (username || '').trim();
+
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: cleanUsername },
+          { username: cleanUsername.toUpperCase() },
+          { username: cleanUsername.toLowerCase() },
+          { profile: { aadhar_number: cleanUsername } }
+        ]
+      },
       include: {
         profile: {
           include: {
@@ -66,7 +136,27 @@ async function login(username, password) {
           }
         }
       }
-  });
+    });
+
+    if (!user && (cleanUsername.toUpperCase() === 'GROUND_STAFF' || cleanUsername === '999999999999')) {
+      await ensureGroundStaffRoleAndUser();
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { username: 'GROUND_STAFF' },
+            { profile: { aadhar_number: '999999999999' } }
+          ]
+        },
+        include: {
+          profile: {
+            include: {
+              temple: true,
+              role: true
+            }
+          }
+        }
+      });
+    }
 
     if (!user) {
       throw new Error('Invalid credentials');
@@ -574,5 +664,6 @@ export {
   findUserByAadhaarAndEmail,
   getUserDetailsByAadhaar,
   updateUserEmail,
-  resetPassword
+  resetPassword,
+  ensureGroundStaffRoleAndUser
 };

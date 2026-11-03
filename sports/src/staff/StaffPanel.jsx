@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { eventAPI, reportAPI } from '../utils/api';
+import { getCurrentUser } from '../utils/tokenUtils';
 import TempleManagement from '../components/TempleManagement.jsx';
 import Schedule from '../components/Schedule.jsx';
 import Results from '../components/Results.jsx';
@@ -8,6 +9,9 @@ import UpdateTeamResult from '../components/UpdateTeamResult.jsx';
 import UpdateIndividualResult from '../components/UpdateIndividualResult.jsx';
 
 const StaffPanel = () => {
+  const currentUser = getCurrentUser();
+  const isGroundStaff = currentUser?.role === 6 || currentUser?.role === 'GROUND_STAFF';
+
   const [activeTab, setActiveTab] = useState('update-results');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -21,10 +25,9 @@ const StaffPanel = () => {
   const [modalDetails, setModalDetails] = useState(null);
   const [pendingUpdate, setPendingUpdate] = useState(null); // Store pending update data
 
-
-
-
-  const tabs = [
+  const tabs = isGroundStaff ? [
+    { id: 'update-results', name: 'Performances', endpoint: '/api/events/participant-data' }
+  ] : [
     { id: 'update-results', name: 'Individual', endpoint: '/api/events/participant-data' },
     { id: 'teams', name: 'Teams', endpoint: '/api/events/team-events' },
     { id: 'champions', name: 'Champions', endpoint: '/api/users/champions' },
@@ -293,11 +296,16 @@ const StaffPanel = () => {
       
       <div className="max-w-7xl mx-auto">
         <div className="mb-2 sm:mb-4">
-          <h1 className="text-lg sm:text-3xl font-bold text-[#2A2A2A] mb-0 sm:mb-2">Staff Panel</h1>
-          <p className="hidden sm:block text-sm sm:text-base text-[#5A5A5A]">Manage your sports event data</p>
+          <h1 className="text-lg sm:text-3xl font-bold text-[#2A2A2A] mb-0 sm:mb-2">
+            {isGroundStaff ? 'Ground Staff Panel' : 'Staff Panel'}
+          </h1>
+          <p className="hidden sm:block text-sm sm:text-base text-[#5A5A5A]">
+            {isGroundStaff ? 'Enter and update performances for assigned ground events' : 'Manage your sports event data'}
+          </p>
         </div>
 
         {/* Tabs */}
+        {!isGroundStaff && (
         <div className="mb-0 md:mb-6">
           {/* Desktop Tabs - Horizontal */}
           <nav className="hidden lg:flex space-x-8">
@@ -337,12 +345,13 @@ const StaffPanel = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Render different content based on active tab */}
         {activeTab === 'temples' ? (
           renderTempleReports()
         ) : activeTab === 'update-results' ? (
-          <UpdateIndividualResult />
+          <UpdateIndividualResult isGroundStaff={isGroundStaff} />
         ) : activeTab === 'teams' ? (
           <UpdateTeamResult />
         ) : activeTab === 'champions' ? (
@@ -354,10 +363,11 @@ const StaffPanel = () => {
         ) : null}
 
         {/* Bottom spacer for mobile to account for fixed tab bar */}
-        <div className="h-20 md:hidden"></div>
+        {!isGroundStaff && <div className="h-20 md:hidden"></div>}
       </div>
 
       {/* Mobile Bottom Tab Bar (< 768px) */}
+      {!isGroundStaff && (
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#F8DFBE] z-50 md:hidden">
         <nav className="flex items-center justify-around py-2 px-1">
           {/* Individual */}
@@ -451,6 +461,7 @@ const StaffPanel = () => {
           </button>
         </nav>
       </div>
+      )}
     </div>
   );
 };

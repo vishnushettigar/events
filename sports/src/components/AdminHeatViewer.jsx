@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { eventAPI } from '../utils/api.js';
+import { getBibNumber } from '../utils/templeUtils.js';
 
-const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
+const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender, year = new Date().getFullYear() }) => {
   const [heats, setHeats] = useState({});
   const [selectedHeat, setSelectedHeat] = useState(null);
   const [loadingHeats, setLoadingHeats] = useState(false);
@@ -26,7 +27,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
       // console.log(`Fetching heats for eventId: ${eventId}`);
       setLoadingHeats(true);
       setHeatError(null);
-      const heatsData = await eventAPI.getHeats(eventId);
+      const heatsData = await eventAPI.getHeats(eventId, { year });
       // console.log('Heats data received:', heatsData);
       setHeats(heatsData);
 
@@ -149,7 +150,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
       </head>
       <body>
         <div class="header">
-          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - 2026</div>
+          <div class="main-title">34ನೇ ಪದ್ಮಶಾಲಿ ಕ್ರೀಡೋತ್ಸವ - ${year}</div>
           <div class="place">ಸ್ಥಳ - ಕಲ್ಯಾಣಪುರ </div>
           <div class="event-details">
             <span><strong>Age Category:</strong> ${ageCategory}</span>
@@ -174,6 +175,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
           <thead>
             <tr>
               <th>SL.NO</th>
+              <th>BIB NO</th>
               <th>NAME</th>
               <th>TEMPLE</th>
               <th>AADHAR NO</th>
@@ -183,12 +185,14 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
           <tbody>
             ${participantsToPrint.map((participant, index) => {
       const participantName = participant.participant_name || participant.team_name;
+      const bibNo = participant.bib_number || getBibNumber(participant.temple_id || participant.temple_name, participant.user_id || participant.user_profile_id);
       const timing = participant.performance_1 || participant.timing || '';
       const timingClass = showFinalHeat && finalHeatParticipants.length > 0 ? 'final-heat-timing' : 'timing-data';
 
       return `
                 <tr>
                   <td>${index + 1}</td>
+                  <td><strong>${bibNo || '-'}</strong></td>
                   <td>${participantName}</td>
                   <td>${participant.temple_name}</td>
                   <td>${participant.aadhar_number || 'N/A'}</td>
@@ -214,7 +218,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
     if (isHeatEvent()) {
       fetchHeats();
     }
-  }, [eventId, eventName]);
+  }, [eventId, eventName, year]);
 
   // Don't render if not a heat event
   if (!isHeatEvent()) {
@@ -320,6 +324,7 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL.NO</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB NO</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NAME</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TEMPLE</th>
                   <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AADHAR NO</th>
@@ -328,10 +333,15 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {(showFinalHeat ? finalHeatParticipants :
-                  selectedHeat ? heats[selectedHeat] || [] : []).map((participant, index) => (
+                  selectedHeat ? heats[selectedHeat] || [] : []).map((participant, index) => {
+                    const bibNo = participant.bib_number || getBibNumber(participant.temple_id || participant.temple_name, participant.user_id || participant.user_profile_id);
+                    return (
                     <tr key={participant.id || index} className="hover:bg-gray-50">
                       <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                         {index + 1}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-[#D35D38] font-mono">
+                        {bibNo || '-'}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-900">
                         {participant.participant_name || participant.team_name}
@@ -361,7 +371,8 @@ const AdminHeatViewer = ({ eventId, eventName, ageCategory, gender }) => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

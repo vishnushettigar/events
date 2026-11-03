@@ -559,7 +559,14 @@ router.put('/users/:id/update-role', authenticate, requireRole('ADMIN'), async (
     const userId = parseInt(req.params.id);
     const { role_id } = req.body;
 
-    if (!role_id || ![1, 2, 3, 4, 5].includes(role_id)) {
+    if (!role_id) {
+      return res.status(400).json({ error: 'Role ID is required' });
+    }
+
+    const roleExists = await prisma.mst_role.findUnique({
+      where: { id: parseInt(role_id) }
+    });
+    if (!roleExists) {
       return res.status(400).json({ error: 'Invalid role ID' });
     }
 

@@ -6,8 +6,7 @@ import Results from '../components/Results.jsx';
 import Champions from '../components/Champions.jsx';
 import { authAPI, userAPI, eventAPI, participantAPI, teamAPI, templeAPI, reportAPI, systemAPI } from '../utils/api.js';
 import authManager from '../utils/authManager';
-// Icons temporarily disabled due to import issues
-// import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaCog, FaSignOutAlt, FaBars, FaTimes } from 'react-icons/fa';
+import { FaTachometerAlt, FaUsers, FaCalendarAlt, FaTrophy, FaBuilding, FaCog, FaBars, FaTimes, FaUser, FaRunning, FaAward } from 'react-icons/fa';
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -63,15 +62,15 @@ const AdminPanel = () => {
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: '📊', color: 'text-blue-600' },
-    { id: 'events', label: 'Event', icon: '📅', color: 'text-green-600' },
-    { id: 'users', label: 'User', icon: '👥', color: 'text-purple-600' },
-    { id: 'participants', label: 'Participants', icon: '👤', color: 'text-indigo-600' },
-    { id: 'teams', label: 'Teams', icon: '🏃', color: 'text-teal-600' },
-    { id: 'temples', label: 'Temples ', icon: '🏛️', color: 'text-orange-600' },
-    { id: 'results', label: 'Results', icon: '🏆', color: 'text-yellow-600' },
-    { id: 'champions', label: 'Champions', icon: '👑', color: 'text-pink-600' },
-    { id: 'settings', label: 'Settings', icon: '⚙️', color: 'text-gray-600' },
+    { id: 'dashboard', label: 'Dashboard', icon: FaTachometerAlt, color: 'text-blue-600' },
+    { id: 'events', label: 'Event', icon: FaCalendarAlt, color: 'text-green-600' },
+    { id: 'users', label: 'User', icon: FaUsers, color: 'text-purple-600' },
+    { id: 'participants', label: 'Participants', icon: FaUser, color: 'text-indigo-600' },
+    { id: 'teams', label: 'Teams', icon: FaRunning, color: 'text-teal-600' },
+    { id: 'temples', label: 'Temples ', icon: FaBuilding, color: 'text-orange-600' },
+    { id: 'results', label: 'Results', icon: FaTrophy, color: 'text-yellow-600' },
+    { id: 'champions', label: 'Champions', icon: FaAward, color: 'text-pink-600' },
+    { id: 'settings', label: 'Settings', icon: FaCog, color: 'text-gray-600' },
   ];
 
   const renderContent = () => {
@@ -140,7 +139,7 @@ const AdminPanel = () => {
               onClick={() => setSidebarOpen(false)}
               className="lg:hidden p-1 rounded-md text-gray-400 hover:text-gray-600"
             >
-              ✕
+              <FaTimes className="text-xl" />
             </button>
           </div>
 
@@ -165,20 +164,23 @@ const AdminPanel = () => {
 
           {/* Navigation Menu */}
           <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            {menuItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
-                  activeTab === item.id
-                    ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
-                    : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
-                }`}
-              >
-                <span className="text-xl">{item.icon}</span>
-                <span className="font-medium">{item.label}</span>
-              </button>
-            ))}
+            {menuItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 ${
+                    activeTab === item.id
+                      ? 'bg-[#F8DFBE] text-[#D35D38] border-r-2 border-[#D35D38]'
+                      : 'text-[#5A5A5A] hover:bg-gray-100 hover:text-[#2A2A2A]'
+                  }`}
+                >
+                  <IconComponent className={`text-xl ${activeTab === item.id ? item.color : ''}`} />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+              );
+            })}
           </nav>
 
           {/* Logout */}
@@ -204,7 +206,7 @@ const AdminPanel = () => {
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
               >
-                ☰
+                <FaBars className="text-xl" />
               </button>
               <h2 className="text-xl font-semibold text-[#2A2A2A]">
                 {menuItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
@@ -245,7 +247,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-            <span className="text-blue-600 text-xl">📅</span>
+            <FaCalendarAlt className="text-blue-600 text-xl" />
           </div>
         </div>
       </div>
@@ -259,7 +261,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-            <span className="text-green-600 text-xl">👥</span>
+            <FaUsers className="text-green-600 text-xl" />
           </div>
         </div>
       </div>
@@ -273,7 +275,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-            <span className="text-orange-600 text-xl">🏛️</span>
+            <FaBuilding className="text-orange-600 text-xl" />
           </div>
         </div>
       </div>
@@ -287,7 +289,7 @@ const Dashboard = ({ stats, isLoading }) => (
             </p>
           </div>
           <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-            <span className="text-purple-600 text-xl">🏆</span>
+            <FaTrophy className="text-purple-600 text-xl" />
           </div>
         </div>
       </div>
@@ -584,6 +586,7 @@ const UserManagement = () => {
                           user.profile?.role_id === 5 ? 'bg-red-100 text-red-800' :
                           user.profile?.role_id === 3 ? 'bg-blue-100 text-blue-800' :
                           user.profile?.role_id === 2 ? 'bg-green-100 text-green-800' :
+                          user.profile?.role_id === 6 ? 'bg-amber-100 text-amber-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           {getRoleName(user.profile?.role_id)}
@@ -1081,6 +1084,7 @@ const ParticipantsManagement = () => {
                       isAdmin={true}
                       ageCategory={ageCategory}
                       gender={gender}
+                      year={selectedYear}
                     />
                   ))}
                 </div>

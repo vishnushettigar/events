@@ -32,9 +32,9 @@ const SignInForm = () => {
         const password = formData.password.trim();
 
         if (!aadhaar) {
-            newErrors.aadhaar = 'Aadhaar number is required';
-        } else if (!/^[0-9]{12}$/.test(aadhaar)) {
-            newErrors.aadhaar = 'Please enter a valid 12-digit Aadhaar number';
+            newErrors.aadhaar = 'Aadhaar number or username is required';
+        } else if (!/^[0-9]{12}$/.test(aadhaar) && aadhaar.length < 3) {
+            newErrors.aadhaar = 'Please enter a valid 12-digit Aadhaar number or username';
         }
 
         if (!password) {
@@ -79,17 +79,18 @@ const SignInForm = () => {
             setFormData({ aadhaar: '', password: '' });
             setErrors({});
 
-            // Check both role.id and role_id patterns
+            // Check both role.id and role_id patterns and role.name
             const userRoleId = data.user?.profile?.role?.id || data.user?.profile?.role_id;
+            const userRoleName = data.user?.profile?.role?.name?.toUpperCase();
 
-            if (userRoleId === 4) {
+            if (userRoleId === 4 || userRoleName === 'VIEWER') {
                 // Viewer - redirect to viewer panel
                 navigate('/viewer');
-            } else if (userRoleId === 5) {
+            } else if (userRoleId === 5 || userRoleName === 'ADMIN') {
                 // Admin panel - redirect to admin panel
                 navigate('/admin');
-            } else if (userRoleId === 3) {
-                // Staff user - redirect to staff panel
+            } else if (userRoleId === 3 || userRoleId === 6 || userRoleName === 'STAFF' || userRoleName === 'GROUND_STAFF') {
+                // Staff or Ground Staff user - redirect to staff panel
                 navigate('/staffpanel');
             } else {
                 // Regular user - redirect to myevents page
@@ -137,7 +138,7 @@ const SignInForm = () => {
                         {/* Aadhaar Number */}
                         <div>
                             <label htmlFor="aadhaar" className="block text-sm font-semibold text-[#2A2A2A] mb-2">
-                                Aadhaar Number *
+                                Aadhaar Number / Username *
                             </label>
                             <input
                                 type="text"
@@ -147,7 +148,7 @@ const SignInForm = () => {
                                 onChange={handleChange}
                                 className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent ${errors.aadhaar ? 'border-red-300' : 'border-gray-300'
                                     }`}
-                                placeholder="Enter your 12-digit Aadhaar number"
+                                placeholder="Enter 12-digit Aadhaar number or username"
                             />
                             {errors.aadhaar && <p className="text-red-500 text-sm mt-1">{errors.aadhaar}</p>}
                         </div>

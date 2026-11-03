@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt';
 
 dotenv.config();
 
@@ -66,7 +67,8 @@ async function main() {
     { name: 'TEMPLE_ADMIN' },
     { name: 'STAFF' },
     { name: 'VIEWER' },
-    { name: 'ADMIN' }
+    { name: 'ADMIN' },
+    { name: 'GROUND_STAFF' }
   ];
 
   for (const role of roles) {
@@ -354,6 +356,46 @@ async function main() {
       update: { value: setting.value },
       create: setting
     });
+  }
+
+  // Seed default GROUND_STAFF user
+  const groundStaffRole = await prisma.mst_role.findFirst({
+    where: { name: 'GROUND_STAFF' }
+  });
+
+  if (groundStaffRole) {
+    const existingGroundStaff = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: 'GROUND_STAFF' },
+          { profile: { aadhar_number: '999999999999' } }
+        ]
+      }
+    });
+
+    if (!existingGroundStaff) {
+      const defaultGroundStaffPassword = await bcrypt.hash('GroundStaff@123', 10);
+      await prisma.user.create({
+        data: {
+          username: 'GROUND_STAFF',
+          password: defaultGroundStaffPassword,
+          email: 'groundstaff@events.com',
+          profile: {
+            create: {
+              first_name: 'Ground',
+              last_name: 'Staff',
+              phone: '9999999999',
+              aadhar_number: '999999999999',
+              dob: new Date('1990-01-01'),
+              gender: 'MALE',
+              temple_id: 1,
+              role_id: groundStaffRole.id
+            }
+          }
+        }
+      });
+      console.log('Default GROUND_STAFF user seeded (username: GROUND_STAFF / Aadhaar: 999999999999)');
+    }
   }
 
   console.log('Database has been seeded. 🌱');

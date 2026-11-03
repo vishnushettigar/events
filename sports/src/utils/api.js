@@ -129,8 +129,10 @@ class ApiService {
   }
 
   // DELETE request
-  async delete(endpoint) {
-    return this.request(endpoint, { method: 'DELETE' });
+  async delete(endpoint, params = {}) {
+    const queryString = params && Object.keys(params).length > 0 ? new URLSearchParams(params).toString() : '';
+    const url = queryString ? `${endpoint}?${queryString}` : endpoint;
+    return this.request(url, { method: 'DELETE' });
   }
 
   // PATCH request
@@ -205,14 +207,23 @@ export const eventAPI = {
   getBatchTeamData: (registrationIds) => apiService.post('/events/batch-team-data', { registration_ids: registrationIds }),
   
   // Heat management
-  generateHeats: (eventId) => apiService.post('/events/generate-heats', { event_id: eventId }),
-  regenerateHeats: (eventId) => apiService.delete(`/events/regenerate-heats/${eventId}`),
+  generateHeats: (eventId, params = {}) => {
+    const data = typeof eventId === 'object' ? eventId : { event_id: eventId, ...params };
+    return apiService.post('/events/generate-heats', data);
+  },
+  regenerateHeats: (eventId, params = {}) => {
+    const queryParams = typeof params === 'object' ? params : { year: params };
+    return apiService.delete(`/events/regenerate-heats/${eventId}`, queryParams);
+  },
   getHeats: (eventId, params = {}) => apiService.get(`/events/heats/${eventId}`, params),
   saveTimings: (eventId, heatNumber, timings) => apiService.put('/events/update-timings', { event_id: eventId, heat_number: heatNumber, timings }),
   saveFinalTimings: (eventId, timings) => apiService.put('/events/update-final-timings', { event_id: eventId, timings }),
   
   // Trial management
-  initTrials: (eventId) => apiService.post('/events/init-trials', { event_id: eventId }),
+  initTrials: (eventId, params = {}) => {
+    const data = typeof eventId === 'object' ? eventId : { event_id: eventId, ...params };
+    return apiService.post('/events/init-trials', data);
+  },
   getTrials: (eventId, params = {}) => apiService.get(`/events/trials/${eventId}`, params),
   saveTrials: (eventId, trials) => apiService.put('/events/update-trials', { event_id: eventId, trials }),
   

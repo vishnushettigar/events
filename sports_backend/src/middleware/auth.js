@@ -41,14 +41,15 @@ function requireRole(role) {
       'TEMPLE_ADMIN': 2,
       'STAFF': 3,
       'PARTICIPANT': 1,
-      'ADMIN': 5
+      'ADMIN': 5,
+      'GROUND_STAFF': 6
     };
 
     // Get the role ID(s) (either from the map or use the number directly)
     let requiredRoleIds;
     if (Array.isArray(role)) {
-      // If role is an array, use the numbers directly
-      requiredRoleIds = role;
+      // If role is an array, convert string names to role IDs or use numbers directly
+      requiredRoleIds = role.map(r => typeof r === 'string' ? (roleMap[r] || r) : r);
     } else if (typeof role === 'string') {
       // If role is a string, map it to role ID
       const roleId = roleMap[role];

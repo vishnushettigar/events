@@ -27,17 +27,23 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
         
         if (requiredRole) {
           // Check if user has the required role
-          // VIEWER = 4, TEMPLE_ADMIN = 2, STAFF = 3, PARTICIPANT = 1, ADMIN = 5
+          // VIEWER = 4, TEMPLE_ADMIN = 2, STAFF = 3, PARTICIPANT = 1, ADMIN = 5, GROUND_STAFF = 6
           const roleMap = {
             'VIEWER': 4,
             'TEMPLE_ADMIN': 2,
             'STAFF': 3,
             'PARTICIPANT': 1,
-            'ADMIN': 5
+            'ADMIN': 5,
+            'GROUND_STAFF': 6
           };
           
-          const requiredRoleId = roleMap[requiredRole];
-          setHasAccess(user.role === requiredRoleId);
+          if (Array.isArray(requiredRole)) {
+            const requiredRoleIds = requiredRole.map(r => typeof r === 'string' ? roleMap[r] : r);
+            setHasAccess(requiredRoleIds.includes(user.role));
+          } else {
+            const requiredRoleId = typeof requiredRole === 'string' ? roleMap[requiredRole] : requiredRole;
+            setHasAccess(user.role === requiredRoleId);
+          }
         } else {
           // If no specific role required, just check if user is authenticated
           setHasAccess(true);

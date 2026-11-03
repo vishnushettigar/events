@@ -130,7 +130,7 @@ const ProfileDropdown = () => {
                     </p>
                     <p className="text-xs text-gray-500">{userInfo?.temple}</p>
                   </div>
-                  {(![3, 4, 5].includes(userInfo?.role_id) && !['ADMIN', 'VIEWER', 'STAFF'].includes(userInfo?.role?.toUpperCase())) && (
+                  {(![3, 4, 5, 6].includes(userInfo?.role_id) && !['ADMIN', 'VIEWER', 'STAFF', 'GROUND_STAFF'].includes(userInfo?.role?.toUpperCase())) && (
                     <Link
                       to="/myevents"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -163,7 +163,7 @@ const ProfileDropdown = () => {
                       </span>
                     </Link>
                   )}
-                  {userInfo?.role_id === 3 && (
+                  {(userInfo?.role_id === 3 || userInfo?.role_id === 6 || ['STAFF', 'GROUND_STAFF'].includes(userInfo?.role?.toUpperCase())) && (
                     <Link
                       to="/staffpanel"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 border-t border-gray-100"
@@ -171,7 +171,7 @@ const ProfileDropdown = () => {
                     >
                       <span className="flex items-center">
                         <span className="mr-2"></span>
-                        Staff Panel
+                        {userInfo?.role_id === 6 || userInfo?.role?.toUpperCase() === 'GROUND_STAFF' ? 'Ground Staff Panel' : 'Staff Panel'}
                       </span>
                     </Link>
                   )}

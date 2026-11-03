@@ -58,7 +58,7 @@ function getTransporter() {
 export async function sendPasswordResetOtp({ email, otp, userName = 'Participant' }) {
   const mailTransporter = getTransporter();
   const fromEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.SMTP_USER || 'no-reply@shettigarevents.com';
-  const appName = 'Sports Event Management';
+  const appName = 'Padmashali kreedothsava';
 
   const htmlContent = `
     <!DOCTYPE html>

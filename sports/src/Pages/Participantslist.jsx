@@ -197,7 +197,7 @@ const Participantslist = () => {
 
   // Filter participants
   const filteredParticipants = useMemo(() => {
-    const excludedRoles = ['ADMIN', 'STAFF', 'VIEWER'];
+    const excludedRoles = ['ADMIN', 'STAFF', 'VIEWER', 'GROUND_STAFF'];
 
     return participants.filter(participant => {
       // Exclude administrative/staff/viewer users

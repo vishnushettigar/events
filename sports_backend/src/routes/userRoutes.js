@@ -1150,7 +1150,7 @@ router.get('/templeusers', authenticate, async (req, res) => {
       templeId = userProfile.temple_id;
     }
 
-    const excludedRoles = ['ADMIN', 'STAFF', 'VIEWER'];
+    const excludedRoles = ['ADMIN', 'STAFF', 'VIEWER', 'GROUND_STAFF'];
 
     const whereClause = {
       is_deleted: false,

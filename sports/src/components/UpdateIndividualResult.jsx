@@ -1,9 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { eventAPI, systemAPI, userAPI } from '../utils/api';
+import { getCurrentUser } from '../utils/tokenUtils';
+import { getBibNumber } from '../utils/templeUtils';
 
-const UpdateIndividualResult = () => {
-  // State management
-  const [selectedAge, setSelectedAge] = useState('0-5');
+const isAllowedGroundStaffEvent = (name) => {
+  if (!name) return false;
+  const n = name.toLowerCase().trim();
+  return (
+    n.includes('running - 100') ||
+    n.includes('running - 200') ||
+    n.includes('long jump') ||
+    n.includes('long-jump') ||
+    n.includes('shot put')
+  );
+};
+
+const UpdateIndividualResult = ({ isGroundStaff: propIsGroundStaff = false }) => {
+  const currentUser = getCurrentUser();
+  const isGroundStaff = propIsGroundStaff || currentUser?.role === 6 || currentUser?.role === 'GROUND_STAFF';
+
+  // State management - Ground staff defaults to '11-14' where track/field events exist
+  const [selectedAge, setSelectedAge] = useState(isGroundStaff ? '11-14' : '0-5');
   const [selectedGender, setSelectedGender] = useState('MALE');
   const [ageGroups, setAgeGroups] = useState([]);
   const [genders, setGenders] = useState([]);
@@ -185,7 +202,11 @@ const UpdateIndividualResult = () => {
       const filteredAgeGroups = data.ageCategories.filter(group => group.name !== 'All');
       setAgeGroups(filteredAgeGroups);
       setGenders(data.genderOptions);
-      setEvents(data.events);
+      let fetchedEvents = data.events || [];
+      if (isGroundStaff) {
+        fetchedEvents = fetchedEvents.filter(e => isAllowedGroundStaffEvent(e.name));
+      }
+      setEvents(fetchedEvents);
       setLoading(false);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -575,7 +596,8 @@ const UpdateIndividualResult = () => {
     isFinalHeatSelected,
     setFinalHeatSelectedForEvent,
     laneCount,
-    openAddParticipantModal
+    openAddParticipantModal,
+    isGroundStaff
   }) => {
     // Use parent-managed state
     const eventParticipants = getEventParticipants(eventId);
@@ -1474,10 +1496,12 @@ const UpdateIndividualResult = () => {
         };
         const dob = formatDob(participant.date_of_birth);
 
+        const bibNo = participant.bib_number || getBibNumber(participant.temple_id || participant.temple_name, participant.user_id || participant.user_profile_id);
+
         return `
                   <tr>
                     <td>${index + 1}</td>
-                    <td><strong>${participant.bib_number || '-'}</strong></td>
+                    <td><strong>${bibNo || '-'}</strong></td>
                     <td>${participantName}</td>
                     <td>${participant.temple_name}</td>
                     <td>${participant.aadhar_number || 'N/A'}</td>
@@ -1726,18 +1750,20 @@ const UpdateIndividualResult = () => {
                 )}
 
                 {/* Add Participant Button */}
-                <div className="flex justify-end mb-4">
-                  <button
-                    onClick={() => openAddParticipantModal(eventId, title)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm md:text-base"
-                  >
-                    <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span className="hidden md:inline">Add Participant</span>
-                    <span className="md:hidden">Add</span>
-                  </button>
-                </div>
+                {!isGroundStaff && (
+                  <div className="flex justify-end mb-4">
+                    <button
+                      onClick={() => openAddParticipantModal(eventId, title)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium flex items-center gap-2 text-sm md:text-base"
+                    >
+                      <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      <span className="hidden md:inline">Add Participant</span>
+                      <span className="md:hidden">Add</span>
+                    </button>
+                  </div>
+                )}
 
                 {/* Final Heat Management - Desktop Only */}
                 {isHeatEvent() && showFinalHeat && Object.keys(heats).length > 0 && (
@@ -1853,7 +1879,7 @@ const UpdateIndividualResult = () => {
                     )}
 
                     {/* Update Results Button */}
-                    {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                    {!isGroundStaff && (!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
                       <button
                         onClick={() => handleBulkResultUpdate(eventId, title, ageCategory)}
                         className={`flex-1 px-3 py-1.5 rounded-lg transition-colors font-medium text-sm ${Object.keys(getRankChanges(eventId)).length > 0
@@ -1919,11 +1945,14 @@ const UpdateIndividualResult = () => {
                                     <p className="text-xs text-[#5A5A5A]">{participant.temple_name}</p>
                                   </div>
                                   <div className="flex-1 space-y-1 flex items-center gap-1 flex-wrap">
-                                    {participant.bib_number && (
-                                      <span className="inline-block px-1.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-900 rounded font-mono">
-                                        {participant.bib_number}
-                                      </span>
-                                    )}
+                                    {(() => {
+                                      const bibNo = participant.bib_number || getBibNumber(participant.temple_id || participant.temple_name, participant.user_id || participant.user_profile_id);
+                                      return bibNo ? (
+                                        <span className="inline-block px-1.5 py-0.5 text-xs font-bold bg-amber-100 text-amber-900 rounded font-mono">
+                                          {bibNo}
+                                        </span>
+                                      ) : null;
+                                    })()}
                                     <p className="text-xs text-[#5A5A5A]">#{participant.aadhar_number || 'N/A'}</p>
                                   </div>
                                   {/* Result Badge - only show for non-heat events or final heat */}
@@ -2029,7 +2058,7 @@ const UpdateIndividualResult = () => {
                                 )}
 
                                 {/* Result Selection */}
-                                {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                                {!isGroundStaff && (!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
                                   <div>
                                     {/* <label className="block text-xs font-semibold text-[#2A2A2A] mb-1">Select Result</label> */}
                                     <select
@@ -2103,7 +2132,7 @@ const UpdateIndividualResult = () => {
                             </div>
                           </th>
                         )}
-                        {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                        {!isGroundStaff && (!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
                           <th className="px-4 py-3 text-left text-xs font-bold text-[#2A2A2A] uppercase tracking-wider">
                             <div className="flex items-center justify-between">
                               <span>RESULT</span>
@@ -2125,13 +2154,15 @@ const UpdateIndividualResult = () => {
                     <tbody className="bg-white divide-y divide-[#F8DFBE]">
                       {(isHeatEvent() && showFinalHeat ? finalHeatParticipants :
                         isHeatEvent() && selectedHeat ? heats[selectedHeat] || [] :
-                          eventParticipants).map((participant, index) => (
+                          eventParticipants).map((participant, index) => {
+                            const bibNo = participant.bib_number || getBibNumber(participant.temple_id || participant.temple_name, participant.user_id || participant.user_profile_id);
+                            return (
                             <tr key={participant.id || index} className="hover:bg-[#F8DFBE] transition">
                               <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-[#2A2A2A] border-r border-[#F8DFBE]">
                                 {index + 1}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-[#D35D38] font-mono border-r border-[#F8DFBE]">
-                                {participant.bib_number || '-'}
+                                {bibNo || '-'}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-[#2A2A2A] border-r border-[#F8DFBE]">
                                 {participant.participant_name || participant.team_name}
@@ -2213,7 +2244,7 @@ const UpdateIndividualResult = () => {
                                   )}
                                 </td>
                               )}
-                              {(!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
+                              {!isGroundStaff && (!isHeatEvent() || (isHeatEvent() && showFinalHeat)) && (
                                 <td className="px-4 py-3 whitespace-nowrap text-sm">
                                   <div className="flex items-center gap-3">
                                     {/* Current Result Display */}
@@ -2332,7 +2363,8 @@ const UpdateIndividualResult = () => {
                                 </td>
                               )}
                             </tr>
-                          ))}
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
@@ -3009,6 +3041,7 @@ const UpdateIndividualResult = () => {
                       setFinalHeatSelectedForEvent={setFinalHeatSelectedForEvent}
                       laneCount={laneCount}
                       openAddParticipantModal={openAddParticipantModal}
+                      isGroundStaff={isGroundStaff}
                     />
                   ))}
                 </div>
