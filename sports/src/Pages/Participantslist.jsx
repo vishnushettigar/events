@@ -8,6 +8,8 @@ const Participantslist = () => {
   const [temples, setTemples] = useState([]);
   const [selectedTemple, setSelectedTemple] = useState('');
   const [templeName, setTempleName] = useState('');
+  // Temple admins (role_id 2) are locked to their own temple
+  const [lockedTempleId, setLockedTempleId] = useState('');
   const [selectedAgeCategory, setSelectedAgeCategory] = useState('');
   const [selectedGender, setSelectedGender] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,7 +98,21 @@ const Participantslist = () => {
         const templeIdParam = searchParams.get('temple_id');
         let initialTempleId = '';
 
-        if (templeIdParam) {
+        // Temple admins can only see their own temple's athletes
+        let ownProfile = null;
+        try {
+          ownProfile = await userAPI.getProfile();
+        } catch (err) {
+          console.error('Error fetching profile:', err);
+        }
+        const isTempleAdmin = ownProfile?.role_id === 2 && ownProfile?.temple_id;
+
+        if (isTempleAdmin) {
+          initialTempleId = String(ownProfile.temple_id);
+          setLockedTempleId(initialTempleId);
+          setTemples(templesList.filter(t => String(t.id) === initialTempleId));
+          setSearchParams({ temple_id: initialTempleId }, { replace: true });
+        } else if (templeIdParam) {
           initialTempleId = templeIdParam;
         } else {
           // If no param, try current user's temple
@@ -175,6 +191,7 @@ const Participantslist = () => {
 
   // Handle temple selection change
   const handleTempleChange = (newTempleId) => {
+    if (lockedTempleId && newTempleId !== lockedTempleId) return;
     setSelectedTemple(newTempleId);
     if (newTempleId) {
       setSearchParams({ temple_id: newTempleId });
@@ -469,7 +486,7 @@ const Participantslist = () => {
                 </svg>
                 Filter Participants by Temple & Details
               </h2>
-              {(selectedTemple !== 'ALL' || selectedAgeCategory || selectedGender || searchQuery) && (
+              {((!lockedTempleId && selectedTemple !== 'ALL') || selectedAgeCategory || selectedGender || searchQuery) && (
                 <button
                   onClick={() => {
                     setSelectedAgeCategory('');
@@ -493,10 +510,10 @@ const Participantslist = () => {
                   id="templeFilter"
                   value={selectedTemple}
                   onChange={(e) => handleTempleChange(e.target.value)}
-                  disabled={loading}
-                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent font-medium"
+                  disabled={loading || !!lockedTempleId}
+                  className="w-full px-3.5 py-2.5 text-sm bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D35D38] focus:border-transparent font-medium disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="ALL">All Temples / ಎಲ್ಲಾ ದೇವಸ್ಥಾನಗಳು</option>
+                  {!lockedTempleId && <option value="ALL">All Temples / ಎಲ್ಲಾ ದೇವಸ್ಥಾನಗಳು</option>}
                   {temples.map((temple) => (
                     <option key={temple.id} value={temple.id}>
                       {temple.name}

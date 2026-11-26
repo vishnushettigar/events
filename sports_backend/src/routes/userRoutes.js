@@ -1117,12 +1117,34 @@ router.get('/templeusers', authenticate, async (req, res) => {
     let templeId;
     let isAllTemples = false;
 
+    // Effective temple_id query value (req.query is read-only in Express 5)
+    let requestedTempleId = req.query.temple_id;
+
+    // Read the caller's live profile (the JWT may be stale after a role/temple change)
+    const callerProfile = await prisma.profile.findUnique({
+      where: { user_id: req.user.id },
+      select: { role_id: true, temple_id: true }
+    });
+
+    // TEMPLE_ADMIN (role_id 2) may only see athletes of their own temple
+    if (callerProfile?.role_id === 2) {
+      if (!callerProfile.temple_id) {
+        return res.status(404).json({ error: 'User profile not found' });
+      }
+      const requested = requestedTempleId?.toString();
+      if (requested && requested.toUpperCase() !== 'ALL' && parseInt(requested) !== callerProfile.temple_id) {
+        return res.status(403).json({ error: 'Temple admins can only view participants of their own temple' });
+      }
+      // No temple, 'ALL', or their own temple -> always their own temple
+      requestedTempleId = String(callerProfile.temple_id);
+    }
+
     // Check if temple_id is provided in query parameters
-    if (req.query.temple_id) {
-      if (req.query.temple_id.toString().toUpperCase() === 'ALL') {
+    if (requestedTempleId) {
+      if (requestedTempleId.toString().toUpperCase() === 'ALL') {
         isAllTemples = true;
       } else {
-        templeId = parseInt(req.query.temple_id);
+        templeId = parseInt(requestedTempleId);
 
         // Verify the temple exists
         const temple = await prisma.mst_temple.findFirst({
