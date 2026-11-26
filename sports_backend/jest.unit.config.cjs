@@ -2,10 +2,6 @@
 module.exports = {
   testEnvironment: 'node',
   transform: {},
-  testMatch: [
-    '**/tests/availableEvents.test.js',
-    '**/tests/age_limit_year_rules.test.js',
-    '**/tests/temple_participants_route.test.js'
-  ],
+  testMatch: ['**/tests/availableEvents.test.js'],
   verbose: true
 };

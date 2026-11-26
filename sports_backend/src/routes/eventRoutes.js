@@ -5,7 +5,6 @@ import * as systemService from '../services/systemService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import prisma from '../utils/prismaClient.js';
 import { getBibNumber } from '../constants.js';
-import { isUnlimitedAgeCategory as isUnlimitedAgeCategoryName } from '../utils/ageUtils.js';
 
 const router = express.Router();
 
@@ -231,7 +230,7 @@ router.post('/update-registration-status', authenticate, requireRole('TEMPLE_ADM
 // Get temple participants
 router.get('/temple-participants', authenticate, requireRole(2), async (req, res) => {
   try {
-    const { event_ids, status } = req.query;
+    const { event_ids, status, year } = req.query;
 
     if (!req.user.temple_id) {
       console.error('No temple_id found in user object');
@@ -243,13 +242,13 @@ router.get('/temple-participants', authenticate, requireRole(2), async (req, res
 
     console.log('Fetching participants for events:', eventIdArray);
 
-    // Temple admins may only see the current year's registrations; any ?year= param is ignored
     const currentYear = new Date().getFullYear();
+    const targetYear = year ? parseInt(year) : currentYear;
 
     const participants = await eventService.getTempleParticipants(req.user.temple_id, {
       event_ids: eventIdArray,
       status: status,
-      year: currentYear
+      year: targetYear
     });
 
     res.json(participants);
@@ -2166,7 +2165,7 @@ router.get('/temple-participants-count/:eventId/:templeId', authenticate, requir
     }
 
     // Check if this age category has unlimited participants (0-5, 6-10, 71+)
-    const isUnlimitedAgeCategory = isUnlimitedAgeCategoryName(event.age_category.name);
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(event.age_category.name);
 
     // Count accepted participants from this temple for this event
     const count = await prisma.ind_event_registration.count({
@@ -2268,7 +2267,7 @@ router.post('/staff-register-participant', authenticate, requireRole('STAFF'), [
     }
 
     // Check if this age category has unlimited participants (0-5, 6-10, 71+)
-    const isUnlimitedAgeCategory = isUnlimitedAgeCategoryName(event.age_category.name);
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(event.age_category.name);
 
     // Check user's total individual event registrations (applies to all age categories)
     const userRegistrations = await prisma.ind_event_registration.count({
