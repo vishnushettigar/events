@@ -1,4 +1,4 @@
-import { calculateAge, getAgeCategory, isExcludedAgeCategory } from '../utils/ageUtils.js';
+import { calculateAge, getAgeCategory, isExcludedAgeCategory, isUnlimitedAgeCategory } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
 import { getBibNumber } from '../constants.js';
 
@@ -133,12 +133,11 @@ async function registerParticipant(user_id, event_id, temple_id) {
     }
 
     // Check if this age category has unlimited participants (0-5, 6-10, 71+)
-    const ageCategoryName = event.age_category.name;
-    const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(ageCategoryName);
-    
+    const isUnlimitedCategory = isUnlimitedAgeCategory(event.age_category.name);
+
     let registration;
-    
-    if (isUnlimitedAgeCategory) {
+
+    if (isUnlimitedCategory) {
       // For unlimited age categories, create registration directly as ACCEPTED
       registration = await tx.ind_event_registration.create({
         data: {
@@ -628,6 +627,11 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
       throw new Error('Unauthorized: Cannot manage registrations from other temples');
     }
 
+    // Registrations from previous years are read-only
+    if (registration.year !== new Date().getFullYear()) {
+      throw new Error('Unauthorized: Cannot modify registrations from a non-current year');
+    }
+
     // Map the status to the correct enum value
     let mappedStatus;
     switch (status.toUpperCase()) {
@@ -658,11 +662,8 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
         throw new Error('Event not found');
       }
 
-      const ageCategoryName = eventWithAgeCategory.age_category.name;
-      const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(ageCategoryName);
-
       // Only apply the 3-participant limit for non-unlimited age categories
-      if (!isUnlimitedAgeCategory) {
+      if (!isUnlimitedAgeCategory(eventWithAgeCategory.age_category.name)) {
         // Count current ACCEPTED registrations for this temple and event for the same year
         const currentYear = registration.year || new Date().getFullYear();
         const acceptedCount = await tx.ind_event_registration.count({

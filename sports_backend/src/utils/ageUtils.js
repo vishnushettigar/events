@@ -168,7 +168,23 @@ function isExcludedAgeCategory(ageCategory) {
   return excludedCategories.includes(ageCategory);
 }
 
+// Age categories with no per-temple limit on registrations per event.
+// Every other category (11-14, 15-18, 19-24, 25-35, 36-49, 50-60, 61-70) is
+// limited to 3 ACCEPTED participants per temple per event.
+const UNLIMITED_AGE_CATEGORIES = ['0-5', '6-10', '71+'];
+
+/**
+ * Check if an age category allows unlimited registrations per temple
+ * @param {string} ageCategoryName - The age category name
+ * @returns {boolean}
+ */
+function isUnlimitedAgeCategory(ageCategoryName) {
+  return UNLIMITED_AGE_CATEGORIES.includes(ageCategoryName);
+}
+
 export {
+  UNLIMITED_AGE_CATEGORIES,
+  isUnlimitedAgeCategory,
   AGE_CATEGORIES,
   calculateAge,
   calculateAgeWithSettings,
