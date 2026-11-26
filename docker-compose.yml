@@ -11,7 +11,7 @@ services:
       - ./sports:/app
       - /app/node_modules
     environment:
-      # - VITE_API_BASE_URL=https://app.shettigarevents.com
+      - VITE_API_BASE_URL=https://www.shettigarevents.com
       - VITE_API_URL=http://localhost/api
     networks:
       - shettigarevents-network
@@ -30,18 +30,18 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=libsql://testingevents-jeevanpadmashali.aws-ap-south-1.turso.io
-      - DATABASE_AUTH_TOKEN=eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3OTA1OTg0MDIsImlkIjoiZWViZDU3MTktMWE4OS00ZWMxLWFiYzgtYmQ3NGYwMWQ3ZDdiIiwia2lkIjoidGFYTUtWVFVhdEc4cnlhMU1nMG1yaWlKeGkzVXJpSTlFOVI1SjFnelNLZyIsInJpZCI6IjMzYmIzMGVmLTRjMzktNDY0MS05ZGY3LTE0NGY1MjliZTYyOSJ9.TVbGfNfULWWq4DFI2kO8xxzgDHb-wkmWKzXMvIA0neVPY5JU5e47zr8mIAiEbKoTqSLuyIPAtFXtHuXogRg9Dg
-      - JWT_SECRET=testeststest
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_AUTH_TOKEN=${DATABASE_AUTH_TOKEN}
+      - JWT_SECRET=${JWT_SECRET}
       - PORT=4000
-      - EMAIL_USER=jeevanpadmashali@gmail.com
-      - EMAIL_PASS=jprv cjib mafq wzbx
-      - EMAIL_FROM=jeevanpadmashali@gmail.com
-      - SMTP_USER=jeevanpadmashali@gmail.com
-      - SMTP_PASS=jprv cjib mafq wzbx
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=465
-      - SMTP_SECURE=true
+      - EMAIL_USER=${EMAIL_USER:-}
+      - EMAIL_PASS=${EMAIL_PASS:-}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_SECURE=${SMTP_SECURE}
     networks:
       - shettigarevents-network
 
@@ -67,12 +67,12 @@ services:
     container_name: shettigarevents-nginx
     ports:
       - "80:80"
-      # - "443:443"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - frontend_dist_prod:/usr/share/nginx/html
-      # - /var/www/certbot:/var/www/certbot:ro
-      # - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - frontend
       - backend
