@@ -128,5 +128,40 @@ assert.ok(bibA && bibA.includes('0045'), `Expected BIB to contain padded user ID
 assert.ok(bibB && bibB.includes('1024'), `Expected BIB to contain padded user ID: ${bibB}`);
 console.log(`✅ BIB generation verified: ${bibA}, ${bibB}`);
 
+// 6. Test Multi-Year Simulation for Future Years (2027, 2028, 2029, 2030)
+console.log('--- Testing Forward Compatibility for Following Years ---');
+const futureYears = [2027, 2028, 2029, 2030];
+
+for (const futureYear of futureYears) {
+  // Simulate accepted registrations for future year
+  mockDatabase.registrations.push(
+    { id: mockDatabase.registrations.length + 1, event_id: 10, user_id: 200 + futureYear, year: futureYear, status: 'ACCEPTED', is_deleted: false, name: `Runner ${futureYear} 1`, temple: 'Temple A' },
+    { id: mockDatabase.registrations.length + 2, event_id: 10, user_id: 201 + futureYear, year: futureYear, status: 'ACCEPTED', is_deleted: false, name: `Runner ${futureYear} 2`, temple: 'Temple B' }
+  );
+
+  // Generate heats for this future year
+  const genResult = generateHeatsSim(10, futureYear);
+  assert.strictEqual(genResult.count, 2, `Should generate 2 heats for year ${futureYear}`);
+
+  // Verify only this year's records were added
+  const yearRecords = mockDatabase.performances.filter(p => p.event_id === 10 && p.year === futureYear);
+  assert.strictEqual(yearRecords.length, 2, `Expected 2 performance records for year ${futureYear}`);
+
+  // Duplicate generation check
+  assert.throws(() => {
+    generateHeatsSim(10, futureYear);
+  }, new RegExp(`Heats already generated for this event for year ${futureYear}`));
+
+  console.log(`✅ Year ${futureYear}: Heat generation and isolation verified.`);
+}
+
+// Verify all years coexist simultaneously in the database without collision
+const allYears = [2025, 2026, ...futureYears];
+for (const yr of allYears) {
+  const count = mockDatabase.performances.filter(p => p.event_id === 10 && p.year === yr).length;
+  assert.strictEqual(count, 2, `Each year (${yr}) must maintain exactly its own 2 records`);
+}
+console.log('✅ All historical and future years co-exist without collision.');
+
 console.log('--- All Heat Generation Year & BIB Tests Passed! ---');
 

@@ -70,7 +70,7 @@ const Location = () => {
             </p>
             <p className="text-[#5A5A5A] text-center"></p>
             <a
-              href="https://www.google.com/maps/search/?api=1&query=Government+Junior+College%2C+Karnad%2C+Mulki%2C+Karnataka+574154"
+              href="https://www.google.com/maps/place/Mahatma+Gandhi+District+Stadium/@13.3320594,74.742327,18z/data=!4m6!3m5!1s0x3bbcbb72fab4a6cf:0x650cd705041331c9!8m2!3d13.3320594!4d74.7430338!16s%2Fg%2F11bwqm7dzv?entry=ttu&g_ep=EgoyMDI2MTExMC4wIKXMDSoASAFQAw%3D%3D"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-2 inline-block w-56 px-4 py-2 bg-[#D35D38] text-white rounded-lg shadow hover:bg-[#B84A2E] transition text-center text-sm"

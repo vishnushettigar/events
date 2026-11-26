@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Link,useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './styles.css';
 import ProfileDropdown from './ProfileDropdown';
 import { userAPI } from '../utils/api.js';
@@ -10,7 +10,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const Navbar = () => {
     const [userInfo, setUserInfo] = useState(null);
-    
+
     // Use custom auth hook without periodic checking
     const { isLoggedIn, user } = useAuth(false);
 
@@ -49,7 +49,7 @@ const Navbar = () => {
         <nav id="header" className="header fixed bg-[#FCFCFC] h-16 flex flex-row items-center justify-between sticky top-0 z-46">
             <div className='header flex flex-row items-center justify-between sticky top-0 z-10 w-[95%] md:w-[90%] mx-auto'>
                 <div className="flex flex-row items-center justify-between w-full">
-                    
+
                     <div className="flex items-center">
                         {/* Logo */}
                         <div className="pl-0 md:pl-0 lg:p-2">
@@ -61,14 +61,12 @@ const Navbar = () => {
                                 />
                             </Link>
                         </div>
-                   
-                    </div>                
-                    {/* <div className='hidden md:flex flex-row items-center justify-center gap-2'>
-                        <h1 className='text-[20px] text-white pr-[60px]'>PADMASHALI KREEDOTHSAVA</h1>
-                    </div> */}
+
+                    </div>
+
                     <div className="profile nav-links flex flex-row pr-1 gap-4 items-center">
-                    {isHomePage && <Toggle />}
-                        <ProfileDropdown />
+                        {isHomePage && <Toggle />}
+                        {/* <ProfileDropdown /> */}
                     </div>
                 </div>
             </div>

@@ -71,13 +71,10 @@ const Home = () => {
                 : <>34ನೇ ಪದ್ಮಶಾಲಿ <br /> ಕ್ರೀಡೋತ್ಸವ - 2026</>
               }
             </h1>
-            {/* <p className="text-[16px] md:text-[20px] text-[#5A5A5A] mb-2">
-              Hosted by Sri Brahmalinga Veerabhadra Durgaparameshwari temple,
-              Salikeri
-            </p> */}
+
             <EventDetails />
             <div className="flex flex-row sm:flex-row gap-2 sm:gap-4 mt-4 w-full">
-              {isLoggedIn ? (
+              {/* {isLoggedIn ? (
                 <button
                   onClick={handleMyEventsClick}
                   className="flex-1 sm:flex-initial px-8 h-12 rounded-lg text-center bg-[#D35D38] text-white font-medium text-md shadow-lg hover:bg-[#B84A2E] transition w-[160px] flex items-center justify-center whitespace-nowrap leading-none"
@@ -99,12 +96,12 @@ const Home = () => {
                     {isEnglish ? "Register" : "ನೋಂದಣಿ"}
                   </a>
                 </>
-              )}
-              {/* <button
-                  className="w-full sm:w-80 px-4 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-sm shadow-lg hover:bg-[#B84A2E] transition"
-                >
+              )} */}
+              <button
+                className="w-full sm:w-80 px-4 py-3 rounded-lg text-center bg-[#D35D38] text-white font-medium text-sm shadow-lg hover:bg-[#B84A2E] transition"
+              >
                 {isEnglish ? "Registration will start soon" : "ನೋಂದಣಿ ಶೀಘ್ರದಲ್ಲೇ ಪ್ರಾರಂಭವಾಗುತ್ತದೆ"}
-              </button> */}
+              </button>
 
 
             </div>
