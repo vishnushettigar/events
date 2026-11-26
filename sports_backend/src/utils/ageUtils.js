@@ -139,6 +139,26 @@ function getAgeCategory(age, customCategories = null) {
 }
 
 /**
+ * Find the age category row a person of this age belongs to.
+ * Ignores the catch-all "All" category (team games) and, if ranges ever overlap,
+ * picks the narrowest one - so the result never depends on row/id order.
+ * @param {number} age - The calculated age
+ * @param {Array<{name: string, from_age: number, to_age: number}>} categories - Category rows
+ * @returns {Object|undefined} - The matching category row, or undefined
+ */
+function findAgeCategoryForAge(age, categories) {
+  if (age === null || age === undefined || isNaN(age) || !Array.isArray(categories)) {
+    return undefined;
+  }
+  const numericAge = Math.max(0, Math.floor(Number(age)));
+
+  return categories
+    .filter(cat => cat && cat.name && cat.name.toLowerCase() !== 'all')
+    .filter(cat => numericAge >= cat.from_age && numericAge <= cat.to_age)
+    .sort((a, b) => (a.to_age - a.from_age) - (b.to_age - b.from_age))[0];
+}
+
+/**
  * Check if an age category should be excluded from points
  * @param {string} ageCategory - The age category name
  * @returns {boolean} - True if the age category should be excluded from points
@@ -154,5 +174,6 @@ export {
   calculateAgeWithSettings,
   getCutoffDateFromSettings,
   getAgeCategory,
+  findAgeCategoryForAge,
   isExcludedAgeCategory
 };

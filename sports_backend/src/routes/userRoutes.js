@@ -7,7 +7,7 @@ import * as emailService from '../services/emailService.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { TEMPLES, getBibNumber } from '../constants.js';
 import { Gender } from '@prisma/client';
-import { calculateAgeWithSettings, getAgeCategory } from '../utils/ageUtils.js';
+import { calculateAgeWithSettings, getAgeCategory, findAgeCategoryForAge } from '../utils/ageUtils.js';
 import prisma from '../utils/prismaClient.js';
 const router = express.Router();
 
@@ -787,9 +787,7 @@ router.get('/profile', authenticate, async (req, res) => {
       }
     });
 
-    const matchingAgeCategory = ageCategories.find(category =>
-      age >= category.from_age && age <= category.to_age
-    );
+    const matchingAgeCategory = findAgeCategoryForAge(age, ageCategories);
 
     // Get all temple admin information
     const templeAdmins = await prisma.profile.findMany({
@@ -869,9 +867,7 @@ router.get('/available-events', authenticate, async (req, res) => {
     });
 
     // Find matching age category
-    const matchingAgeCategory = ageCategories.find(category =>
-      age >= category.from_age && age <= category.to_age
-    );
+    const matchingAgeCategory = findAgeCategoryForAge(age, ageCategories);
 
     if (!matchingAgeCategory) {
       return res.status(400).json({ error: 'No matching age category found for user' });

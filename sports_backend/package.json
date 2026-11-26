@@ -7,6 +7,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.unit.config.cjs",
     "test:ci": "jest --ci --coverage --watchAll=false",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js"
