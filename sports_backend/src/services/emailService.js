@@ -123,7 +123,7 @@ export async function sendPasswordResetOtp({ email, otp, userName = 'Participant
       const info = await mailTransporter.sendMail({
         from: `"${appName}" <${fromEmail}>`,
         to: email,
-        subject: `Your Password Reset Code: ${otp}`,
+        subject: 'Your Password Reset Code',
         text: `Your password reset verification code is ${otp}. It is valid for 10 minutes. If you did not request this, please ignore this email.`,
         html: htmlContent
       });
