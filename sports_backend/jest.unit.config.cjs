@@ -2,6 +2,6 @@
 module.exports = {
   testEnvironment: 'node',
   transform: {},
-  testMatch: ['**/tests/availableEvents.test.js'],
+  testMatch: ['**/tests/availableEvents.test.js', '**/tests/registrationLimit.test.js'],
   verbose: true
 };
