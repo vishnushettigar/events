@@ -132,9 +132,9 @@ async function registerParticipant(user_id, event_id, temple_id) {
       throw new Error('Already registered for this event');
     }
 
-    // Check if this age category has unlimited participants (0-5, 6-10, 61-90)
+    // Check if this age category has unlimited participants (0-5, 6-10, 71+)
     const ageCategoryName = event.age_category.name;
-    const isUnlimitedAgeCategory = ['0-5', '6-10', '61+'].includes(ageCategoryName);
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(ageCategoryName);
     
     let registration;
     
@@ -659,7 +659,7 @@ async function updateRegistrationStatus(registration_id, status, temple_admin_id
       }
 
       const ageCategoryName = eventWithAgeCategory.age_category.name;
-      const isUnlimitedAgeCategory = ['0-5', '6-10', '61-90'].includes(ageCategoryName);
+      const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(ageCategoryName);
 
       // Only apply the 3-participant limit for non-unlimited age categories
       if (!isUnlimitedAgeCategory) {

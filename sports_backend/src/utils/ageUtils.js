@@ -103,7 +103,8 @@ const AGE_CATEGORIES = [
   { name: '25-35', from_age: 25, to_age: 35 },
   { name: '36-49', from_age: 36, to_age: 49 },
   { name: '50-60', from_age: 50, to_age: 60 },
-  { name: '61+', from_age: 61, to_age: 99 }
+  { name: '61-70', from_age: 61, to_age: 70 },
+  { name: '71+', from_age: 71, to_age: 99 }
 ];
 
 /**
@@ -130,8 +131,8 @@ function getAgeCategory(age, customCategories = null) {
     return matched.name;
   }
 
-  if (numericAge >= 61) {
-    return '61+';
+  if (numericAge >= 71) {
+    return '71+';
   }
 
   return 'Unknown';
@@ -143,7 +144,7 @@ function getAgeCategory(age, customCategories = null) {
  * @returns {boolean} - True if the age category should be excluded from points
  */
 function isExcludedAgeCategory(ageCategory) {
-  const excludedCategories = ['0-5', '6-10', '61-90', '61+'];
+  const excludedCategories = ['0-5', '6-10', '71+'];
   return excludedCategories.includes(ageCategory);
 }
 

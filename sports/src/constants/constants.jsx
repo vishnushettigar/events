@@ -8,7 +8,7 @@ import winner from "../assets/winners.png";
 //rules in English
 export const rules = [
   "Participation in all competitions is restricted only to members of the Padmashali/Shettigar community belonging to the 16 associated temples.",
-  "A maximum of three participants from each temple are allowed to participate in a single competition, and one participant can participate in a maximum of three competitions. (This rule does not apply to competitions for participants under 10 years of age and those above 61 years of age).",
+  "A maximum of three participants from each temple are allowed to participate in a single competition, and one participant can participate in a maximum of three competitions. (This rule does not apply to competitions for participants under 10 years of age and those above 70 years of age).",
   "All athletes participating in any individual or team competition must register compulsorily through the web application.",
   "As per the Mahasabha rule, it is mandatory for each temple to register their temple by paying Rs. 1,000/-.",
   "All members of the 16 temples must be present near their respective temple flags by 8:30 AM on the morning of the Kreedotsava",

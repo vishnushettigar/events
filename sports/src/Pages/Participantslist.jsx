@@ -37,7 +37,7 @@ const Participantslist = () => {
   // Helper for age category display
   const displayAgeCategory = (cat) => {
     if (!cat) return '';
-    if (cat === '61-90' || cat === '61-99' || cat === '61 and above') return '61+';
+    if (cat === '61+' || cat === '61-90' || cat === '61-99' || cat === '61 and above') return '71+';
     return cat;
   };
 
@@ -45,19 +45,8 @@ const Participantslist = () => {
     if (!selectedCategory) return true;
     if (participantCategory === selectedCategory) return true;
 
-    // Check for 61+ variants (61+, 61-90, 61-99, 61 and above)
-    const is61Plus = (cat) =>
-      cat === '61+' ||
-      cat === '61-90' ||
-      cat === '61-99' ||
-      cat === '61 and above' ||
-      (typeof cat === 'string' && cat.trim().startsWith('61'));
-
-    if (is61Plus(selectedCategory) && is61Plus(participantCategory)) {
-      return true;
-    }
-
-    return false;
+    // Legacy "61+" style names now mean 71+ (61-70 is its own category)
+    return displayAgeCategory(participantCategory) === displayAgeCategory(selectedCategory);
   };
 
   // Initial load: fetch all temples, user's default temple, filter options
@@ -89,11 +78,10 @@ const Participantslist = () => {
         const formattedAgeCategories = (filterOptionsData.ageCategories || [])
           .filter(cat => !cat.name.toUpperCase().includes('ALL'))
           .map(cat => {
-            const is61 = cat.name.includes('61') || cat.from_age === 61;
             return {
               id: cat.id,
-              name: is61 ? '61+' : cat.name,
-              value: is61 ? '61+' : (cat.name || `${cat.from_age}-${cat.to_age}`),
+              name: cat.name,
+              value: cat.name || `${cat.from_age}-${cat.to_age}`,
               from_age: cat.from_age,
               to_age: cat.to_age
             };

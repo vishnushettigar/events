@@ -2164,8 +2164,8 @@ router.get('/temple-participants-count/:eventId/:templeId', authenticate, requir
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Check if this age category has unlimited participants (0-5, 6-10, 61+)
-    const isUnlimitedAgeCategory = ['0-5', '6-10', '61+'].includes(event.age_category.name);
+    // Check if this age category has unlimited participants (0-5, 6-10, 71+)
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(event.age_category.name);
 
     // Count accepted participants from this temple for this event
     const count = await prisma.ind_event_registration.count({
@@ -2266,8 +2266,8 @@ router.post('/staff-register-participant', authenticate, requireRole('STAFF'), [
       return res.status(404).json({ error: 'Event not found' });
     }
 
-    // Check if this age category has unlimited participants (0-5, 6-10, 61+)
-    const isUnlimitedAgeCategory = ['0-5', '6-10', '61+'].includes(event.age_category.name);
+    // Check if this age category has unlimited participants (0-5, 6-10, 71+)
+    const isUnlimitedAgeCategory = ['0-5', '6-10', '71+'].includes(event.age_category.name);
 
     // Check user's total individual event registrations (applies to all age categories)
     const userRegistrations = await prisma.ind_event_registration.count({

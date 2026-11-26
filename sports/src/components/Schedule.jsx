@@ -149,13 +149,14 @@ const Schedule = ({
     const name = ageCategory?.name || 'Unknown';
     if (name.includes('0-5') || name.includes('0 - 5')) return '0-5';
     if (name.includes('6-10') || name.includes('6 - 10')) return '6-10';
-    if (name.includes('61+') || name.includes('61 +') || name.includes('61 and above') || 
-        name.includes('Senior') || name.includes('60+') || name.includes('60 +')) return '61+';
+    if (name.includes('71+') || name.includes('71 +') || name.includes('71 and above') ||
+        name.includes('61+') || name.includes('61 +') || name.includes('61 and above') ||
+        name.includes('Senior')) return '71+';
     return name; // Return original name for other categories
   };
 
   // Define the order for age categories and event types
-  const ageCategoryOrder = ['0-5', '6-10', '61+'];
+  const ageCategoryOrder = ['0-5', '6-10', '71+'];
   const eventTypeOrder = ['Running', 'Throwing', 'Jumping', 'Other'];
 
   // Available filter options derived dynamically from data

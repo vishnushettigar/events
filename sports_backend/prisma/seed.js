@@ -89,8 +89,9 @@ async function main() {
     { name: '25-35', from_age: 25, to_age: 35 },
     { name: '36-49', from_age: 36, to_age: 49 },
     { name: '50-60', from_age: 50, to_age: 60 },
-    { name: '61+', from_age: 61, to_age: 99 },
-    { name: 'All', from_age: 0, to_age: 99 }
+    { name: '71+', from_age: 71, to_age: 99 },
+    { name: 'All', from_age: 0, to_age: 99 },
+    { name: '61-70', from_age: 61, to_age: 70 }
   ];
 
   for (const ageCategory of ageCategories) {
@@ -219,7 +220,7 @@ async function main() {
     { event_type_id: 10, age_category_id: 8, gender: 'MALE', is_deleted: false, is_closed: false },
     { event_type_id: 10, age_category_id: 8, gender: 'FEMALE', is_deleted: false, is_closed: false },
   
-    // 61+ years MALE
+    // 71+ years MALE
     { event_type_id: 11, age_category_id: 9, gender: 'MALE', is_deleted: false, is_closed: false },
   
     // Team games category
@@ -235,8 +236,14 @@ async function main() {
     // Tug of War for both MALE and FEMALE.
     { event_type_id: 16, age_category_id: 10, gender: 'MALE', is_deleted: false, is_closed: false },  
     { event_type_id: 16, age_category_id: 10, gender: 'FEMALE', is_deleted: false, is_closed: false },
-    // 61+ years FEMALE
+    // 71+ years FEMALE
     { event_type_id: 11, age_category_id: 9, gender: 'FEMALE', is_deleted: false, is_closed: false },
+
+    // 61-70 years (Running - 50 mts, Shot put)
+    { event_type_id: 4, age_category_id: 11, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 4, age_category_id: 11, gender: 'FEMALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 11, gender: 'MALE', is_deleted: false, is_closed: false },
+    { event_type_id: 10, age_category_id: 11, gender: 'FEMALE', is_deleted: false, is_closed: false },
   ];
   
 

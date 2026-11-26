@@ -17,7 +17,7 @@ const Templedetailedreports = () => {
     if (!ageCategory || ageCategory === 'Unknown' || ageCategory === 'All') {
       return ageCategory === 'All' ? 999 : 0;
     }
-    // Extract the first number from strings like "0-5", "6-10", "61+"
+    // Extract the first number from strings like "0-5", "6-10", "71+"
     const match = ageCategory.match(/^(\d+)/);
     return match ? parseInt(match[1], 10) : 0;
   };
