@@ -7,7 +7,7 @@ import Location from "../components/Location";
 import "./styles.css"; // Create this file for styling
 import { Link, useNavigate } from "react-router-dom";
 import Contacts from "../components/Contacts";
-import heroImg from "../assets/heroImg.png";
+import heroImg from "../assets/heroImg34th.png";
 import EventDetails from "../components/EventDetails";
 // import background from "../assets/background.png";
 // import Loginbg from "../assets/Login-Img.png"
